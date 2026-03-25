@@ -16,6 +16,7 @@
     --amber-bg: #faeeda; --amber-text: #633806;
     --red-bg: #fcebeb; --red-text: #791f1f;
     --teal-bg: #e1f5ee; --teal-text: #085041;
+    --overdue-bg: #faeeda; --overdue-border: #ba7517;
     --radius: 8px; --radius-lg: 12px;
   }
   @media (prefers-color-scheme: dark) {
@@ -29,12 +30,25 @@
       --amber-bg: #412402; --amber-text: #fac775;
       --red-bg: #501313; --red-text: #f7c1c1;
       --teal-bg: #04342c; --teal-text: #9fe1cb;
+      --overdue-bg: #412402; --overdue-border: #ef9f27;
     }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  /* Login screen */
+  .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .login-box { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 32px; width: 320px; }
+  .login-box h2 { font-size: 16px; font-weight: 500; margin-bottom: 16px; }
+  .login-box input { width: 100%; font-size: 13px; font-family: inherit; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 10px; background: var(--bg2); color: var(--text); margin-bottom: 10px; }
+  .login-box input:focus { outline: none; border-color: var(--text3); }
+  .login-box button { width: 100%; font-size: 13px; padding: 8px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); cursor: pointer; font-weight: 500; }
+  .login-error { font-size: 12px; color: var(--red-text); margin-bottom: 8px; }
+
   header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
   header h1 { font-size: 15px; font-weight: 500; }
-  header span { font-size: 12px; color: var(--text3); }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .header-btn { font-size: 11px; padding: 4px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; text-decoration: none; display: inline-block; }
+  .header-btn:hover { background: var(--bg2); color: var(--text); }
   .main { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
   .stat { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
@@ -45,15 +59,17 @@
   .filter-btn.active, .filter-btn:hover { background: var(--bg2); color: var(--text); }
   .add-btn { margin-left: auto; font-size: 12px; padding: 5px 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--text); color: var(--bg); cursor: pointer; }
   .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 10px; }
+  .card.overdue { border-color: var(--overdue-border); }
   .card-head { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none; }
   .card-head:hover { background: var(--bg2); }
-  .firm-top { display: flex; align-items: center; gap: 10px; }
+  .firm-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .firm-name { font-weight: 500; font-size: 14px; }
   .tier-badge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 4px; }
+  .overdue-badge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: var(--overdue-bg); color: var(--amber-text); }
   .t1 { background: var(--blue-bg); color: var(--blue-text); }
   .t2 { background: var(--green-bg); color: var(--green-text); }
   .t3 { background: var(--gray-bg); color: var(--gray-text); }
-  .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; font-weight: 500; }
+  .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
   .s-not { background: var(--gray-bg); color: var(--gray-text); }
   .s-contacted { background: var(--blue-bg); color: var(--blue-text); }
   .s-conversation { background: var(--amber-bg); color: var(--amber-text); }
@@ -66,8 +82,8 @@
   .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
   .field-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
   .field-val { font-size: 13px; color: var(--text2); line-height: 1.5; }
-  .links { display: flex; gap: 8px; margin-top: 6px; }
-  .link-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text2); text-decoration: none; }
+  .links { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .link-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text2); text-decoration: none; cursor: pointer; }
   .link-btn:hover { background: var(--bg2); }
   .status-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .status-opt { font-size: 12px; padding: 4px 12px; border-radius: var(--radius); border: 0.5px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; }
@@ -76,23 +92,49 @@
   .notes-area { width: 100%; margin-top: 12px; font-size: 13px; font-family: inherit; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 8px 10px; background: var(--bg2); color: var(--text); resize: vertical; min-height: 60px; }
   .notes-area:focus { outline: none; border-color: var(--border2); }
   .notes-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 14px; margin-bottom: 5px; }
+  .followup-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .followup-row label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  .followup-row input[type=date] { font-size: 12px; font-family: inherit; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 4px 8px; background: var(--bg2); color: var(--text); }
+  .meta-row { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .meta-item { font-size: 12px; color: var(--text3); }
+  .meta-item strong { color: var(--text2); }
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 24px; width: 480px; max-width: calc(100vw - 32px); border: 0.5px solid var(--border2); }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 24px; width: 520px; max-width: calc(100vw - 32px); border: 0.5px solid var(--border2); max-height: 90vh; overflow-y: auto; }
   .modal h2 { font-size: 15px; font-weight: 500; margin-bottom: 16px; }
   .modal input, .modal select, .modal textarea { width: 100%; font-size: 13px; font-family: inherit; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 10px; background: var(--bg2); color: var(--text); margin-bottom: 10px; }
-  .modal input:focus, .modal select:focus { outline: none; }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { outline: none; border-color: var(--text3); }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
   .btn-cancel { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; }
   .btn-save { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); cursor: pointer; font-weight: 500; }
+  .import-result { font-size: 13px; color: var(--green-text); margin-top: 8px; }
+  .import-hint { font-size: 11px; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
   @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } .card-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
+
+<!-- Login screen (shown when auth required) -->
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-box">
+    <h2>Recruiter Tracker</h2>
+    <div class="login-error" id="login-error" style="display:none">Wrong password</div>
+    <input type="password" id="login-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button onclick="doLogin()">Sign in</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
 <header>
   <h1>Recruiter Tracker</h1>
-  <span id="last-updated"></span>
+  <div class="header-actions">
+    <span id="overdue-count" style="font-size:12px;color:var(--amber-text);display:none"></span>
+    <a class="header-btn" onclick="exportCSV()">Export CSV</a>
+    <a class="header-btn" onclick="openImport()">Import CSV</a>
+    <a class="header-btn" onclick="openDownloadTemplate()">Template</a>
+  </div>
 </header>
+
 <div class="main">
   <div class="stats" id="stats"></div>
   <div class="controls">
@@ -103,10 +145,14 @@
     <button class="filter-btn" data-filter="not contacted">Not contacted</button>
     <button class="filter-btn" data-filter="contacted">Contacted</button>
     <button class="filter-btn" data-filter="in conversation">In conversation</button>
+    <button class="filter-btn" data-filter="overdue">Follow-up overdue</button>
     <button class="add-btn" onclick="openModal()">+ Add firm</button>
   </div>
   <div id="cards"></div>
 </div>
+</div>
+
+<!-- Add firm modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h2>Add a firm</h2>
@@ -126,9 +172,27 @@
     </div>
   </div>
 </div>
+
+<!-- Import CSV modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h2>Import CSV</h2>
+    <p class="import-hint">Paste CSV rows below. Required column: <strong>name</strong>. Optional: tier, why, contact, website, linkedin, notes, status, followup_date. Existing firms matched by name will be updated, new names will be added.</p>
+    <textarea id="import-text" rows="8" placeholder="name,tier,why,contact,website,linkedin,notes,status,followup_date
+Acme Search,1,Great SaaS fit,acmesearch.com,https://acmesearch.com,,First call scheduled,contacted,2026-04-01"></textarea>
+    <div class="import-result" id="import-result" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeImport()">Cancel</button>
+      <button class="btn-save" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let firms = [];
 let activeFilter = 'all';
+let authToken = localStorage.getItem('rt-token') || '';
+
 const STATUS_CONFIG = {
   'not contacted':   { label: 'Not contacted',  cls: 's-not' },
   'contacted':       { label: 'Contacted',       cls: 's-contacted' },
@@ -137,37 +201,110 @@ const STATUS_CONFIG = {
   'passed':          { label: 'Passed',          cls: 's-passed' },
 };
 const STATUSES = Object.keys(STATUS_CONFIG);
-async function load() { const r = await fetch('/api/firms'); firms = await r.json(); render(); }
-async function patch(id, payload) { await fetch('/api/firms/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); }
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'x-auth-token': authToken };
+}
+
+async function init() {
+  const r = await fetch('/api/auth-required');
+  const { required } = await r.json();
+  if (!required) {
+    authToken = 'no-auth';
+    showApp();
+  } else if (authToken) {
+    const test = await fetch('/api/firms', { headers: { 'x-auth-token': authToken } });
+    if (test.ok) { showApp(); }
+    else { authToken = ''; showLogin(); }
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  load();
+}
+
+async function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+  if (r.ok) {
+    const { token } = await r.json();
+    authToken = token;
+    localStorage.setItem('rt-token', token);
+    document.getElementById('login-error').style.display = 'none';
+    showApp();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+async function load() {
+  const r = await fetch('/api/firms', { headers: authHeaders() });
+  firms = await r.json();
+  render();
+}
+
+async function patch(id, payload) {
+  await fetch('/api/firms/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(payload) });
+}
+
+function isOverdue(f) {
+  if (!f.followup_date) return false;
+  return new Date(f.followup_date) < new Date(new Date().toDateString());
+}
+
 function filtered() {
   if (activeFilter === 'all') return firms;
   if (activeFilter === 'tier-1') return firms.filter(f => f.tier === 1);
   if (activeFilter === 'tier-2') return firms.filter(f => f.tier === 2);
   if (activeFilter === 'tier-3') return firms.filter(f => f.tier === 3);
+  if (activeFilter === 'overdue') return firms.filter(isOverdue);
   return firms.filter(f => f.status === activeFilter);
 }
+
 function render() { renderStats(); renderCards(); }
+
 function renderStats() {
   const total = firms.length;
   const t1 = firms.filter(f => f.tier === 1).length;
   const contacted = firms.filter(f => f.status !== 'not contacted').length;
   const active = firms.filter(f => f.status === 'in conversation').length;
+  const overdue = firms.filter(isOverdue).length;
   document.getElementById('stats').innerHTML =
     '<div class="stat"><div class="stat-label">Total firms</div><div class="stat-val">' + total + '</div></div>' +
     '<div class="stat"><div class="stat-label">Tier 1 targets</div><div class="stat-val">' + t1 + '</div></div>' +
     '<div class="stat"><div class="stat-label">Contacted</div><div class="stat-val">' + contacted + '</div></div>' +
     '<div class="stat"><div class="stat-label">In conversation</div><div class="stat-val">' + active + '</div></div>';
-  document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const oc = document.getElementById('overdue-count');
+  if (overdue > 0) { oc.style.display = 'inline'; oc.textContent = overdue + ' follow-up' + (overdue > 1 ? 's' : '') + ' overdue'; }
+  else { oc.style.display = 'none'; }
+  document.getElementById('last-updated') && (document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
 }
+
 function renderCards() {
   const list = filtered();
   document.getElementById('cards').innerHTML = list.map(f => {
     const sc = STATUS_CONFIG[f.status] || STATUS_CONFIG['not contacted'];
-    const links = [f.website && '<a class="link-btn" href="' + f.website + '" target="_blank">Website</a>', f.linkedin && '<a class="link-btn" href="' + f.linkedin + '" target="_blank">LinkedIn</a>'].filter(Boolean).join('');
+    const overdue = isOverdue(f);
+    const links = [
+      f.website && '<a class="link-btn" href="' + f.website + '" target="_blank">Website</a>',
+      f.linkedin && '<a class="link-btn" href="' + f.linkedin + '" target="_blank">LinkedIn</a>',
+      (f.contact && f.contact.includes('@')) && '<a class="link-btn" href="mailto:' + encodeURIComponent(f.contact) + '?subject=' + encodeURIComponent('Introduction - Everett Steele') + '&body=' + encodeURIComponent('Hi,\n\nI wanted to reach out regarding potential opportunities...') + '">Draft Email</a>',
+    ].filter(Boolean).join('');
     const statusOpts = STATUSES.map(s => '<button class="status-opt ' + (f.status === s ? 'selected' : '') + '" onclick="setStatus(' + f.id + ',\'' + s + '\',this)">' + STATUS_CONFIG[s].label + '</button>').join('');
-    return '<div class="card" id="card-' + f.id + '">' +
+    const lastContacted = f.last_contacted ? '<span class="meta-item">Last contacted: <strong>' + f.last_contacted + '</strong></span>' : '';
+    const followupVal = f.followup_date || '';
+    return '<div class="card' + (overdue ? ' overdue' : '') + '" id="card-' + f.id + '">' +
       '<div class="card-head" onclick="toggle(' + f.id + ')">' +
-        '<div class="firm-top"><span class="firm-name">' + f.name + '</span><span class="tier-badge t' + f.tier + '">Tier ' + f.tier + '</span></div>' +
+        '<div class="firm-top"><span class="firm-name">' + f.name + '</span><span class="tier-badge t' + f.tier + '">Tier ' + f.tier + '</span>' + (overdue ? '<span class="overdue-badge">Follow-up overdue</span>' : '') + '</div>' +
         '<span class="status-badge ' + sc.cls + '">' + sc.label + '</span>' +
         '<span class="chevron" id="chev-' + f.id + '">&#9660;</span>' +
       '</div>' +
@@ -177,36 +314,106 @@ function renderCards() {
           '<div><div class="field-label">How to reach them</div><div class="field-val">' + (f.contact || '-') + '</div>' + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '</div>' +
         '<div style="margin-top:14px"><div class="field-label">Status</div><div class="status-row">' + statusOpts + '</div></div>' +
+        '<div class="followup-row"><label>Follow-up date</label><input type="date" value="' + followupVal + '" onchange="saveFollowup(' + f.id + ', this.value)" /></div>' +
+        (lastContacted ? '<div class="meta-row">' + lastContacted + '</div>' : '') +
         '<div class="notes-label">Notes</div>' +
         '<textarea class="notes-area" id="notes-' + f.id + '" placeholder="Add notes..." onblur="saveNotes(' + f.id + ')">' + (f.notes || '') + '</textarea>' +
       '</div></div>';
   }).join('');
 }
+
 function toggle(id) { const b = document.getElementById('body-' + id); const c = document.getElementById('chev-' + id); const o = b.classList.toggle('open'); c.classList.toggle('open', o); }
+
 function setStatus(id, status, btn) {
   const firm = firms.find(f => f.id === id); if (!firm) return;
-  firm.status = status; patch(id, { status });
+  firm.status = status;
+  if (status !== 'not contacted') firm.last_contacted = new Date().toISOString().split('T')[0];
+  patch(id, { status });
   const card = document.getElementById('card-' + id);
   const sc = STATUS_CONFIG[status];
   card.querySelector('.status-badge').className = 'status-badge ' + sc.cls;
   card.querySelector('.status-badge').textContent = sc.label;
   card.querySelectorAll('.status-opt').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected'); renderStats();
+  btn.classList.add('selected');
+  const metaRow = card.querySelector('.meta-row');
+  if (firm.last_contacted) {
+    const html = '<span class="meta-item">Last contacted: <strong>' + firm.last_contacted + '</strong></span>';
+    if (metaRow) metaRow.innerHTML = html;
+  }
+  renderStats();
 }
+
 function saveNotes(id) { const val = document.getElementById('notes-' + id).value; const firm = firms.find(f => f.id === id); if (firm) firm.notes = val; patch(id, { notes: val }); }
+function saveFollowup(id, val) { const firm = firms.find(f => f.id === id); if (firm) firm.followup_date = val; patch(id, { followup_date: val }); renderStats(); }
+
 document.querySelectorAll('.filter-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); activeFilter = btn.dataset.filter; renderCards(); }); });
+
 function openModal() { document.getElementById('modal').classList.add('open'); document.getElementById('m-name').focus(); }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
 async function addFirm() {
   const name = document.getElementById('m-name').value.trim(); if (!name) return;
   const body = { name, tier: parseInt(document.getElementById('m-tier').value), why: document.getElementById('m-why').value.trim(), contact: document.getElementById('m-contact').value.trim(), website: document.getElementById('m-website').value.trim(), linkedin: document.getElementById('m-linkedin').value.trim() };
-  const r = await fetch('/api/firms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetch('/api/firms', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
   const firm = await r.json(); firms.push(firm); closeModal(); render();
   ['m-name','m-why','m-contact','m-website','m-linkedin'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('m-tier').value = '3';
 }
+
 document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
-load();
+document.getElementById('import-modal').addEventListener('click', e => { if (e.target === document.getElementById('import-modal')) closeImport(); });
+
+// CSV Export
+function exportCSV() {
+  const token = authToken;
+  window.location = '/api/export.csv?token=' + token;
+}
+
+// CSV Template download
+function openDownloadTemplate() {
+  const headers = 'name,tier,why,contact,website,linkedin,notes,status,followup_date';
+  const example = '"Example Firm",1,"Good SaaS fit","contact@example.com","https://example.com","https://linkedin.com/company/example","Notes here","not contacted","2026-04-01"';
+  const blob = new Blob([headers + '\n' + example], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tracker-template.csv'; a.click();
+}
+
+// CSV Import
+function openImport() { document.getElementById('import-modal').classList.add('open'); document.getElementById('import-result').style.display = 'none'; }
+function closeImport() { document.getElementById('import-modal').classList.remove('open'); document.getElementById('import-text').value = ''; }
+
+async function doImport() {
+  const raw = document.getElementById('import-text').value.trim();
+  if (!raw) return;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return;
+  const headers = parseCSVLine(lines[0]);
+  const rows = lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => r.name);
+  const r = await fetch('/api/import', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ rows }) });
+  const result = await r.json();
+  await load();
+  const el = document.getElementById('import-result');
+  el.style.display = 'block';
+  el.textContent = 'Done. ' + result.added + ' added, ' + result.updated + ' updated.';
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+init();
 </script>
 </body>
 </html>
