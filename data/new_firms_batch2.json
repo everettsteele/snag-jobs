@@ -1,0 +1,123 @@
+[
+  {
+    "name": "JM Search",
+    "tier": 1,
+    "why": "Managing Partner Andrew Henry leads Healthcare & Life Sciences practice. 20+ years PE-backed healthcare tech COO placements. Direct match on vertical SaaS + health tech background.",
+    "website": "https://jmsearch.com",
+    "contacts": [
+      { "name": "Andrew Henry", "title": "Managing Partner, Healthcare & Life Sciences", "email": "ahenry@jmsearch.com", "linkedin": "https://linkedin.com/in/andrew-henry-7179964/" }
+    ],
+    "status": "contacted",
+    "notes": "Also: Pam Zients (Partner, digital health COO specialist) and Kristy Lindquist (Practice Leader, digital health). Consider following up with them if Andrew doesn't respond."
+  },
+  {
+    "name": "Storm3",
+    "tier": 4,
+    "why": "US Commercial lead Perrin Joel heads NY office. Pure health tech specialist. Directly relevant given ChartRequest background.",
+    "website": "https://storm3.com",
+    "contacts": [
+      { "name": "Perrin Joel", "title": "Commercial Manager, US", "email": "perrin.joel@storm3.com", "linkedin": "" }
+    ],
+    "status": "contacted",
+    "notes": "Health tech only. Finance & Operations practice explicitly places COOs. Based in NYC World Trade Center."
+  },
+  {
+    "name": "Daversa Partners",
+    "tier": 1,
+    "why": "Will Sheridan is Director in Orlando office focusing on CEO/President/COO at growth-stage and VC-backed SaaS. Direct function match.",
+    "website": "https://daversa.com",
+    "contacts": [
+      { "name": "Will Sheridan", "title": "Director", "email": "will@daversa.com", "linkedin": "https://daversa.com/team" }
+    ],
+    "status": "contacted",
+    "notes": "Top-tier VC/growth-stage tech firm. Forbes #145 Best Executive Recruiting 2025. Email format: first@daversa.com"
+  },
+  {
+    "name": "StevenDouglas",
+    "tier": 2,
+    "why": "Drew Zachmann leads Operations & COO search nationally from Atlanta. PE-backed portfolio COO placements. Local market advantage.",
+    "website": "https://stevendouglas.com",
+    "contacts": [
+      { "name": "Drew Zachmann", "title": "Director, Operations & Supply Chain Executive Search", "email": "dzachmann@stevendouglas.com", "linkedin": "https://stevendouglas.com/who-we-are/team/drew-zachmann/" }
+    ],
+    "status": "contacted",
+    "notes": "Atlanta office. C-suite COO/CMO/CHRO/VP Ops search. PE-backed portfolio focus. Also: Matthew Beck leads national Sales/Marketing/Ops practice."
+  },
+  {
+    "name": "Acertitude",
+    "tier": 1,
+    "why": "Rick DeRose leads Technology & Healthcare practices. PE portfolio C-suite specialist. 200+ placements for Platinum Equity alone. Strong COO/ops track record.",
+    "website": "https://acertitude.com",
+    "contacts": [
+      { "name": "Rick DeRose", "title": "Co-Founder & Managing Partner, Technology & Healthcare", "email": "rderose@acertitude.com", "linkedin": "https://linkedin.com/in/deroserick/" }
+    ],
+    "status": "contacted",
+    "notes": "Forbes #139. Inc 500 3 consecutive years. PE Power 75 firm. Also: Kevin O'Neill (co-founder, COO placements in consumer/industrial). Email format: FLast@acertitude.com"
+  },
+  {
+    "name": "ON Partners",
+    "tier": 1,
+    "why": "Seth Harris is the SaaS practice partner. 20+ years placing C-level at VC-backed and PE-backed SaaS. Forbes #34 recruiting firm. Explicit SaaS COO work.",
+    "website": "https://onpartners.com",
+    "contacts": [
+      { "name": "Seth Harris", "title": "Partner, SaaS & Technology", "email": "sharris@onpartners.com", "linkedin": "https://linkedin.com/in/sethoharris/" }
+    ],
+    "status": "contacted",
+    "notes": "Pure-play retained search, Forbes #34. Partner-led model from day one. 85% client return rate. 95% new business from referrals. Also: Bryan Buck (Managing Partner) and Brad Westveld (Partner). Email format: FLast@onpartners.com"
+  },
+  {
+    "name": "CarterBaldwin Executive Search",
+    "tier": 1,
+    "why": "Atlanta HQ. Jennifer Sobocinski leads Technology practice. PE-backed company C-suite placements including COO. Strong local relationship advantage.",
+    "website": "https://carterbaldwin.com",
+    "contacts": [
+      { "name": "Jennifer Sobocinski", "title": "Founding Partner, Technology Practice", "email": "jsobocinski@carterbaldwin.com", "linkedin": "" }
+    ],
+    "status": "contacted",
+    "notes": "Atlanta HQ (Roswell, GA). Hunt Scanlon Top 50 and PE Power 75. Inc 500 twice. Also: Dave Sobocinski (Founding Partner, PE/mid-market C-suite). Email format: FLast@carterbaldwin.com"
+  },
+  {
+    "name": "Crist|Kolder Associates",
+    "tier": 1,
+    "why": "Scott Simmons is Co-Managing Partner leading COO and operating officer searches. Explicit COO practice. PE portfolio work. Annual COO Volatility Report signals deep functional expertise.",
+    "website": "https://cristkolder.com",
+    "contacts": [
+      { "name": "Scott Simmons", "title": "Co-Managing Partner", "email": "ssimmons@cristkolder.com", "linkedin": "https://linkedin.com/in/scott-w-simmons-b1b9942/" }
+    ],
+    "status": "contacted",
+    "notes": "Downers Grove IL. CEO/CFO/COO/Board specialist only. No off-limits issues (limited search volume). Clem Johnson (President) also relevant. Email format: FLast@cristkolder.com"
+  },
+  {
+    "name": "Slayton Search Partners",
+    "tier": 2,
+    "why": "Rick Slayton leads COO/CFO C-suite placement firm. Forbes #38. PE-backed portfolio focus. Explicit COO practice.",
+    "website": "https://slaytonsearch.com",
+    "contacts": [
+      { "name": "Rick Slayton", "title": "Managing Partner & CEO", "email": "rslayton@slaytonsearch.com", "linkedin": "https://linkedin.com/in/rickslayton/" }
+    ],
+    "status": "contacted",
+    "notes": "Chicago-based. Acquired by The Judge Group 2022 but operates independently. CFO/CIO/COO/CHRO/CMO/CSO/CTO specialist. Forbes #38. Email format: FLast@slaytonsearch.com"
+  },
+  {
+    "name": "Nexus Search Partners",
+    "tier": 2,
+    "why": "Thadd Jones founded firm from Amazon/Fortune 500 C-suite background. Charlotte-based. PE-backed COO/President placements. Diversity-forward retained search.",
+    "website": "https://nexussearchpartners.com",
+    "contacts": [
+      { "name": "Thaddeus Jones", "title": "Founder & Managing Partner", "email": "tjones@nexussearchpartners.com", "linkedin": "" }
+    ],
+    "status": "contacted",
+    "notes": "Charlotte NC. Founded 2023, fast-growing. Amazon AWS / Red Ventures background. Contact also at info@nexussearchpartners.com. Worth warm intro given shared civic/community engagement background."
+  },
+  {
+    "name": "Riviera Partners",
+    "tier": 3,
+    "why": "Ryan Brogan joined PE practice Sept 2025. PE portfolio COO and tech leadership placements. Primarily tech/engineering but PE practice does operating leader work.",
+    "website": "https://rivierapartners.com",
+    "contacts": [
+      { "name": "Ryan Brogan", "title": "Client Partner, Private Equity Practice", "email": "rbrogan@rivierapartners.com", "linkedin": "https://linkedin.com/in/ryanbrogan/" }
+    ],
+    "status": "contacted",
+    "notes": "Primarily CTO/CPO/VP Eng. PE practice under Brogan does COO-adjacent work. Worth a shot but lower probability than Tier 1. Email format: FLast@rivierapartners.com"
+  }
+]
