@@ -14,9 +14,10 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) {
 const sessions = new Set();
 
 const SEED_FIRMS = [
+  // ---- TIER 1: PRIORITY ----
   {
     id: 1, tier: 1, name: 'Bespoke Partners',
-    why: 'Top PE-backed SaaS exec search. Places COO/President roles. Exact profile match.',
+    why: 'Top PE-backed SaaS exec search. Places COO/President roles. Also has a dedicated healthcare software practice.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/bespoke-partners/', website: 'https://bespokepartners.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
@@ -34,7 +35,7 @@ const SEED_FIRMS = [
   },
   {
     id: 3, tier: 1, name: 'Cowen Partners',
-    why: 'Forbes Top 100. PE-backed COO specialists. Deep ops practice. Fast time-to-fill.',
+    why: 'Forbes Top 100. PE-backed COO specialists. Deep ops practice. Fast time-to-fill. Also listed as top healthcare executive recruiter.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/cowen-partners/', website: 'https://cowenpartners.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
@@ -59,6 +60,7 @@ const SEED_FIRMS = [
       { id: 1, name: 'Callie Vandegrift', title: 'Recruiter', email: '', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Already connected. Put Everett on radar for President role in March. Has resume and full context.' }
     ]
   },
+  // ---- TIER 2: SECONDARY ----
   {
     id: 6, tier: 2, name: 'True Search',
     why: 'PE/VC tech companies. Transparent process. Strong Series B/C COO practice.',
@@ -105,10 +107,11 @@ const SEED_FIRMS = [
       { id: 1, name: 'Kevin Stemke', title: 'Practice Leader', email: 'kevin.stemke@charlesaris.com', linkedin: 'https://www.linkedin.com/in/kevinstemke/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. LinkedIn connection sent.' }
     ]
   },
+  // ---- TIER 3: OPPORTUNISTIC ----
   {
     id: 11, tier: 3, name: 'ReadySetExec',
     why: 'Founder-led boutique. Operations and SaaS focus. Relationship-first process.',
-    status: 'contacted', notes: 'patrick@readysetexec.com and patrick.shea@readysetexec.com both bounced. Correct address confirmed as pshea@readysetexec.com. Resent 3/26.', linkedin: '', website: 'https://readysetexec.com',
+    status: 'contacted', notes: 'patrick@ and patrick.shea@ both bounced. Correct address confirmed as pshea@readysetexec.com. Resent 3/26.', linkedin: '', website: 'https://readysetexec.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
       { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'pshea@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'patrick@ and patrick.shea@ both bounced. Correct address is pshea@readysetexec.com. Resent 3/26.' }
@@ -131,6 +134,35 @@ const SEED_FIRMS = [
     contacts: [
       { id: 1, name: 'Nora Sutherland', title: 'MOVED TO TRUE SEARCH', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'nora.sutherland@divsearch.com bounced. Nora is now at True Search. See True Search entry.' }
     ]
+  },
+  // ---- TIER 4: HEALTH TECH SPECIALISTS ----
+  {
+    id: 14, tier: 4, name: 'Direct Recruiters Inc. (DRI)',
+    why: 'Dedicated digital health and healthcare IT executive search practice. Placed COOs, VPs, and C-suite at health SaaS companies. ChartRequest background is directly relevant.',
+    status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/direct-recruiters-inc/', website: 'https://directrecruiters.com',
+    last_contacted: null, followup_date: null,
+    contacts: [
+      { id: 1, name: 'Norman Volsky', title: 'Managing Partner, Digital Health Practice', email: 'nvolsky@directrecruiters.com', linkedin: 'https://www.linkedin.com/in/normanvolsky/', last_contacted: null, status: 'not contacted', notes: 'Digital Health Heavyweights Podcast host. Deep network in digital health and employer tech SaaS. Primary target at DRI.' },
+      { id: 2, name: 'Mike Silverstein', title: 'Managing Partner, Healthcare IT Practice', email: 'msilverstein@directrecruiters.com', linkedin: 'https://www.linkedin.com/in/mikesilverstein1/', last_contacted: null, status: 'not contacted', notes: 'Leads Healthcare IT practice. PE and VC portfolio company specialist. Pinnacle Society member.' }
+    ]
+  },
+  {
+    id: 15, tier: 4, name: 'JM Search',
+    why: 'Premier PE-focused retained search firm with dedicated digital health and HCIT practice. Top 40 Hunt Scanlon healthcare firm. Partners stay close to every search.',
+    status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/jm-search/', website: 'https://jmsearch.com',
+    last_contacted: null, followup_date: null,
+    contacts: [
+      { id: 1, name: 'Digital Health Practice', title: 'Practice Lead (research needed)', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Need to identify the specific partner leading digital health / HCIT COO searches. Based in King of Prussia, PA. Research before outreach.' }
+    ]
+  },
+  {
+    id: 16, tier: 4, name: 'Storm3',
+    why: 'Leading US HealthTech-specialist recruiter. Places C-suite and VP-level leaders at health tech startups and scaleups. Exact vertical fit for ChartRequest-type companies.',
+    status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/storm3/', website: 'https://storm3.com',
+    last_contacted: null, followup_date: null,
+    contacts: [
+      { id: 1, name: 'US Team', title: 'Executive Search (NYC office)', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Need to identify the specific US-based partner for C-suite ops roles. Micro-specialist model. Research before outreach.' }
+    ]
   }
 ];
 
@@ -140,17 +172,9 @@ function loadDB() {
     return SEED_FIRMS;
   }
   const firms = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-  return firms.map(f => ({
-    last_contacted: null,
-    followup_date: null,
-    contacts: [],
-    ...f
-  }));
+  return firms.map(f => ({ last_contacted: null, followup_date: null, contacts: [], ...f }));
 }
-
-function saveDB(firms) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(firms, null, 2));
-}
+function saveDB(firms) { fs.writeFileSync(DB_PATH, JSON.stringify(firms, null, 2)); }
 
 function requireAuth(req, res, next) {
   if (!PASSWORD) return next();
@@ -165,11 +189,8 @@ app.post('/api/login', (req, res) => {
   if (!PASSWORD) return res.json({ ok: true, token: 'no-auth' });
   if (req.body.password === PASSWORD) {
     const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    sessions.add(token);
-    res.json({ ok: true, token });
-  } else {
-    res.status(401).json({ error: 'Wrong password' });
-  }
+    sessions.add(token); res.json({ ok: true, token });
+  } else res.status(401).json({ error: 'Wrong password' });
 });
 
 app.get('/api/auth-required', (req, res) => res.json({ required: !!PASSWORD }));
@@ -180,33 +201,15 @@ app.patch('/api/firms/:id', requireAuth, (req, res) => {
   const firms = loadDB();
   const idx = firms.findIndex(f => f.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  const allowed = ['status', 'notes', 'followup_date'];
-  allowed.forEach(k => { if (req.body[k] !== undefined) firms[idx][k] = req.body[k]; });
-  if (req.body.status && req.body.status !== 'not contacted') {
-    firms[idx].last_contacted = new Date().toISOString().split('T')[0];
-  }
-  saveDB(firms);
-  res.json(firms[idx]);
+  ['status', 'notes', 'followup_date'].forEach(k => { if (req.body[k] !== undefined) firms[idx][k] = req.body[k]; });
+  if (req.body.status && req.body.status !== 'not contacted') firms[idx].last_contacted = new Date().toISOString().split('T')[0];
+  saveDB(firms); res.json(firms[idx]);
 });
 
 app.post('/api/firms', requireAuth, (req, res) => {
   const firms = loadDB();
-  const next = {
-    id: Math.max(0, ...firms.map(f => f.id)) + 1,
-    tier: req.body.tier || 3,
-    name: req.body.name || 'New Firm',
-    why: req.body.why || '',
-    status: 'not contacted',
-    notes: '',
-    linkedin: req.body.linkedin || '',
-    website: req.body.website || '',
-    last_contacted: null,
-    followup_date: null,
-    contacts: []
-  };
-  firms.push(next);
-  saveDB(firms);
-  res.status(201).json(next);
+  const next = { id: Math.max(0, ...firms.map(f => f.id)) + 1, tier: req.body.tier || 3, name: req.body.name || 'New Firm', why: req.body.why || '', status: 'not contacted', notes: '', linkedin: req.body.linkedin || '', website: req.body.website || '', last_contacted: null, followup_date: null, contacts: [] };
+  firms.push(next); saveDB(firms); res.status(201).json(next);
 });
 
 app.post('/api/firms/:id/contacts', requireAuth, (req, res) => {
@@ -215,55 +218,35 @@ app.post('/api/firms/:id/contacts', requireAuth, (req, res) => {
   const firm = firms.find(f => f.id === id);
   if (!firm) return res.status(404).json({ error: 'Firm not found' });
   const contacts = firm.contacts || [];
-  const contact = {
-    id: Math.max(0, ...contacts.map(c => c.id)) + 1,
-    name: req.body.name || '',
-    title: req.body.title || '',
-    email: req.body.email || '',
-    linkedin: req.body.linkedin || '',
-    last_contacted: req.body.last_contacted || null,
-    status: req.body.status || 'not contacted',
-    notes: req.body.notes || ''
-  };
-  firm.contacts = [...contacts, contact];
-  saveDB(firms);
-  res.status(201).json(contact);
+  const contact = { id: Math.max(0, ...contacts.map(c => c.id)) + 1, name: req.body.name || '', title: req.body.title || '', email: req.body.email || '', linkedin: req.body.linkedin || '', last_contacted: req.body.last_contacted || null, status: req.body.status || 'not contacted', notes: req.body.notes || '' };
+  firm.contacts = [...contacts, contact]; saveDB(firms); res.status(201).json(contact);
 });
 
 app.patch('/api/firms/:id/contacts/:cid', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id);
-  const cid = parseInt(req.params.cid);
+  const id = parseInt(req.params.id), cid = parseInt(req.params.cid);
   const firms = loadDB();
   const firm = firms.find(f => f.id === id);
   if (!firm) return res.status(404).json({ error: 'Firm not found' });
   const contact = (firm.contacts || []).find(c => c.id === cid);
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
-  ['name', 'title', 'email', 'linkedin', 'last_contacted', 'status', 'notes'].forEach(k => {
-    if (req.body[k] !== undefined) contact[k] = req.body[k];
-  });
-  saveDB(firms);
-  res.json(contact);
+  ['name', 'title', 'email', 'linkedin', 'last_contacted', 'status', 'notes'].forEach(k => { if (req.body[k] !== undefined) contact[k] = req.body[k]; });
+  saveDB(firms); res.json(contact);
 });
 
 app.delete('/api/firms/:id/contacts/:cid', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id);
-  const cid = parseInt(req.params.cid);
+  const id = parseInt(req.params.id), cid = parseInt(req.params.cid);
   const firms = loadDB();
   const firm = firms.find(f => f.id === id);
   if (!firm) return res.status(404).json({ error: 'Firm not found' });
   firm.contacts = (firm.contacts || []).filter(c => c.id !== cid);
-  saveDB(firms);
-  res.json({ ok: true });
+  saveDB(firms); res.json({ ok: true });
 });
 
 app.get('/api/export.csv', requireAuth, (req, res) => {
   const firms = loadDB();
   const headers = ['id', 'tier', 'name', 'status', 'last_contacted', 'followup_date', 'why', 'website', 'linkedin', 'notes', 'contacts_count'];
   const escape = v => '"' + String(v || '').replace(/"/g, '""') + '"';
-  const rows = firms.map(f => [
-    ...headers.slice(0, -1).map(h => escape(f[h])),
-    escape((f.contacts || []).length)
-  ].join(','));
+  const rows = firms.map(f => [...headers.slice(0,-1).map(h => escape(f[h])), escape((f.contacts||[]).length)].join(','));
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="recruiter-tracker.csv"');
   res.send([headers.join(','), ...rows].join('\n'));
@@ -277,30 +260,15 @@ app.post('/api/import', requireAuth, (req, res) => {
   rows.forEach(row => {
     const existing = firms.find(f => f.name.toLowerCase() === (row.name || '').toLowerCase());
     if (existing) {
-      ['tier', 'why', 'website', 'linkedin', 'notes', 'status', 'followup_date'].forEach(k => {
-        if (row[k] !== undefined && row[k] !== '') existing[k] = row[k];
-      });
+      ['tier', 'why', 'website', 'linkedin', 'notes', 'status', 'followup_date'].forEach(k => { if (row[k] !== undefined && row[k] !== '') existing[k] = row[k]; });
       updated++;
     } else {
-      firms.push({
-        id: Math.max(0, ...firms.map(f => f.id)) + 1,
-        tier: parseInt(row.tier) || 3,
-        name: row.name || 'Unnamed',
-        why: row.why || '',
-        status: row.status || 'not contacted',
-        notes: row.notes || '',
-        linkedin: row.linkedin || '',
-        website: row.website || '',
-        last_contacted: row.last_contacted || null,
-        followup_date: row.followup_date || null,
-        contacts: []
-      });
+      firms.push({ id: Math.max(0, ...firms.map(f => f.id)) + 1, tier: parseInt(row.tier) || 3, name: row.name || 'Unnamed', why: row.why || '', status: row.status || 'not contacted', notes: row.notes || '', linkedin: row.linkedin || '', website: row.website || '', last_contacted: row.last_contacted || null, followup_date: row.followup_date || null, contacts: [] });
       added++;
     }
   });
-  saveDB(firms);
-  res.json({ ok: true, added, updated });
+  saveDB(firms); res.json({ ok: true, added, updated });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, () => console.log('Recruiter tracker running on :' + PORT));
+app.listen(PORT, () => console.log('Meridian CRM running on :' + PORT));
