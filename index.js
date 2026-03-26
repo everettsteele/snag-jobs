@@ -35,7 +35,7 @@ const SEED_FIRMS = [
   },
   {
     id: 3, tier: 1, name: 'Cowen Partners',
-    why: 'Forbes Top 100. PE-backed COO specialists. Deep ops practice. Fast time-to-fill. Also listed as top healthcare executive recruiter.',
+    why: 'Forbes Top 100. PE-backed COO specialists. Deep ops practice. Fast time-to-fill.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/cowen-partners/', website: 'https://cowenpartners.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
@@ -57,49 +57,85 @@ const SEED_FIRMS = [
     status: 'in conversation', notes: 'Callie connected Everett to colleagues. Flagged a President role for March.', linkedin: '', website: '',
     last_contacted: '2026-03-26', followup_date: null,
     contacts: [
-      { id: 1, name: 'Callie Vandegrift', title: 'Recruiter', email: '', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Already connected. Put Everett on radar for President role in March. Has resume and full context.' }
+      { id: 1, name: 'Callie Vandegrift', title: 'Recruiter', email: '', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Already connected. Has resume and full context.' }
+    ]
+  },
+  {
+    id: 6, tier: 1, name: 'JM Search',
+    why: 'Managing Partner Andrew Henry leads Healthcare & Life Sciences. 20+ years PE-backed healthcare tech COO placements. Hunt Scanlon Top 50 healthcare search firm.',
+    status: 'contacted', notes: 'Also: Pam Zients (Partner, digital health COO) and Kristy Lindquist (Practice Leader, digital health). Follow up with them if Andrew does not respond.', linkedin: 'https://www.linkedin.com/company/jm-search/', website: 'https://jmsearch.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Andrew Henry', title: 'Managing Partner, Healthcare & Life Sciences', email: 'ahenry@jmsearch.com', linkedin: 'https://www.linkedin.com/in/andrew-henry-7179964/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Co-leads digital health and HCIT practice. 20+ years. Perfect vertical match.' }
+    ]
+  },
+  {
+    id: 7, tier: 1, name: 'Daversa Partners',
+    why: 'Will Sheridan focuses on CEO/President/COO at growth-stage VC-backed SaaS. Forbes #145. Strong Series B/C sweet spot.',
+    status: 'contacted', notes: 'Email format: first@daversa.com', linkedin: 'https://www.linkedin.com/company/daversa-partners/', website: 'https://daversa.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Will Sheridan', title: 'Director, Orlando Office', email: 'will@daversa.com', linkedin: 'https://daversa.com/team', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Explicit CEO/President/COO focus at growth-stage companies.' }
+    ]
+  },
+  {
+    id: 8, tier: 1, name: 'Acertitude',
+    why: 'Rick DeRose leads Technology & Healthcare practices. PE portfolio C-suite specialist. 200+ placements for Platinum Equity alone. Forbes #139. Strong COO/ops track record.',
+    status: 'contacted', notes: 'Email format: FLast@acertitude.com. Also: Kevin O\'Neill (co-founder). Inc 500 three consecutive years. PE Power 75 firm.', linkedin: 'https://www.linkedin.com/company/acertitude/', website: 'https://acertitude.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Rick DeRose', title: 'Co-Founder & Managing Partner, Technology & Healthcare', email: 'rderose@acertitude.com', linkedin: 'https://www.linkedin.com/in/deroserick/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Oversees Technology and Healthcare practices. 20+ years PE portfolio C-suite placements.' }
+    ]
+  },
+  {
+    id: 9, tier: 1, name: 'ON Partners',
+    why: 'Seth Harris is the dedicated SaaS practice partner. Forbes #34. Partner-led from day 1. 85% client return rate. Explicit VC/PE SaaS COO and C-suite work.',
+    status: 'contacted', notes: 'Email format: FLast@onpartners.com. Also: Bryan Buck (Managing Partner) and Brad Westveld (Partner).', linkedin: 'https://www.linkedin.com/company/on-search-partners/', website: 'https://onpartners.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Seth Harris', title: 'Partner, SaaS & Technology', email: 'sharris@onpartners.com', linkedin: 'https://www.linkedin.com/in/sethoharris/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. SaaS practice specialist. IBM/Christian & Timbers background. 20+ years.' }
+    ]
+  },
+  {
+    id: 10, tier: 1, name: 'CarterBaldwin Executive Search',
+    why: 'Atlanta HQ (Roswell). Jennifer Sobocinski leads Technology practice. PE-backed C-suite placements including COO. Hunt Scanlon Top 50. Inc 500 twice. Local relationship advantage.',
+    status: 'contacted', notes: 'Email format: FLast@carterbaldwin.com. Also: Dave Sobocinski (Founding Partner, PE/mid-market). Roswell GA office on Mansell Road.', linkedin: 'https://www.linkedin.com/company/carterbaldwin/', website: 'https://carterbaldwin.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Jennifer Sobocinski', title: 'Founding Partner, Technology Practice', email: 'jsobocinski@carterbaldwin.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Leads technology practice. Strong local Atlanta market advantage. Personal note added re: Andre Dickens connection.' }
+    ]
+  },
+  {
+    id: 11, tier: 1, name: 'Crist|Kolder Associates',
+    why: 'Scott Simmons explicitly leads COO and operating officer searches. Focused exclusively on CEO/CFO/COO/Board. No off-limits conflicts. PE portfolio work.',
+    status: 'contacted', notes: 'Email format: FLast@cristkolder.com. Also: Clem Johnson (President, tech/industrial). Downers Grove IL.', linkedin: 'https://www.linkedin.com/company/crist-kolder-associates/', website: 'https://cristkolder.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Scott Simmons', title: 'Co-Managing Partner', email: 'ssimmons@cristkolder.com', linkedin: 'https://www.linkedin.com/in/scott-w-simmons-b1b9942/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Leads COO and operating officer searches. PE portfolio clients include Elevance, Fiserv, Culligan.' }
     ]
   },
   // ---- TIER 2: SECONDARY ----
   {
-    id: 6, tier: 2, name: 'True Search',
+    id: 12, tier: 2, name: 'True Search',
     why: 'PE/VC tech companies. Transparent process. Strong Series B/C COO practice.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/true-search/', website: 'https://trueplatform.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
       { id: 1, name: 'Steve Tutelman', title: 'Managing Director, PE Practice', email: 'steve.tutelman@truesearch.com', linkedin: 'https://www.linkedin.com/in/stevetutelman/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26.' },
-      { id: 2, name: 'Nora Sutherland', title: 'Partner, Technology Practice', email: 'nora.sutherland@trueplatform.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Formerly at DSG. Emailed at True Search address 3/26. DSG address confirmed bounced.' }
+      { id: 2, name: 'Nora Sutherland', title: 'Partner, Technology Practice', email: 'nora.sutherland@trueplatform.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Formerly at DSG. Emailed at True Search address 3/26.' }
     ]
   },
   {
-    id: 7, tier: 2, name: 'Heidrick and Struggles',
-    why: 'National. COO practice. Good for high-profile PE-backed ops roles at scale.',
-    status: 'contacted', notes: 'Emailed Doug Greenberg at Heidrick address but he is confirmed at Korn Ferry. This entry may be a dead end.', linkedin: 'https://www.linkedin.com/company/heidrick-struggles/', website: 'https://heidrick.com',
-    last_contacted: '2026-03-26', followup_date: null,
-    contacts: [
-      { id: 1, name: 'Doug Greenberg', title: 'NOTE: Confirmed at Korn Ferry, not Heidrick', email: 'doug.greenberg@heidrick.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Emailed Heidrick address 3/26 but Doug is at Korn Ferry. See Korn Ferry entry.' }
-    ]
-  },
-  {
-    id: 8, tier: 2, name: 'Korn Ferry',
+    id: 13, tier: 2, name: 'Korn Ferry',
     why: 'Large national firm. COO/SVP Ops practice. Best for Series C/D and PE-owned companies.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/kornferry/', website: 'https://kornferry.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
-      { id: 1, name: 'Doug Greenberg', title: 'Senior Partner, Healthcare Technology', email: 'doug.greenberg@kornferry.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. LinkedIn connection pending (ran out of free connects this month).' }
+      { id: 1, name: 'Doug Greenberg', title: 'Senior Partner, Healthcare Technology', email: 'doug.greenberg@kornferry.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. LinkedIn connection pending — out of free connects this month.' }
     ]
   },
   {
-    id: 9, tier: 2, name: 'TGC Search',
-    why: 'Placed COOs for IPO-prep SaaS. Experience in scaling scenarios like ChartRequest.',
-    status: 'contacted', notes: 'No named partner found. Sent to general info inbox.', linkedin: 'https://www.linkedin.com/company/tgc-search/', website: 'https://tgcsearch.com',
-    last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    contacts: [
-      { id: 1, name: 'General Inbox', title: '', email: 'info@tgcsearch.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'No named partner surfaced. Emailed general inbox 3/26. Follow up by finding a named contact.' }
-    ]
-  },
-  {
-    id: 10, tier: 2, name: 'Charles Aris',
+    id: 14, tier: 2, name: 'Charles Aris',
     why: 'NC-based, national reach. Consistent COO placements in Southeast growth companies.',
     status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/charles-aris-inc-/', website: 'https://charlesaris.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
@@ -107,9 +143,45 @@ const SEED_FIRMS = [
       { id: 1, name: 'Kevin Stemke', title: 'Practice Leader', email: 'kevin.stemke@charlesaris.com', linkedin: 'https://www.linkedin.com/in/kevinstemke/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. LinkedIn connection sent.' }
     ]
   },
+  {
+    id: 15, tier: 2, name: 'StevenDouglas',
+    why: 'Drew Zachmann leads Operations & COO search from Atlanta. PE-backed portfolio COO placements. Georgia Southern grad. Local market advantage.',
+    status: 'contacted', notes: 'Also: Matthew Beck (national Sales/Marketing/Ops practice leader). HQ in South Florida but Atlanta office active.', linkedin: '', website: 'https://stevendouglas.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Drew Zachmann', title: 'Director, Operations & Supply Chain Executive Search', email: 'dzachmann@stevendouglas.com', linkedin: 'https://stevendouglas.com/who-we-are/team/drew-zachmann/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Atlanta-based. CEO/COO/CMO/CHRO/VP Ops search across PE-backed portfolio companies.' }
+    ]
+  },
+  {
+    id: 16, tier: 2, name: 'Slayton Search Partners',
+    why: 'Rick Slayton leads COO/CFO C-suite placement firm. Forbes #38. PE-backed portfolio focus. Explicit CEO/COO/CFO/CHRO/CMO/CSO/CTO practice.',
+    status: 'contacted', notes: 'Acquired by The Judge Group 2022 but operates independently. Chicago-based. Email format: FLast@slaytonsearch.com', linkedin: 'https://www.linkedin.com/company/slayton-search-partners/', website: 'https://slaytonsearch.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Rick Slayton', title: 'Managing Partner & CEO', email: 'rslayton@slaytonsearch.com', linkedin: 'https://www.linkedin.com/in/rickslayton/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Forbes #38. Lifetime Achievement Award from AESC 2025.' }
+    ]
+  },
+  {
+    id: 17, tier: 2, name: 'Nexus Search Partners',
+    why: 'Thadd Jones founded from Amazon AWS / Fortune 50 background. Charlotte-based. PE-backed COO/President placements. Fast-growing. Strong diversity lens.',
+    status: 'contacted', notes: 'Contact also at info@nexussearchpartners.com. Founded 2023. Warm outreach angle: shared civic/community engagement background.', linkedin: '', website: 'https://nexussearchpartners.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Thaddeus Jones', title: 'Founder & Managing Partner', email: 'tjones@nexussearchpartners.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Amazon AWS / Lowe\'s / Target background. Charlotte NC. Placed COOs and Presidents at PE-backed companies.' }
+    ]
+  },
   // ---- TIER 3: OPPORTUNISTIC ----
   {
-    id: 11, tier: 3, name: 'ReadySetExec',
+    id: 18, tier: 3, name: 'Riviera Partners',
+    why: 'Ryan Brogan joined PE practice Sept 2025. Primarily tech/engineering/product but PE practice does operating leader work. COO-adjacent placements at growth-stage companies.',
+    status: 'contacted', notes: 'Primarily CTO/CPO/VP Eng. PE practice is the relevant angle. Email format: FLast@rivierapartners.com.', linkedin: 'https://www.linkedin.com/company/riviera-partners/', website: 'https://rivierapartners.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'Ryan Brogan', title: 'Client Partner, Private Equity Practice', email: 'rbrogan@rivierapartners.com', linkedin: 'https://www.linkedin.com/in/ryanbrogan/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Joined Riviera PE practice Sept 2025. Previously founded Brogan Search.' }
+    ]
+  },
+  {
+    id: 19, tier: 3, name: 'ReadySetExec',
     why: 'Founder-led boutique. Operations and SaaS focus. Relationship-first process.',
     status: 'contacted', notes: 'patrick@ and patrick.shea@ both bounced. Correct address confirmed as pshea@readysetexec.com. Resent 3/26.', linkedin: '', website: 'https://readysetexec.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
@@ -118,7 +190,7 @@ const SEED_FIRMS = [
     ]
   },
   {
-    id: 12, tier: 3, name: 'Klein Hersh',
+    id: 20, tier: 3, name: 'Klein Hersh',
     why: 'Healthcare tech and digital health SaaS. ChartRequest background is a specific credential here.',
     status: 'contacted', notes: 'jesse@kleinhersh.com bounced. Correct address is jklein@kleinhersh.com. Resent 3/26.', linkedin: 'https://www.linkedin.com/company/klein-hersh/', website: 'https://kleinhersh.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
@@ -127,18 +199,36 @@ const SEED_FIRMS = [
     ]
   },
   {
-    id: 13, tier: 3, name: 'Diversified Search Group',
-    why: 'PE-backed tech practice. Primary contact Nora Sutherland has since moved to True Search.',
-    status: 'passed', notes: 'Nora Sutherland moved to True Search. DSG address bounced. No replacement contact identified. Dead end.', linkedin: 'https://www.linkedin.com/company/diversifiedsearchgroup/', website: 'https://diversifiedsearchgroup.com',
+    id: 21, tier: 3, name: 'TGC Search',
+    why: 'Placed COOs for IPO-prep SaaS. Experience in scaling scenarios like ChartRequest.',
+    status: 'contacted', notes: 'No named partner found. Sent to general info inbox.', linkedin: 'https://www.linkedin.com/company/tgc-search/', website: 'https://tgcsearch.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
+    contacts: [
+      { id: 1, name: 'General Inbox', title: '', email: 'info@tgcsearch.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'No named partner surfaced. Emailed general inbox 3/26. Follow up: find a named contact.' }
+    ]
+  },
+  {
+    id: 22, tier: 3, name: 'Heidrick and Struggles',
+    why: 'National. COO practice. Good for high-profile PE-backed ops roles at scale.',
+    status: 'contacted', notes: 'Emailed Doug Greenberg at Heidrick address but he is confirmed at Korn Ferry. This entry may be a dead end.', linkedin: 'https://www.linkedin.com/company/heidrick-struggles/', website: 'https://heidrick.com',
     last_contacted: '2026-03-26', followup_date: null,
     contacts: [
-      { id: 1, name: 'Nora Sutherland', title: 'MOVED TO TRUE SEARCH', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'nora.sutherland@divsearch.com bounced. Nora is now at True Search. See True Search entry.' }
+      { id: 1, name: 'Doug Greenberg', title: 'NOTE: Confirmed at Korn Ferry, not Heidrick', email: 'doug.greenberg@heidrick.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Doug is at Korn Ferry. See Korn Ferry entry.' }
+    ]
+  },
+  {
+    id: 23, tier: 3, name: 'Diversified Search Group',
+    why: 'PE-backed tech practice. Primary contact Nora Sutherland moved to True Search.',
+    status: 'passed', notes: 'Nora Sutherland moved to True Search. DSG address bounced. Dead end.', linkedin: 'https://www.linkedin.com/company/diversifiedsearchgroup/', website: 'https://diversifiedsearchgroup.com',
+    last_contacted: '2026-03-26', followup_date: null,
+    contacts: [
+      { id: 1, name: 'Nora Sutherland', title: 'MOVED TO TRUE SEARCH', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Bounced. Nora is now at True Search. See True Search entry.' }
     ]
   },
   // ---- TIER 4: HEALTH TECH SPECIALISTS ----
   {
-    id: 14, tier: 4, name: 'Direct Recruiters Inc. (DRI)',
-    why: 'Dedicated digital health and healthcare IT executive search practice. Placed COOs, VPs, and C-suite at health SaaS companies. ChartRequest background is directly relevant.',
+    id: 24, tier: 4, name: 'Direct Recruiters Inc. (DRI)',
+    why: 'Dedicated digital health and healthcare IT executive search. Placed COOs and C-suite at health SaaS. ChartRequest background directly relevant.',
     status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/direct-recruiters-inc/', website: 'https://directrecruiters.com',
     last_contacted: null, followup_date: null,
     contacts: [
@@ -147,21 +237,12 @@ const SEED_FIRMS = [
     ]
   },
   {
-    id: 15, tier: 4, name: 'JM Search',
-    why: 'Premier PE-focused retained search firm with dedicated digital health and HCIT practice. Top 40 Hunt Scanlon healthcare firm. Partners stay close to every search.',
-    status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/jm-search/', website: 'https://jmsearch.com',
-    last_contacted: null, followup_date: null,
+    id: 25, tier: 4, name: 'Storm3',
+    why: 'Leading US HealthTech-specialist recruiter. Places C-suite and VP-level leaders at health tech startups and scaleups. Finance & Operations practice explicitly places COOs.',
+    status: 'contacted', notes: 'NY office at One World Trade Center. Micro-specialist model. Email format: first.last@storm3.com.', linkedin: 'https://www.linkedin.com/company/storm3/', website: 'https://storm3.com',
+    last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
-      { id: 1, name: 'Digital Health Practice', title: 'Practice Lead (research needed)', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Need to identify the specific partner leading digital health / HCIT COO searches. Based in King of Prussia, PA. Research before outreach.' }
-    ]
-  },
-  {
-    id: 16, tier: 4, name: 'Storm3',
-    why: 'Leading US HealthTech-specialist recruiter. Places C-suite and VP-level leaders at health tech startups and scaleups. Exact vertical fit for ChartRequest-type companies.',
-    status: 'not contacted', notes: '', linkedin: 'https://www.linkedin.com/company/storm3/', website: 'https://storm3.com',
-    last_contacted: null, followup_date: null,
-    contacts: [
-      { id: 1, name: 'US Team', title: 'Executive Search (NYC office)', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Need to identify the specific US-based partner for C-suite ops roles. Micro-specialist model. Research before outreach.' }
+      { id: 1, name: 'Perrin Joel', title: 'Commercial Manager, US', email: 'perrin.joel@storm3.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. US Commercial lead. Based at NYC World Trade Center office. HealthTech Finance & Operations practice.' }
     ]
   }
 ];
