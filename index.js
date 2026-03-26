@@ -66,7 +66,7 @@ const SEED_FIRMS = [
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
       { id: 1, name: 'Steve Tutelman', title: 'Managing Director, PE Practice', email: 'steve.tutelman@truesearch.com', linkedin: 'https://www.linkedin.com/in/stevetutelman/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26.' },
-      { id: 2, name: 'Nora Sutherland', title: 'Partner, Technology Practice', email: 'nora.sutherland@trueplatform.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Formerly at DSG. Emailed at new True Search address 3/26. Also emailed old DSG address earlier same day.' }
+      { id: 2, name: 'Nora Sutherland', title: 'Partner, Technology Practice', email: 'nora.sutherland@trueplatform.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Formerly at DSG. Emailed at True Search address 3/26. DSG address confirmed bounced.' }
     ]
   },
   {
@@ -108,28 +108,28 @@ const SEED_FIRMS = [
   {
     id: 11, tier: 3, name: 'ReadySetExec',
     why: 'Founder-led boutique. Operations and SaaS focus. Relationship-first process.',
-    status: 'contacted', notes: '', linkedin: '', website: 'https://readysetexec.com',
+    status: 'contacted', notes: 'patrick@readysetexec.com bounced. Retried patrick.shea@readysetexec.com on 3/26.', linkedin: '', website: 'https://readysetexec.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
-      { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'patrick@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. LinkedIn connection sent.' }
+      { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'patrick.shea@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'patrick@readysetexec.com bounced. Resent to patrick.shea@readysetexec.com on 3/26. LinkedIn connection sent.' }
     ]
   },
   {
     id: 12, tier: 3, name: 'Klein Hersh',
     why: 'Healthcare tech and digital health SaaS. ChartRequest background is a specific credential here.',
-    status: 'contacted', notes: '', linkedin: 'https://www.linkedin.com/company/klein-hersh/', website: 'https://kleinhersh.com',
+    status: 'contacted', notes: 'jesse@kleinhersh.com bounced. Correct address is jklein@kleinhersh.com. Resent 3/26.', linkedin: 'https://www.linkedin.com/company/klein-hersh/', website: 'https://kleinhersh.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
-      { id: 1, name: 'Jesse Klein', title: 'Managing Director & COO', email: 'jesse@kleinhersh.com', linkedin: 'https://www.linkedin.com/in/kleinjesse/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Emailed 3/26. Healthcare tech angle highlighted given ChartRequest background.' }
+      { id: 1, name: 'Jesse Klein', title: 'Managing Director & COO', email: 'jklein@kleinhersh.com', linkedin: 'https://www.linkedin.com/in/kleinjesse/', last_contacted: '2026-03-26', status: 'emailed', notes: 'jesse@kleinhersh.com bounced. Correct address confirmed as jklein@kleinhersh.com. Resent 3/26.' }
     ]
   },
   {
     id: 13, tier: 3, name: 'Diversified Search Group',
     why: 'PE-backed tech practice. Primary contact Nora Sutherland has since moved to True Search.',
-    status: 'passed', notes: 'Nora Sutherland confirmed moved to True Search. No replacement contact identified at DSG. Dead end for now.', linkedin: 'https://www.linkedin.com/company/diversifiedsearchgroup/', website: 'https://diversifiedsearchgroup.com',
+    status: 'passed', notes: 'Nora Sutherland moved to True Search. DSG address bounced. No replacement contact identified. Dead end.', linkedin: 'https://www.linkedin.com/company/diversifiedsearchgroup/', website: 'https://diversifiedsearchgroup.com',
     last_contacted: '2026-03-26', followup_date: null,
     contacts: [
-      { id: 1, name: 'Nora Sutherland', title: 'MOVED TO TRUE SEARCH', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Emailed DSG address 3/26 but Nora has moved to True Search. See True Search entry.' }
+      { id: 1, name: 'Nora Sutherland', title: 'MOVED TO TRUE SEARCH', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'nora.sutherland@divsearch.com bounced. Nora is now at True Search. See True Search entry.' }
     ]
   }
 ];
@@ -197,7 +197,6 @@ app.post('/api/firms', requireAuth, (req, res) => {
     tier: req.body.tier || 3,
     name: req.body.name || 'New Firm',
     why: req.body.why || '',
-    contact: req.body.contact || '',
     status: 'not contacted',
     notes: '',
     linkedin: req.body.linkedin || '',
@@ -211,7 +210,6 @@ app.post('/api/firms', requireAuth, (req, res) => {
   res.status(201).json(next);
 });
 
-// Contact routes
 app.post('/api/firms/:id/contacts', requireAuth, (req, res) => {
   const id = parseInt(req.params.id);
   const firms = loadDB();
@@ -259,7 +257,6 @@ app.delete('/api/firms/:id/contacts/:cid', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// CSV export
 app.get('/api/export.csv', requireAuth, (req, res) => {
   const firms = loadDB();
   const headers = ['id', 'tier', 'name', 'status', 'last_contacted', 'followup_date', 'why', 'website', 'linkedin', 'notes', 'contacts_count'];
