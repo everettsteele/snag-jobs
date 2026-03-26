@@ -108,10 +108,10 @@ const SEED_FIRMS = [
   {
     id: 11, tier: 3, name: 'ReadySetExec',
     why: 'Founder-led boutique. Operations and SaaS focus. Relationship-first process.',
-    status: 'contacted', notes: 'patrick@readysetexec.com bounced. Retried patrick.shea@readysetexec.com on 3/26.', linkedin: '', website: 'https://readysetexec.com',
+    status: 'contacted', notes: 'patrick@readysetexec.com and patrick.shea@readysetexec.com both bounced. Correct address confirmed as pshea@readysetexec.com. Resent 3/26.', linkedin: '', website: 'https://readysetexec.com',
     last_contacted: '2026-03-26', followup_date: '2026-04-02',
     contacts: [
-      { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'patrick.shea@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'patrick@readysetexec.com bounced. Resent to patrick.shea@readysetexec.com on 3/26. LinkedIn connection sent.' }
+      { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'pshea@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'patrick@ and patrick.shea@ both bounced. Correct address is pshea@readysetexec.com. Resent 3/26.' }
     ]
   },
   {
@@ -173,7 +173,6 @@ app.post('/api/login', (req, res) => {
 });
 
 app.get('/api/auth-required', (req, res) => res.json({ required: !!PASSWORD }));
-
 app.get('/api/firms', requireAuth, (req, res) => res.json(loadDB()));
 
 app.patch('/api/firms/:id', requireAuth, (req, res) => {
