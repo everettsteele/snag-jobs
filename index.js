@@ -1,13 +1,13 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PASSWORD = process.env.AUTH_PASSWORD || '';
 
-// Seeds live in /seeds/ — never under the Railway volume mount.
-// Railway volume mounts at /app/data. Seeds at /app/seeds are untouched by the volume.
+// Seeds live in /seeds/ — outside Railway volume mount at /app/data.
 // Overrides (runtime status changes) live in /app/data/overrides.json on the volume.
 const SEEDS_DIR = path.join(__dirname, 'seeds');
 const DATA_DIR  = path.join(__dirname, 'data');
@@ -48,8 +48,78 @@ function getDB(key) {
   });
 }
 
-const counts = { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length };
-console.log(`HopeSpot ready — firms:${counts.firms} ceos:${counts.ceos} vcs:${counts.vcs} — seeds from /seeds/, overrides on volume`);
+// ── DAILY CRON ─────────────────────────────────────────────────────
+// Runs at 6:00 AM ET every day.
+// Pulls up to 5 contacts per pillar (firms, ceos, vcs) from 'not contacted' status
+// and marks them as 'draft' so they appear in the Queue tab.
+// Skips any pillar with no uncontacted entries — redistributes quota to others.
+// Goal: at least 15 drafts queued every morning.
+
+const DAILY_TARGET = 15;
+const PILLARS = ['firms', 'ceos', 'vcs'];
+
+function runDailyCron() {
+  const ov = loadOverrides();
+  const perPillar = Math.ceil(DAILY_TARGET / PILLARS.length); // 5 each
+
+  // First pass: collect how many uncontacted exist per pillar
+  const pools = {};
+  PILLARS.forEach(key => {
+    const seed = readSeed(key);
+    const existing = ov[key] || {};
+    pools[key] = seed.filter(item => {
+      const status = (existing[String(item.id)] || {}).status || item.status || 'not contacted';
+      return status === 'not contacted';
+    }).sort((a, b) => (a.tier || 99) - (b.tier || 99)); // tier 1 first
+  });
+
+  // Calculate how many to pull per pillar, redistribute leftovers
+  let allocations = {};
+  let surplus = 0;
+  PILLARS.forEach(key => {
+    const available = pools[key].length;
+    const take = Math.min(perPillar, available);
+    allocations[key] = take;
+    surplus += (perPillar - take);
+  });
+
+  // Redistribute surplus to pillars that have more contacts
+  if (surplus > 0) {
+    PILLARS.forEach(key => {
+      if (surplus <= 0) return;
+      const canTakeMore = pools[key].length - allocations[key];
+      if (canTakeMore > 0) {
+        const extra = Math.min(surplus, canTakeMore);
+        allocations[key] += extra;
+        surplus -= extra;
+      }
+    });
+  }
+
+  let totalDrafted = 0;
+  PILLARS.forEach(key => {
+    if (!ov[key]) ov[key] = {};
+    const toMark = pools[key].slice(0, allocations[key]);
+    toMark.forEach(item => {
+      ov[key][String(item.id)] = { ...(ov[key][String(item.id)] || {}), status: 'draft' };
+      totalDrafted++;
+    });
+  });
+
+  saveOverrides(ov);
+
+  const summary = PILLARS.map(k => `${k}:${allocations[k]}`).join(', ');
+  console.log(`[CRON] Daily queue run — ${totalDrafted} contacts drafted (${summary})`);
+  return { totalDrafted, allocations };
+}
+
+// 6 AM ET daily (UTC-4 in summer, UTC-5 in winter; using 10:00 UTC to cover ET)
+cron.schedule('0 10 * * *', () => {
+  console.log('[CRON] Running daily outreach queue...');
+  runDailyCron();
+}, { timezone: 'America/New_York' });
+
+console.log(`HopeSpot ready — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v — daily cron active (6 AM ET)`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -74,7 +144,12 @@ app.get('/api/firms', requireAuth, (req, res) => res.json(getDB('firms')));
 app.get('/api/ceos',  requireAuth, (req, res) => res.json(getDB('ceos')));
 app.get('/api/vcs',   requireAuth, (req, res) => res.json(getDB('vcs')));
 
-// Debug endpoint — shows seed counts and overrides count so we can verify the right files are loading
+// Manually trigger the daily cron (for testing or manual queue top-up)
+app.post('/api/cron/run', requireAuth, (req, res) => {
+  const result = runDailyCron();
+  res.json({ ok: true, ...result });
+});
+
 app.get('/api/debug', requireAuth, (req, res) => {
   const ov = loadOverrides();
   res.json({
@@ -82,8 +157,11 @@ app.get('/api/debug', requireAuth, (req, res) => {
     dataDir: DATA_DIR,
     seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length },
     overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length },
-    overridesPath: OVERRIDES_PATH,
-    overridesExists: fs.existsSync(OVERRIDES_PATH),
+    notContactedCounts: {
+      firms: getDB('firms').filter(x=>x.status==='not contacted').length,
+      ceos:  getDB('ceos').filter(x=>x.status==='not contacted').length,
+      vcs:   getDB('vcs').filter(x=>x.status==='not contacted').length,
+    }
   });
 });
 
@@ -163,7 +241,7 @@ app.patch('/api/vcs/:id',   requireAuth, makePatch('vcs'));
 
 app.post('/api/reseed', requireAuth, (req, res) => {
   saveOverrides({ firms: {}, ceos: {}, vcs: {} });
-  res.json({ ok: true, message: 'Overrides cleared. All statuses reset to seed defaults.' });
+  res.json({ ok: true, message: 'Overrides cleared.' });
 });
 
 app.post('/api/sync', requireAuth, (req, res) => {
@@ -195,6 +273,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length } }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, '0.0.0.0', () => console.log('Listening on port '+PORT));

@@ -1,1 +1,16 @@
-{"name":"meridian-recruiter-tracker","version":"1.0.0","description":"Open-source recruiter outreach tracker.","main":"index.js","scripts":{"start":"node index.js"},"engines":{"node":">=18"},"dependencies":{"express":"^4.18.2"}}
+{
+  "name": "meridian-recruiter-tracker",
+  "version": "1.0.0",
+  "description": "Open-source recruiter outreach tracker.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3"
+  }
+}
