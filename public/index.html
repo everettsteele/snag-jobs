@@ -7,8 +7,6 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;color:#1F2D3D;min-height:100vh;display:flex;flex-direction:column}
-
-/* ── LAYOUT ────────────────────────────────────── */
 .app-shell{display:flex;flex:1;overflow:hidden;height:100vh}
 .sidebar{width:220px;flex-shrink:0;background:#1F2D3D;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
 .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
@@ -28,14 +26,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-badge.blue{background:#3B82F6}
 .nav-badge.green{background:#10B981}
 .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:rgba(255,255,255,.2)}
-
 .content-area{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .topbar{background:#fff;border-bottom:1px solid #E5E7EB;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;flex-direction:column;gap:1px}
 .topbar-title{font-size:15px;font-weight:600;color:#1F2D3D}
 .topbar-sub{font-size:12px;color:#9CA3AF}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.refresh-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;border:1px solid #E5E7EB;background:#fff;font-size:12px;font-weight:500;color:#6B7280;cursor:pointer;transition:all .15s}
+.refresh-btn:hover{background:#F9FAFB;border-color:#D1D5DB;color:#1F2D3D}
+.refresh-btn.spinning svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .main{padding:20px 24px;flex:1}
-
-/* ── QUEUE ──────────────────────────────────────── */
 .queue-date{font-size:11px;color:#9CA3AF;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
 .queue-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .queue-sub{font-size:13px;color:#6B7280;margin-bottom:20px}
@@ -59,15 +60,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
 .btn-send{background:#F97316;color:#fff}.btn-send:hover{background:#ea6c06}
 .btn-followup{background:#F3F4F6;color:#1F2D3D}.btn-followup:hover{background:#E5E7EB}
-
-/* ── STATS ──────────────────────────────────────── */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px}
 .stat{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E5E7EB}
 .stat-label{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .stat-val{font-size:24px;font-weight:600;color:#1F2D3D}
 .stat-sub{font-size:10px;color:#9CA3AF;margin-top:2px}
-
-/* ── DASHBOARD ──────────────────────────────────── */
 .dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 .dash-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:18px}
@@ -90,8 +87,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .legend{display:flex;gap:14px;margin-top:12px}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#6B7280}
 .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-
-/* ── LIST / CARDS ───────────────────────────────── */
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .search-box{flex:1;min-width:160px;padding:7px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
 .search-box:focus{border-color:#F97316}
@@ -130,8 +125,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sec-lbl{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
 .divider{height:1px;background:#F3F4F6;margin:16px 0}
 .empty{text-align:center;padding:52px 20px;color:#9CA3AF}
-
-/* ── LOGIN ──────────────────────────────────────── */
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F5F7FA}
 .login-box{background:#fff;border-radius:14px;padding:40px;max-width:380px;width:100%;border:1px solid #E5E7EB;box-shadow:0 4px 24px rgba(0,0,0,.08)}
 .login-logo{display:flex;align-items:center;gap:9px;margin-bottom:20px}
@@ -162,8 +155,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <div id="app-view" style="display:none" class="app-shell">
-
-  <!-- SIDEBAR -->
   <nav class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-mark">
@@ -172,7 +163,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="sidebar-logo-sub">Built instead of applying.</div>
     </div>
-
     <div class="sidebar-nav">
       <div class="nav-section-label">Operations</div>
       <div class="nav-item active" id="nav-queue" onclick="switchTab('queue')">
@@ -184,7 +174,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Dashboard
       </div>
-
       <div class="nav-section-label">Pillars</div>
       <div class="nav-item" id="nav-recruiters" onclick="switchTab('recruiters')">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
@@ -202,33 +191,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <span class="nav-badge green" id="badge-vcs">0</span>
       </div>
     </div>
-
     <div class="sidebar-footer">everett.steele@gmail.com</div>
   </nav>
 
-  <!-- CONTENT -->
   <div class="content-area">
     <div class="topbar">
-      <div>
+      <div class="topbar-left">
         <div class="topbar-title" id="topbar-title">Morning Queue</div>
         <div class="topbar-sub" id="topbar-sub">Today's outreach and follow-ups</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Refresh
+        </button>
       </div>
     </div>
     <div class="main" id="main-content"></div>
   </div>
-
 </div>
 
 <script>
 let TOKEN='', DATA=[], CEOs=[], VCs=[], STATS=null;
 let FILTER='all', TAB='queue';
 const TODAY=new Date().toISOString().split('T')[0];
-
 const TITLES={
   queue:['Morning Queue','Today\'s outreach and follow-ups'],
   dashboard:['Dashboard','Outreach performance and activity'],
   recruiters:['Recruiters','Executive search firms'],
-  ceos:['Direct CEO','Referral asks to Atlanta SaaS founders'],
+  ceos:['Direct CEO / Network','Referral asks and warm network contacts'],
   vcs:['VC Firms','Portfolio COO and operating partner outreach'],
 };
 
@@ -262,6 +253,14 @@ async function loadAll(){
   }catch(e){DATA=[];CEOs=[];VCs=[];STATS=null;}
   updateBadges();renderCurrent();
 }
+async function refreshData(){
+  const btn=document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  btn.disabled=true;
+  await loadAll();
+  btn.classList.remove('spinning');
+  btn.disabled=false;
+}
 function showApp(){
   document.getElementById('login-view').style.display='none';
   document.getElementById('app-view').style.display='flex';
@@ -284,9 +283,7 @@ function updateBadges(){
 }
 function switchTab(t){
   TAB=t;FILTER='all';
-  ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>{
-    document.getElementById('nav-'+x).classList.toggle('active',x===t);
-  });
+  ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('active',x===t));
   const [title,sub]=TITLES[t]||['',''];
   document.getElementById('topbar-title').textContent=title;
   document.getElementById('topbar-sub').textContent=sub;
@@ -298,35 +295,31 @@ function renderCurrent(){
   else renderList();
 }
 
-// ── QUEUE ────────────────────────────────────────────
 function renderQueue(){
   const all=allItems();
   const sendNow=all.filter(x=>x.status==='draft');
   const followUp=all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY).sort((a,b)=>a.followup_date>b.followup_date?1:-1);
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const totalMin=Math.round(sendNow.length*0.4+followUp.length*1.5);
-
-  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;·&nbsp; ${followUp.length} follow-ups &nbsp;·&nbsp; ~${totalMin} min</div>`;
-
+  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;\u00b7&nbsp; ${followUp.length} follow-ups &nbsp;\u00b7&nbsp; ~${totalMin} min</div>`;
   html+=`<div class="section-header"><div class="section-title">Send Now</div><div class="section-count">${sendNow.length} drafts waiting</div></div>`;
-  if(!sendNow.length){html+='<div class="empty" style="padding:20px 0">No drafts queued. Add outreach to see it here.</div>';}
+  if(!sendNow.length){html+='<div class="empty" style="padding:20px 0">No drafts queued.</div>';}
   else{['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{
     const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};
     html+=`<div class="queue-card"><span class="pillar-tag pillar-${p}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''}</div><div class="queue-email">${c.email||''}</div></div><button class="btn btn-send" onclick="markSent('${item._endpoint}',${item.id},this)">Mark Sent</button></div>`;
   });});}
-
   html+=`<div class="divider"></div><div class="section-header"><div class="section-title">Follow Up Today</div><div class="section-count">${followUp.length} due</div></div>`;
   if(!followUp.length){html+='<div class="empty" style="padding:20px 0">No follow-ups due today.</div>';}
   else{followUp.forEach(item=>{
     const c=(item.contacts||[])[0]||{};
     const da=item.last_contacted?Math.floor((new Date()-new Date(item.last_contacted))/864e5):null;
     const ov=item.followup_date<TODAY;
-    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${item._pillar}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''} &nbsp;·&nbsp; ${c.email||''}</div><div class="queue-meta">Contacted ${da!=null?da+' days ago':'—'} &nbsp;·&nbsp; Due ${item.followup_date}</div></div><button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button></div>`;
+    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${item._pillar}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''} &nbsp;\u00b7&nbsp; ${c.email||''}</div><div class="queue-meta">Contacted ${da!=null?da+' days ago':'\u2014'} &nbsp;\u00b7&nbsp; Due ${item.followup_date}</div></div><button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button></div>`;
   });}
   document.getElementById('main-content').innerHTML=html;
 }
 async function markSent(endpoint,id,btn){
-  btn.textContent='Sent ✓';btn.disabled=true;btn.style.background='#10B981';
+  btn.textContent='Sent \u2713';btn.disabled=true;btn.style.background='#10B981';
   const followup=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
   await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify({status:'contacted',followup_date:followup})});
   await loadAll();
@@ -339,13 +332,11 @@ async function logFollowup(endpoint,id){
   await loadAll();
 }
 
-// ── DASHBOARD ────────────────────────────────────────
 function renderDashboard(){
   if(!STATS){document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';return;}
   const {segments,daily,totals}=STATS;
   const overallRate=totals.contacted>0?Math.round((totals.inConversation/totals.contacted)*100):0;
   const maxD=daily.length?Math.max(...daily.map(d=>d.total),1):1;
-
   let html=`<div class="stats">
     <div class="stat"><div class="stat-label">Total Outreach</div><div class="stat-val">${totals.contacted}</div><div class="stat-sub">sent & delivered</div></div>
     <div class="stat"><div class="stat-label">In Conversation</div><div class="stat-val">${totals.inConversation}</div><div class="stat-sub">active replies</div></div>
@@ -353,54 +344,26 @@ function renderDashboard(){
     <div class="stat"><div class="stat-label">Drafts Ready</div><div class="stat-val">${totals.drafts}</div><div class="stat-sub">queued to send</div></div>
     <div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${totals.bounced}</div><div class="stat-sub">need alt contact</div></div>
   </div>`;
-
   html+=`<div class="dash-grid">`;
-  const borderColors=['#3B82F6','#F97316','#10B981'];
+  const bc=['#3B82F6','#F97316','#10B981'];
   segments.forEach((s,i)=>{
     const pct=s.contacted>0?Math.round((s.conv/s.contacted)*100):0;
-    html+=`<div class="dash-card">
-      <div class="dash-card-title">${s.label}</div>
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
-        <div><div class="big-num">${s.contacted}</div><div class="big-sub">contacted</div></div>
-        <div class="rate-circle" style="border-color:${borderColors[i]}">
-          <div class="rate-pct">${pct}%</div><div class="rate-lbl">replies</div>
-        </div>
-      </div>
-      <div class="seg-row"><span class="seg-lbl">In conversation</span><span class="seg-val">${s.conv}</span></div>
-      <div class="seg-row"><span class="seg-lbl">Drafts pending</span><span class="seg-val" style="color:#8B5CF6">${s.drafts}</span></div>
-      <div class="seg-row"><span class="seg-lbl">Bounced</span><span class="seg-val" style="color:#F59E0B">${s.bounced}</span></div>
-    </div>`;
+    html+=`<div class="dash-card"><div class="dash-card-title">${s.label}</div><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px"><div><div class="big-num">${s.contacted}</div><div class="big-sub">contacted</div></div><div class="rate-circle" style="border-color:${bc[i]}"><div class="rate-pct">${pct}%</div><div class="rate-lbl">replies</div></div></div><div class="seg-row"><span class="seg-lbl">In conversation</span><span class="seg-val">${s.conv}</span></div><div class="seg-row"><span class="seg-lbl">Drafts pending</span><span class="seg-val" style="color:#8B5CF6">${s.drafts}</span></div><div class="seg-row"><span class="seg-lbl">Bounced</span><span class="seg-val" style="color:#F59E0B">${s.bounced}</span></div></div>`;
   });
-  html+=`</div>`;
-
-  html+=`<div class="dash-card"><div class="dash-card-title">Daily Outreach Activity</div>`;
+  html+=`</div><div class="dash-card"><div class="dash-card-title">Daily Outreach Activity</div>`;
   if(!daily.length){html+='<div style="color:#9CA3AF;font-size:13px">No activity yet.</div>';}
   else{
     daily.forEach(d=>{
       const label=new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      const scale=h=>Math.max(4,Math.round((h/maxD)*24));
-      const w=h=>Math.round((h/maxD)*100);
-      html+=`<div class="daily-row">
-        <div class="daily-date">${label}</div>
-        <div class="daily-bars">
-          ${d.recruiters?`<div class="daily-bar bar-blue" style="width:${w(d.recruiters)}px;height:${scale(d.recruiters)}px" title="Recruiters: ${d.recruiters}"></div>`:''}
-          ${d.ceos?`<div class="daily-bar bar-orange" style="width:${w(d.ceos)}px;height:${scale(d.ceos)}px" title="CEOs: ${d.ceos}"></div>`:''}
-          ${d.vcs?`<div class="daily-bar bar-green" style="width:${w(d.vcs)}px;height:${scale(d.vcs)}px" title="VCs: ${d.vcs}"></div>`:''}
-        </div>
-        <div class="daily-total">${d.total}</div>
-      </div>`;
+      const sc=h=>Math.max(4,Math.round((h/maxD)*24)),w=h=>Math.round((h/maxD)*100);
+      html+=`<div class="daily-row"><div class="daily-date">${label}</div><div class="daily-bars">${d.recruiters?`<div class="daily-bar bar-blue" style="width:${w(d.recruiters)}px;height:${sc(d.recruiters)}px" title="Recruiters: ${d.recruiters}"></div>`:''} ${d.ceos?`<div class="daily-bar bar-orange" style="width:${w(d.ceos)}px;height:${sc(d.ceos)}px" title="CEOs: ${d.ceos}"></div>`:''} ${d.vcs?`<div class="daily-bar bar-green" style="width:${w(d.vcs)}px;height:${sc(d.vcs)}px" title="VCs: ${d.vcs}"></div>`:''}</div><div class="daily-total">${d.total}</div></div>`;
     });
-    html+=`<div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Recruiters</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>CEOs</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>VCs</div>
-    </div>`;
+    html+=`<div class="legend"><div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Recruiters</div><div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>CEOs</div><div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>VCs</div></div>`;
   }
   html+=`</div>`;
   document.getElementById('main-content').innerHTML=html;
 }
 
-// ── LIST TABS ────────────────────────────────────────
 function currentData(){return TAB==='ceos'?CEOs:TAB==='vcs'?VCs:DATA;}
 function nameField(item){return TAB==='ceos'?item.company:TAB==='vcs'?item.firm:item.name;}
 function setFilter(f,btn){
@@ -411,72 +374,20 @@ function setFilter(f,btn){
 function renderList(){
   const q=(document.getElementById('search-input')||{}).value?.toLowerCase()||'';
   let items=currentData();
-  const fMap={
-    active:x=>['contacted','in conversation','draft','linkedin'].includes(x.status),
-    draft:x=>x.status==='draft',
-    contacted:x=>x.status==='contacted',
-    'in conversation':x=>x.status==='in conversation',
-    'not contacted':x=>x.status==='not contacted',
-    bounced:x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced'),
-    passed:x=>x.status==='passed',
-  };
+  const fMap={active:x=>['contacted','in conversation','draft','linkedin'].includes(x.status),draft:x=>x.status==='draft',contacted:x=>x.status==='contacted','in conversation':x=>x.status==='in conversation','not contacted':x=>x.status==='not contacted',bounced:x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced'),passed:x=>x.status==='passed'};
   if(FILTER!=='all'&&fMap[FILTER])items=items.filter(fMap[FILTER]);
   if(q)items=items.filter(x=>nameField(x).toLowerCase().includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||(x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)));
-
   const all=currentData();
   const sMap=s=>all.filter(x=>x.status===s).length;
-  const statHtml=[
-    ['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],
-    ['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],
-    ['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length],
-  ].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
-
+  const statHtml=[['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
   const cardsHtml=items.length?items.map(item=>{
     const id=item.id,name=nameField(item);
     const dotCls='sdot-'+(item.status||'not-contacted').replace(/ /g,'-');
     const tier=item.tier?`<span class="tier-badge">T${item.tier}</span>`:TAB==='ceos'?'<span class="tier-badge">CEO</span>':'<span class="tier-badge">VC</span>';
-    const contacts=(item.contacts||[]).map(c=>{
-      const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');
-      return`<div class="contact-row"><div class="contact-info"><div class="contact-name">${c.name}</div>${c.title?`<div class="contact-title">${c.title}</div>`:''} ${c.email?`<div class="contact-email">${c.email}</div>`:''} ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}</div><span class="cs-tag ${cs}">${c.status||'not contacted'}</span></div>`;
-    }).join('');
-    return`<div class="card">
-      <div class="card-header" onclick="toggle('${TAB}',${id})">
-        ${tier}<div class="card-name">${name}</div>
-        <span class="status-lbl">${item.status||'not contacted'}</span>
-        <span class="sdot ${dotCls}"></span>
-      </div>
-      <div class="card-body" id="body-${TAB}-${id}">
-        <div class="why">${item.why||''}</div>
-        ${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}
-        <div class="sec-lbl" style="margin-top:12px">Notes & Status</div>
-        <div class="field-row">
-          <textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <select class="status-select" id="status-${TAB}-${id}">
-              ${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}
-            </select>
-            <input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}">
-            <button class="save-btn" onclick="save('${TAB}',${id})">Save</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
+    const contacts=(item.contacts||[]).map(c=>{const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');return`<div class="contact-row"><div class="contact-info"><div class="contact-name">${c.name}</div>${c.title?`<div class="contact-title">${c.title}</div>`:''} ${c.email?`<div class="contact-email">${c.email}</div>`:''} ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}</div><span class="cs-tag ${cs}">${c.status||'not contacted'}</span></div>`;}).join('');
+    return`<div class="card"><div class="card-header" onclick="toggle('${TAB}',${id})">${tier}<div class="card-name">${name}</div><span class="status-lbl">${item.status||'not contacted'}</span><span class="sdot ${dotCls}"></span></div><div class="card-body" id="body-${TAB}-${id}"><div class="why">${item.why||''}</div>${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}<div class="sec-lbl" style="margin-top:12px">Notes & Status</div><div class="field-row"><textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea><div style="display:flex;flex-direction:column;gap:6px"><select class="status-select" id="status-${TAB}-${id}">${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}</select><input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}"><button class="save-btn" onclick="save('${TAB}',${id})">Save</button></div></div></div></div>`;
   }).join(''):'<div class="empty">No results.</div>';
-
-  document.getElementById('main-content').innerHTML=`
-    <div class="controls">
-      <input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}">
-      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
-      <button class="filter-btn" onclick="setFilter('draft',this)">Draft</button>
-      <button class="filter-btn" onclick="setFilter('active',this)">Active</button>
-      <button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button>
-      <button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button>
-      <button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button>
-      <button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button>
-      <button class="filter-btn" onclick="setFilter('passed',this)">Passed</button>
-    </div>
-    <div class="stats">${statHtml}</div>
-    <div class="cards">${cardsHtml}</div>`;
+  document.getElementById('main-content').innerHTML=`<div class="controls"><input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}"><button class="filter-btn active" onclick="setFilter('all',this)">All</button><button class="filter-btn" onclick="setFilter('draft',this)">Draft</button><button class="filter-btn" onclick="setFilter('active',this)">Active</button><button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button><button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button><button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button><button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button><button class="filter-btn" onclick="setFilter('passed',this)">Passed</button></div><div class="stats">${statHtml}</div><div class="cards">${cardsHtml}</div>`;
 }
 function toggle(tab,id){document.getElementById(`body-${tab}-${id}`)?.classList.toggle('open');}
 async function save(tab,id){
