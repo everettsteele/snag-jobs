@@ -10,77 +10,112 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .topbar{background:#fff;border-bottom:1px solid #E5E7EB;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:#1F2D3D}
 .logo svg{color:#F97316}
-.tabs{display:flex;gap:0;border-bottom:2px solid #E5E7EB;margin:0 24px;margin-top:16px}
-.tab{padding:10px 20px;font-size:14px;font-weight:500;color:#6B7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap}
+.nav-tabs{display:flex;gap:0;border-bottom:2px solid #E5E7EB;margin:0 24px;margin-top:0;background:#fff;position:sticky;top:56px;z-index:99;padding-top:12px}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:#6B7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .tab:hover{color:#1F2D3D}
 .tab.active{color:#F97316;border-bottom-color:#F97316;font-weight:600}
-.tab .badge{display:inline-block;background:#F97316;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:6px}
-.tab .badge.green{background:#10B981}
-.tab .badge.blue{background:#3B82F6}
-.main{padding:20px 24px}
-.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.search-box{flex:1;min-width:180px;padding:8px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;background:#F97316;color:#fff;font-size:10px;font-weight:700;border-radius:9px;padding:0 4px}
+.badge.green{background:#10B981}
+.badge.blue{background:#3B82F6}
+.badge.purple{background:#8B5CF6}
+.badge.urgent{background:#EF4444;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.main{padding:16px 24px}
+.queue-date{font-size:11px;color:#9CA3AF;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.queue-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.queue-sub{font-size:13px;color:#6B7280;margin-bottom:20px}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:20px}
+.section-header:first-child{margin-top:0}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1F2D3D}
+.section-count{font-size:12px;color:#9CA3AF}
+.queue-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:box-shadow .15s}
+.queue-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.queue-card.followup{border-left:3px solid #F59E0B}
+.queue-card.followup-overdue{border-left:3px solid #EF4444}
+.pillar-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;letter-spacing:.04em}
+.pillar-recruiter{background:#EFF6FF;color:#3B82F6}
+.pillar-ceo{background:#FFF7ED;color:#F97316}
+.pillar-vc{background:#ECFDF5;color:#10B981}
+.queue-info{flex:1;min-width:0}
+.queue-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.queue-contact{font-size:12px;color:#6B7280;margin-bottom:1px}
+.queue-email{font-size:11px;color:#9CA3AF;font-family:monospace}
+.queue-meta{font-size:11px;color:#9CA3AF;margin-top:3px}
+.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
+.btn-send{background:#F97316;color:#fff}
+.btn-send:hover{background:#ea6c06}
+.btn-followup{background:#F3F4F6;color:#1F2D3D}
+.btn-followup:hover{background:#E5E7EB}
+.btn-sm{padding:4px 10px;font-size:11px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.search-box{flex:1;min-width:160px;padding:7px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
 .search-box:focus{border-color:#F97316}
-.filter-btn{padding:6px 12px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;color:#6B7280;transition:all .15s}
+.filter-btn{padding:5px 10px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;font-size:11px;cursor:pointer;color:#6B7280;transition:all .15s}
 .filter-btn.active,.filter-btn:hover{background:#FFF7ED;color:#F97316;border-color:#F97316}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px}
-.stat{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E5E7EB}
-.stat-label{font-size:11px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
-.stat-val{font-size:24px;font-weight:600;color:#1F2D3D}
-.cards{display:flex;flex-direction:column;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}
+.stat{background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #E5E7EB}
+.stat-label{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.stat-val{font-size:22px;font-weight:600;color:#1F2D3D}
+.cards{display:flex;flex-direction:column;gap:8px}
 .card{background:#fff;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;transition:box-shadow .15s}
 .card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.card-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none}
-.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 7px;letter-spacing:.04em}
+.card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.04em}
 .card-name{font-size:14px;font-weight:600;flex:1}
-.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dot-contacted{background:#3B82F6}
-.dot-in-conversation{background:#10B981}
-.dot-not-contacted{background:#D1D5DB}
-.dot-passed{background:#EF4444}
-.dot-bounced{background:#F59E0B}
-.status-label{font-size:12px;color:#9CA3AF}
-.card-body{padding:0 16px 14px;border-top:1px solid #F3F4F6;display:none}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sdot-contacted{background:#3B82F6}
+.sdot-in-conversation{background:#10B981}
+.sdot-not-contacted{background:#D1D5DB}
+.sdot-passed{background:#EF4444}
+.sdot-bounced{background:#F59E0B}
+.sdot-draft{background:#8B5CF6}
+.sdot-linkedin{background:#0EA5E9}
+.status-lbl{font-size:11px;color:#9CA3AF}
+.card-body{padding:0 14px 12px;border-top:1px solid #F3F4F6;display:none}
 .card-body.open{display:block}
-.why{font-size:12px;color:#6B7280;margin:10px 0 8px;line-height:1.5}
-.contacts-section{margin-top:10px}
-.contact-row{display:flex;align-items:flex-start;gap:10px;padding:8px;background:#F9FAFB;border-radius:6px;margin-bottom:6px;font-size:12px}
+.why{font-size:12px;color:#6B7280;margin:8px 0;line-height:1.5}
+.contact-row{display:flex;align-items:flex-start;gap:8px;padding:7px;background:#F9FAFB;border-radius:6px;margin-bottom:5px;font-size:12px}
 .contact-info{flex:1}
-.contact-name{font-weight:600;color:#1F2D3D;margin-bottom:2px}
-.contact-title{color:#9CA3AF;margin-bottom:3px}
+.contact-name{font-weight:600;color:#1F2D3D;margin-bottom:1px}
+.contact-title{color:#9CA3AF;font-size:11px;margin-bottom:2px}
 .contact-email{color:#F97316;font-family:monospace;font-size:11px}
-.contact-notes{color:#6B7280;font-size:11px;margin-top:3px;font-style:italic}
-.contact-status{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EFF6FF;color:#3B82F6;white-space:nowrap}
-.contact-status.bounced{background:#FEF3C7;color:#D97706}
-.contact-status.dead-end{background:#FEE2E2;color:#EF4444}
-.contact-status.in-conversation{background:#ECFDF5;color:#10B981}
-.notes-row{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
-.notes-input{flex:1;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:52px;resize:vertical;font-family:inherit;outline:none}
+.contact-notes{color:#6B7280;font-size:11px;margin-top:2px;font-style:italic}
+.cs-tag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;white-space:nowrap}
+.cs-draft{background:#EDE9FE;color:#6D28D9}
+.cs-linkedin{background:#E0F2FE;color:#0369A1}
+.cs-bounced{background:#FEF3C7;color:#D97706}
+.cs-passed{background:#FEE2E2;color:#EF4444}
+.cs-in-conversation{background:#ECFDF5;color:#059669}
+.cs-contacted{background:#EFF6FF;color:#3B82F6}
+.cs-not-contacted{background:#F3F4F6;color:#6B7280}
+.field-row{display:flex;gap:6px;align-items:flex-start;margin-top:8px}
+.notes-input{flex:1;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:48px;resize:vertical;font-family:inherit;outline:none}
 .notes-input:focus{border-color:#F97316}
-.status-select{padding:5px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;background:#fff}
-.followup-input{padding:5px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none}
+.status-select,.date-input{padding:5px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;background:#fff}
 .save-btn{padding:5px 12px;background:#F97316;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500}
 .save-btn:hover{background:#ea6c06}
-.empty{text-align:center;padding:60px 20px;color:#9CA3AF}
+.sec-lbl{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
+.empty{text-align:center;padding:48px 20px;color:#9CA3AF}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:#fff;border-radius:12px;padding:36px;max-width:380px;width:100%;border:1px solid #E5E7EB;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-.login-title{font-size:22px;font-weight:700;margin-bottom:6px;color:#1F2D3D}
+.login-title{font-size:22px;font-weight:700;margin-bottom:6px}
 .login-sub{font-size:13px;color:#9CA3AF;margin-bottom:24px}
 .login-input{width:100%;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;outline:none;margin-bottom:12px}
 .login-input:focus{border-color:#F97316}
 .login-btn{width:100%;padding:10px;background:#F97316;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
-.login-error{color:#EF4444;font-size:12px;margin-top:8px;display:none}
-.section-label{font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px}
+.login-err{color:#EF4444;font-size:12px;margin-top:8px;display:none}
+.divider{height:1px;background:#F3F4F6;margin:16px 0}
 </style>
 </head>
 <body>
+
 <div id="login-view" class="login-wrap" style="display:none">
   <div class="login-box">
     <div class="login-title">HopeSpot</div>
     <div class="login-sub">Could've used HubSpot.</div>
     <input class="login-input" type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Sign in</button>
-    <div class="login-error" id="login-error">Incorrect password. The irony of being locked out of your own job search tool is noted.</div>
+    <div class="login-err" id="login-error">Wrong password. The irony of being locked out of your own job search tool is noted.</div>
   </div>
 </div>
 
@@ -93,49 +128,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="font-size:11px;color:#9CA3AF">Built instead of applying.</div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" id="tab-recruiters" onclick="switchTab('recruiters')">Recruiters <span class="badge" id="badge-recruiters">0</span></div>
+  <div class="nav-tabs">
+    <div class="tab active" id="tab-queue" onclick="switchTab('queue')">Queue <span class="badge urgent" id="badge-queue">0</span></div>
+    <div class="tab" id="tab-recruiters" onclick="switchTab('recruiters')">Recruiters <span class="badge" id="badge-recruiters">0</span></div>
     <div class="tab" id="tab-ceos" onclick="switchTab('ceos')">Direct CEO <span class="badge blue" id="badge-ceos">0</span></div>
     <div class="tab" id="tab-vcs" onclick="switchTab('vcs')">VC Firms <span class="badge green" id="badge-vcs">0</span></div>
   </div>
 
-  <div class="main">
-    <div class="controls">
-      <input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="render()">
-      <button class="filter-btn active" id="fAll" onclick="setFilter('all',this)">All</button>
-      <button class="filter-btn" id="fActive" onclick="setFilter('active',this)">Active</button>
-      <button class="filter-btn" id="fContacted" onclick="setFilter('contacted',this)">Contacted</button>
-      <button class="filter-btn" id="fNot" onclick="setFilter('not contacted',this)">Not contacted</button>
-      <button class="filter-btn" id="fBounced" onclick="setFilter('bounced',this)">Bounced</button>
-      <button class="filter-btn" id="fPassed" onclick="setFilter('passed',this)">Passed</button>
-    </div>
-
-    <div class="stats" id="stats-row"></div>
-    <div class="cards" id="cards-container"></div>
-  </div>
+  <div class="main" id="main-content"></div>
 </div>
 
 <script>
 let TOKEN = '';
-let DATA = [];
-let CEOs = [];
-let VCs = [];
-let FILTER = 'all';
-let TAB = 'recruiters';
+let DATA = [], CEOs = [], VCs = [];
+let FILTER = 'all', TAB = 'queue';
+const TODAY = new Date().toISOString().split('T')[0];
 
 async function init() {
   const r = await fetch('/api/auth-required').then(x=>x.json());
   if (!r.required) { TOKEN='no-auth'; await loadAll(); showApp(); }
   else document.getElementById('login-view').style.display='flex';
 }
-
 async function doLogin() {
   const pw = document.getElementById('pw-input').value;
   const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(x=>x.json());
   if (r.ok) { TOKEN=r.token; await loadAll(); showApp(); document.getElementById('login-view').style.display='none'; }
   else document.getElementById('login-error').style.display='block';
 }
-
 async function loadAll() {
   const h = {'x-auth-token':TOKEN};
   [DATA, CEOs, VCs] = await Promise.all([
@@ -143,92 +162,169 @@ async function loadAll() {
     fetch('/api/ceos',{headers:h}).then(x=>x.json()),
     fetch('/api/vcs',{headers:h}).then(x=>x.json())
   ]);
-  updateBadges();
-  render();
+  updateBadges(); renderCurrent();
 }
+function showApp() { document.getElementById('app-view').style.display='block'; }
 
-function showApp() {
-  document.getElementById('app-view').style.display='block';
+function allItems() {
+  return [
+    ...DATA.map(x=>({...x,_pillar:'recruiter',_endpoint:'/api/firms',_label:'Recruiter'})),
+    ...CEOs.map(x=>({...x,_pillar:'ceo',_endpoint:'/api/ceos',_label:'CEO',name:x.company})),
+    ...VCs.map(x=>({...x,_pillar:'vc',_endpoint:'/api/vcs',_label:'VC',name:x.firm}))
+  ];
 }
 
 function updateBadges() {
-  const active = d => d.filter(x=>['contacted','in conversation'].includes(x.status)).length;
-  document.getElementById('badge-recruiters').textContent = active(DATA);
-  document.getElementById('badge-ceos').textContent = active(CEOs);
-  document.getElementById('badge-vcs').textContent = active(VCs);
+  const all = allItems();
+  const drafts = all.filter(x=>x.status==='draft').length;
+  const overdue = all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY).length;
+  document.getElementById('badge-queue').textContent = drafts+overdue;
+  document.getElementById('badge-recruiters').textContent = DATA.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
+  document.getElementById('badge-ceos').textContent = CEOs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
+  document.getElementById('badge-vcs').textContent = VCs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
 }
 
 function switchTab(t) {
-  TAB = t;
-  ['recruiters','ceos','vcs'].forEach(x=>{
-    document.getElementById('tab-'+x).classList.toggle('active',x===t);
-  });
-  FILTER='all';
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('fAll').classList.add('active');
-  document.getElementById('search-input').value='';
-  render();
+  TAB=t; FILTER='all';
+  ['queue','recruiters','ceos','vcs'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('active',x===t));
+  renderCurrent();
+}
+function renderCurrent() { TAB==='queue'?renderQueue():renderList(); }
+
+// ── QUEUE TAB ──────────────────────────────────────────
+function renderQueue() {
+  const all = allItems();
+  const sendNow = all.filter(x=>x.status==='draft');
+  const followUp = all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY)
+    .sort((a,b)=>a.followup_date>b.followup_date?1:-1);
+
+  const d = new Date();
+  const dateStr = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const totalMin = Math.round(sendNow.length * 0.4 + followUp.length * 1.5);
+
+  let html = `<div class="queue-date">${dateStr}</div>
+    <div class="queue-title">Morning Queue</div>
+    <div class="queue-sub">${sendNow.length} to send &nbsp;·&nbsp; ${followUp.length} follow-ups &nbsp;·&nbsp; ~${totalMin} min</div>`;
+
+  // SEND NOW
+  html += `<div class="section-header">
+    <div class="section-title">Send Now</div>
+    <div class="section-count">${sendNow.length} drafts waiting</div>
+  </div>`;
+
+  if (!sendNow.length) {
+    html += '<div class="empty" style="padding:20px">Queue is clear. Add more drafts or you're done for today.</div>';
+  } else {
+    // Group by pillar: recruiters first, then CEO, then VC
+    ['recruiter','ceo','vc'].forEach(pillar=>{
+      const group = sendNow.filter(x=>x._pillar===pillar);
+      if (!group.length) return;
+      group.forEach(item=>{
+        const contact = (item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};
+        const pillCls = `pillar-${pillar}`;
+        const pillLabel = item._label;
+        html += `<div class="queue-card">
+          <span class="pillar-tag ${pillCls}">${pillLabel}</span>
+          <div class="queue-info">
+            <div class="queue-name">${item.name}</div>
+            <div class="queue-contact">${contact.name||''}</div>
+            <div class="queue-email">${contact.email||''}</div>
+          </div>
+          <button class="btn btn-send" onclick="markSent('${item._endpoint}',${item.id},this)">Mark Sent</button>
+        </div>`;
+      });
+    });
+  }
+
+  // FOLLOW UP
+  html += `<div class="divider"></div>
+    <div class="section-header">
+      <div class="section-title">Follow Up Today</div>
+      <div class="section-count">${followUp.length} overdue or due today</div>
+    </div>`;
+
+  if (!followUp.length) {
+    html += '<div class="empty" style="padding:20px">No follow-ups due. Check back tomorrow.</div>';
+  } else {
+    followUp.forEach(item=>{
+      const contact = (item.contacts||[])[0]||{};
+      const pillCls = `pillar-${item._pillar}`;
+      const daysAgo = item.last_contacted ? Math.floor((new Date()-new Date(item.last_contacted))/(1000*60*60*24)) : null;
+      const isOverdue = item.followup_date < TODAY;
+      html += `<div class="queue-card ${isOverdue?'followup-overdue':'followup'}">
+        <span class="pillar-tag ${pillCls}">${item._label}</span>
+        <div class="queue-info">
+          <div class="queue-name">${item.name}</div>
+          <div class="queue-contact">${contact.name||''} &nbsp;·&nbsp; ${contact.email||''}</div>
+          <div class="queue-meta">Last contacted ${daysAgo!=null?daysAgo+' days ago':'—'} &nbsp;·&nbsp; Due ${item.followup_date}</div>
+        </div>
+        <button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button>
+      </div>`;
+    });
+  }
+
+  document.getElementById('main-content').innerHTML = html;
 }
 
-function currentData() {
-  if (TAB==='ceos') return CEOs;
-  if (TAB==='vcs') return VCs;
-  return DATA;
+async function markSent(endpoint, id, btn) {
+  btn.textContent='Sent ✓'; btn.disabled=true; btn.style.background='#10B981';
+  const followup = new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
+  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},
+    body:JSON.stringify({status:'contacted',followup_date:followup})});
+  await loadAll();
 }
 
-function nameField(item) {
-  if (TAB==='ceos') return item.company;
-  if (TAB==='vcs') return item.firm;
-  return item.name;
+async function logFollowup(endpoint, id) {
+  const note = prompt('Log a follow-up note (leave blank to just reset the date):');
+  const newDate = new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
+  const payload = {followup_date:newDate};
+  if (note) payload.notes = note;
+  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify(payload)});
+  await loadAll();
 }
 
+// ── LIST TABS ──────────────────────────────────────────
+function currentData() { return TAB==='ceos'?CEOs:TAB==='vcs'?VCs:DATA; }
+function nameField(item) { return TAB==='ceos'?item.company:TAB==='vcs'?item.firm:item.name; }
 function setFilter(f,btn) {
   FILTER=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
+  btn.classList.add('active'); renderList();
 }
 
-function render() {
-  const q = document.getElementById('search-input').value.toLowerCase();
+function renderList() {
+  const q = (document.getElementById('search-input')||{}).value?.toLowerCase()||'';
   let items = currentData();
+  const filterMap = {
+    active: x=>['contacted','in conversation','draft','linkedin'].includes(x.status),
+    draft: x=>x.status==='draft',
+    contacted: x=>x.status==='contacted',
+    'in conversation': x=>x.status==='in conversation',
+    'not contacted': x=>x.status==='not contacted',
+    bounced: x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced'),
+    passed: x=>x.status==='passed'
+  };
+  if (FILTER!=='all'&&filterMap[FILTER]) items=items.filter(filterMap[FILTER]);
+  if (q) items=items.filter(x=>
+    nameField(x).toLowerCase().includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||
+    (x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)));
 
-  if (FILTER==='active') items=items.filter(x=>['contacted','in conversation'].includes(x.status));
-  else if (FILTER==='bounced') items=items.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced'));
-  else if (FILTER!=='all') items=items.filter(x=>x.status===FILTER);
-
-  if (q) items=items.filter(x=>{
-    const name=nameField(x).toLowerCase();
-    return name.includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||
-      (x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q));
-  });
-
-  // Stats
   const all = currentData();
-  const contacted = all.filter(x=>x.status==='contacted').length;
-  const conv = all.filter(x=>x.status==='in conversation').length;
-  const notC = all.filter(x=>x.status==='not contacted').length;
-  const bounced = all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length;
-  document.getElementById('stats-row').innerHTML=
-    `<div class="stat"><div class="stat-label">Total</div><div class="stat-val">${all.length}</div></div>`+
-    `<div class="stat"><div class="stat-label">Active</div><div class="stat-val">${contacted+conv}</div></div>`+
-    `<div class="stat"><div class="stat-label">In Conversation</div><div class="stat-val">${conv}</div></div>`+
-    `<div class="stat"><div class="stat-label">Not Contacted</div><div class="stat-val">${notC}</div></div>`+
-    `<div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${bounced}</div></div>`;
+  const sMap = s=>all.filter(x=>x.status===s).length;
+  const statHtml = [
+    ['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],
+    ['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],
+    ['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]
+  ].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
 
-  const container = document.getElementById('cards-container');
-  if (!items.length) { container.innerHTML='<div class="empty">No results.</div>'; return; }
-
-  container.innerHTML = items.map(item=>{
+  const cardsHtml = items.length ? items.map(item=>{
     const id=item.id;
     const name=nameField(item);
-    const statusClass='dot-'+(item.status||'not-contacted').replace(' ','-');
-    const statusLabel=(item.status||'not contacted');
+    const sdotCls='sdot-'+(item.status||'not-contacted').replace(/ /g,'-');
     const tier=item.tier?`<span class="tier-badge">T${item.tier}</span>`:
-      (TAB==='ceos'?'<span class="tier-badge">CEO</span>':'<span class="tier-badge">VC</span>');
-
+      TAB==='ceos'?'<span class="tier-badge">CEO</span>':'<span class="tier-badge">VC</span>';
     const contacts=(item.contacts||[]).map(c=>{
-      const cs=(c.status||'').replace(' ','-');
+      const cs=('cs-'+(c.status||'not-contacted').replace(/ /g,'-'));
       return `<div class="contact-row">
         <div class="contact-info">
           <div class="contact-name">${c.name}</div>
@@ -236,56 +332,64 @@ function render() {
           ${c.email?`<div class="contact-email">${c.email}</div>`:''}
           ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}
         </div>
-        <span class="contact-status ${cs}">${c.status||'not contacted'}</span>
+        <span class="cs-tag ${cs}">${c.status||'not contacted'}</span>
       </div>`;
     }).join('');
-
     return `<div class="card" id="card-${TAB}-${id}">
       <div class="card-header" onclick="toggle('${TAB}',${id})">
-        ${tier}
-        <div class="card-name">${name}</div>
-        <span class="status-label">${statusLabel}</span>
-        <span class="status-dot ${statusClass}"></span>
+        ${tier}<div class="card-name">${name}</div>
+        <span class="status-lbl">${item.status||'not contacted'}</span>
+        <span class="sdot ${sdotCls}"></span>
       </div>
       <div class="card-body" id="body-${TAB}-${id}">
         <div class="why">${item.why||''}</div>
-        ${contacts?`<div class="section-label">Contacts</div><div class="contacts-section">${contacts}</div>`:''}
-        <div class="section-label" style="margin-top:12px">Notes & Status</div>
-        <div class="notes-row">
+        ${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}
+        <div class="sec-lbl" style="margin-top:10px">Notes & Status</div>
+        <div class="field-row">
           <textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea>
-          <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;flex-direction:column;gap:5px">
             <select class="status-select" id="status-${TAB}-${id}">
-              <option value="not contacted" ${item.status==='not contacted'?'selected':''}>Not contacted</option>
-              <option value="contacted" ${item.status==='contacted'?'selected':''}>Contacted</option>
-              <option value="in conversation" ${item.status==='in conversation'?'selected':''}>In conversation</option>
-              <option value="bounced" ${item.status==='bounced'?'selected':''}>Bounced</option>
-              <option value="passed" ${item.status==='passed'?'selected':''}>Passed</option>
+              ${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed']
+                .map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}
             </select>
-            <input class="followup-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}">
+            <input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}">
             <button class="save-btn" onclick="save('${TAB}',${id})">Save</button>
           </div>
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') : '<div class="empty">No results.</div>';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="controls">
+      <input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('draft',this)">Draft</button>
+      <button class="filter-btn" onclick="setFilter('active',this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button>
+      <button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button>
+      <button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button>
+      <button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button>
+    </div>
+    <div class="stats">${statHtml}</div>
+    <div class="cards">${cardsHtml}</div>`;
 }
 
 function toggle(tab, id) {
-  const body = document.getElementById(`body-${tab}-${id}`);
-  if (body) body.classList.toggle('open');
+  document.getElementById(`body-${tab}-${id}`)?.classList.toggle('open');
 }
-
 async function save(tab, id) {
   const notes=document.getElementById(`notes-${tab}-${id}`).value;
   const status=document.getElementById(`status-${tab}-${id}`).value;
   const followup=document.getElementById(`followup-${tab}-${id}`).value;
-  const endpoint = tab==='ceos'?'/api/ceos':tab==='vcs'?'/api/vcs':'/api/firms';
-  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify({notes,status,followup_date:followup||null})});
+  const ep=tab==='ceos'?'/api/ceos':tab==='vcs'?'/api/vcs':'/api/firms';
+  await fetch(`${ep}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},
+    body:JSON.stringify({notes,status,followup_date:followup||null})});
   await loadAll();
 }
 
 document.addEventListener('keydown',e=>{
-  if ((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();document.getElementById('search-input').focus();}
+  if ((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();document.querySelector('.search-box')?.focus();}
 });
 
 init();
