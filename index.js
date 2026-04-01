@@ -5,6 +5,8 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data', 'tracker.json');
+const CEO_PATH = path.join(__dirname, 'data', 'ceos.json');
+const VC_PATH = path.join(__dirname, 'data', 'vcs.json');
 const PASSWORD = process.env.AUTH_PASSWORD || '';
 
 if (!fs.existsSync(path.join(__dirname, 'data'))) {
@@ -13,396 +15,71 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) {
 
 const sessions = new Set();
 
-// STATUS KEY:
-// contacted      = email confirmed sent and delivered
-// not contacted  = not yet reached out (or email bounced with no replacement sent)
-// in conversation = response received, active dialogue
-// passed         = dead end / wrong contact / bounced with no replacement found
-
 const SEED_FIRMS = [
-
-  // ============================================================
-  // TIER 1: PRIORITY — Direct functional/industry/stage match
-  // ============================================================
-
-  {
-    id: 1, tier: 1, name: 'Bespoke Partners',
-    why: 'Top PE-backed SaaS exec search. Places COO/President roles. Dedicated healthcare software practice.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'LinkedIn connection sent 3/26.',
-    linkedin: 'https://www.linkedin.com/company/bespoke-partners/', website: 'https://bespokepartners.com',
-    contacts: [
-      { id: 1, name: 'Katherine Baker', title: 'Partner, CEO & P&L Practice', email: 'katherine.baker@bespokepartners.com', linkedin: 'https://www.linkedin.com/in/katherinebaker14/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26. LinkedIn connection sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 2, tier: 1, name: 'Talentfoot',
-    why: 'SaaS-only exec search. PE-backed sweet spot. Atlanta reach. Strong COO/ops practice.',
-    status: 'in conversation', last_contacted: '2026-03-26', followup_date: null,
-    notes: 'Camille responded same day. Connected to colleagues. Flagged President role for March. Replied highlighting marketing ownership at ChartRequest.',
-    linkedin: 'https://www.linkedin.com/company/talentfoot/', website: 'https://talentfoot.com',
-    contacts: [
-      { id: 1, name: 'Camille Fetter', title: 'Founder & CEO', email: 'cfetter@talentfoot.com', linkedin: 'https://www.linkedin.com/in/digitalmarketingrecruiter1/', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Responded same day. Active.' }
-    ]
-  },
-
-  {
-    id: 3, tier: 1, name: 'Cowen Partners',
-    why: 'Forbes Top 100. PE-backed COO specialists. Deep ops practice.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'LinkedIn connection sent 3/26.',
-    linkedin: 'https://www.linkedin.com/company/cowen-partners/', website: 'https://cowenpartners.com',
-    contacts: [
-      { id: 1, name: 'Shawn Cole', title: 'President & Founding Partner', email: 'shawn@cowenpartners.com', linkedin: 'https://www.linkedin.com/in/coleshawn', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26. LinkedIn connection sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 4, tier: 1, name: 'BSG (Boston Search Group)',
-    why: 'Mid-market PE. Builder-leader profile match. SaaS and healthcare tech verticals.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'LinkedIn connection sent 3/26.',
-    linkedin: 'https://www.linkedin.com/company/bsg-team-ventures/', website: 'https://bostonsearchgroup.com',
-    contacts: [
-      { id: 1, name: 'Clark Waterfall', title: 'Founder & Managing Director', email: 'cwaterfall@bostonsearchgroup.com', linkedin: 'https://www.linkedin.com/in/clarkwaterfall', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26. LinkedIn connection sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 5, tier: 1, name: 'Bloom Recruiting',
-    why: 'Warm relationship. Callie has full context and is actively working the pipeline.',
-    status: 'in conversation', last_contacted: '2026-03-26', followup_date: null,
-    notes: 'Active conversation. Has resume and full context.',
-    linkedin: '', website: '',
-    contacts: [
-      { id: 1, name: 'Callie Vandegrift', title: 'Recruiter', email: '', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Active.' }
-    ]
-  },
-
-  {
-    id: 6, tier: 1, name: 'JM Search',
-    why: 'Andrew Henry leads Healthcare & Life Sciences. 20+ years PE-backed healthcare tech COO placements. Hunt Scanlon Top 50.',
-    status: 'not contacted', last_contacted: null, followup_date: null,
-    notes: 'Email to ahenry@jmsearch.com bounced 3/27 — address not found. LinkedIn is primary channel. Also try: Pam Zients or Kristy Lindquist.',
-    linkedin: 'https://www.linkedin.com/company/jm-search/', website: 'https://jmsearch.com',
-    contacts: [
-      { id: 1, name: 'Andrew Henry', title: 'Managing Partner, Healthcare & Life Sciences', email: 'ahenry@jmsearch.com', linkedin: 'https://www.linkedin.com/in/andrew-henry-7179964/', last_contacted: null, status: 'bounced', notes: 'Email bounced 3/27 — address not found. LinkedIn connection is primary channel now.' }
-    ]
-  },
-
-  {
-    id: 7, tier: 1, name: 'Daversa Partners',
-    why: 'Will Sheridan focuses on CEO/President/COO at growth-stage VC-backed SaaS. Forbes #145.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/daversa-partners/', website: 'https://daversa.com',
-    contacts: [
-      { id: 1, name: 'Will Sheridan', title: 'Director, Orlando Office', email: 'will@daversa.com', linkedin: 'https://www.linkedin.com/in/willsheridan/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 8, tier: 1, name: 'Acertitude',
-    why: 'Rick DeRose leads Technology & Healthcare. PE portfolio C-suite specialist. Forbes #139.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/acertitude/', website: 'https://acertitude.com',
-    contacts: [
-      { id: 1, name: 'Rick DeRose', title: 'Co-Founder & Managing Partner, Technology & Healthcare', email: 'rderose@acertitude.com', linkedin: 'https://www.linkedin.com/in/deroserick/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 9, tier: 1, name: 'ON Partners',
-    why: 'Dedicated SaaS practice. Forbes #34. Partner-led. Explicit VC/PE SaaS COO work.',
-    status: 'not contacted', last_contacted: null, followup_date: null,
-    notes: 'Email to sharris@onpartners.com bounced 3/27 — address not found. LinkedIn is primary channel. Verify correct email format.',
-    linkedin: 'https://www.linkedin.com/company/on-search-partners/', website: 'https://onpartners.com',
-    contacts: [
-      { id: 1, name: 'Seth Harris', title: 'Partner, SaaS & Technology', email: 'sharris@onpartners.com', linkedin: 'https://www.linkedin.com/in/sethoharris/', last_contacted: null, status: 'bounced', notes: 'Email bounced 3/27 — address not found. LinkedIn connection is primary channel now.' }
-    ]
-  },
-
-  {
-    id: 10, tier: 1, name: 'CarterBaldwin Executive Search',
-    why: 'Atlanta HQ (Roswell). Leads Technology practice. PE-backed C-suite COO placements. Hunt Scanlon Top 50. Local home-field advantage.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection on hold — out of personal notes. Correct LinkedIn URL confirmed.',
-    linkedin: 'https://www.linkedin.com/company/carterbaldwin/', website: 'https://carterbaldwin.com',
-    contacts: [
-      { id: 1, name: 'Jennifer Sobocinski', title: 'Founding Partner, Technology Practice', email: 'jsobocinski@carterbaldwin.com', linkedin: 'https://www.linkedin.com/in/jennifer-poole-sobocinski/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection on hold — out of personal notes. Correct URL: /jennifer-poole-sobocinski/' }
-    ]
-  },
-
-  {
-    id: 11, tier: 1, name: 'Crist|Kolder Associates',
-    why: 'Scott Simmons explicitly leads COO and operating officer searches. CEO/CFO/COO/Board only firm.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/crist-kolder-associates/', website: 'https://cristkolder.com',
-    contacts: [
-      { id: 1, name: 'Scott Simmons', title: 'Co-Managing Partner', email: 'ssimmons@cristkolder.com', linkedin: 'https://www.linkedin.com/in/scott-w-simmons-b1b9942/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 26, tier: 1, name: 'SPMB Executive Search',
-    why: 'Top tech executive search firm. VC/PE-backed CEO, President, COO practice. Okta, GitHub, Snowflake, Toast, Klaviyo placements.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27 to dave@spmb.com. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/spmb-executivesearch/', website: 'https://spmb.com',
-    contacts: [
-      { id: 1, name: 'Dave Mullarkey', title: 'Managing Partner, CEO/President/COO Practice', email: 'dave@spmb.com', linkedin: 'https://www.linkedin.com/in/dave-mullarkey/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  // ============================================================
-  // TIER 2: SECONDARY
-  // ============================================================
-
-  {
-    id: 12, tier: 2, name: 'True Search',
-    why: 'PE/VC tech companies. Strong Series B/C COO practice.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'Emails sent 3/26.',
-    linkedin: 'https://www.linkedin.com/company/true-search/', website: 'https://trueplatform.com',
-    contacts: [
-      { id: 1, name: 'Steve Tutelman', title: 'Managing Director, PE Practice', email: 'steve.tutelman@truesearch.com', linkedin: 'https://www.linkedin.com/in/stevetutelman/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' },
-      { id: 2, name: 'Nora Sutherland', title: 'Partner, Technology Practice', email: 'nora.sutherland@trueplatform.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Formerly at DSG. Email sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 13, tier: 2, name: 'Korn Ferry',
-    why: 'Large national firm. COO/SVP Ops practice. Series C/D and PE-owned companies.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'Email sent 3/26. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/kornferry/', website: 'https://kornferry.com',
-    contacts: [
-      { id: 1, name: 'Doug Greenberg', title: 'Senior Partner, Healthcare Technology', email: 'doug.greenberg@kornferry.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 14, tier: 2, name: 'Charles Aris',
-    why: 'NC-based, national reach. COO placements in Southeast growth companies.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'Email and LinkedIn sent 3/26.',
-    linkedin: 'https://www.linkedin.com/company/charles-aris-inc-/', website: 'https://charlesaris.com',
-    contacts: [
-      { id: 1, name: 'Kevin Stemke', title: 'Practice Leader', email: 'kevin.stemke@charlesaris.com', linkedin: 'https://www.linkedin.com/in/kevinstemke/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26. LinkedIn connection sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 15, tier: 2, name: 'StevenDouglas',
-    why: 'Drew Zachmann leads Operations & COO search from Atlanta. PE-backed portfolio COO placements.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: '', website: 'https://stevendouglas.com',
-    contacts: [
-      { id: 1, name: 'Drew Zachmann', title: 'Director, Operations & Supply Chain Executive Search', email: 'dzachmann@stevendouglas.com', linkedin: 'https://www.linkedin.com/in/drewzachmann/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 16, tier: 2, name: 'Slayton Search Partners',
-    why: 'Forbes #38. PE-backed portfolio COO/CFO/C-suite focus.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/slayton-search-partners/', website: 'https://slaytonsearch.com',
-    contacts: [
-      { id: 1, name: 'Rick Slayton', title: 'Managing Partner & CEO', email: 'rslayton@slaytonsearch.com', linkedin: 'https://www.linkedin.com/in/rickslayton/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 17, tier: 2, name: 'Nexus Search Partners',
-    why: 'Amazon AWS background. Charlotte. PE-backed COO/President placements.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. LinkedIn connection pending.',
-    linkedin: '', website: 'https://nexussearchpartners.com',
-    contacts: [
-      { id: 1, name: 'Thaddeus Jones', title: 'Founder & Managing Partner', email: 'tjones@nexussearchpartners.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }
-    ]
-  },
-
-  {
-    id: 27, tier: 2, name: 'WittKieffer',
-    why: 'Julie Chavey is Atlanta-based. 20+ years VC/PE healthcare, healthtech, life sciences recruiting.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27 to jchavey@wittkieffer.com. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/wittkieffer/', website: 'https://wittkieffer.com',
-    contacts: [
-      { id: 1, name: 'Julie Chavey', title: 'Consultant, Investor-Backed Healthcare', email: 'jchavey@wittkieffer.com', linkedin: 'https://www.linkedin.com/in/juliechanvey/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. Atlanta-based. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 28, tier: 2, name: 'ZRG Partners',
-    why: 'Fastest-growing global talent advisory firm. $120M funded. PE-backed tech and healthcare/life sciences COO practice.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27 to jnoel@zrgpartners.com. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/zrg-partners/', website: 'https://zrgpartners.com',
-    contacts: [
-      { id: 1, name: 'Joni Noel', title: 'Co-Head, Healthcare & Life Sciences Practice', email: 'jnoel@zrgpartners.com', linkedin: 'https://www.linkedin.com/in/joninoel/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. LinkedIn connection pending.' }
-    ]
-  },
-
-  {
-    id: 29, tier: 2, name: 'Caldwell Partners',
-    why: 'Global retained search. COO, CFO, CEO placements. PE platform clients. COO and operating officer focus.',
-    status: 'not contacted', last_contacted: null, followup_date: null,
-    notes: 'Email format: FLast@caldwellpartners.com. Richard Perkey is a Managing Partner focused on CEO succession and C-suite.',
-    linkedin: 'https://www.linkedin.com/company/the-caldwell-partners/', website: 'https://caldwell.com',
-    contacts: [
-      { id: 1, name: 'Richard Perkey', title: 'Managing Partner', email: 'rperkey@caldwellpartners.com', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Draft ready. Attach resume and send.' }
-    ]
-  },
-
-  {
-    id: 30, tier: 2, name: 'Direct Recruiters Inc. (DRI)',
-    why: 'Dedicated digital health and healthcare IT executive search. COOs at health SaaS. ChartRequest background directly relevant.',
-    status: 'not contacted', last_contacted: null, followup_date: null,
-    notes: 'Norman Volsky hosts the Digital Health Heavyweights Podcast — warm angle. Mike Silverstein leads HCIT practice.',
-    linkedin: 'https://www.linkedin.com/company/direct-recruiters-inc/', website: 'https://directrecruiters.com',
-    contacts: [
-      { id: 1, name: 'Norman Volsky', title: 'Managing Partner, Digital Health Practice', email: 'nvolsky@directrecruiters.com', linkedin: 'https://www.linkedin.com/in/normanvolsky/', last_contacted: null, status: 'not contacted', notes: 'Digital Health Heavyweights Podcast host. Primary target.' },
-      { id: 2, name: 'Mike Silverstein', title: 'Managing Partner, Healthcare IT Practice', email: 'msilverstein@directrecruiters.com', linkedin: 'https://www.linkedin.com/in/mikesilverstein1/', last_contacted: null, status: 'not contacted', notes: 'Leads HCIT practice.' }
-    ]
-  },
-
-  // ============================================================
-  // TIER 3: OPPORTUNISTIC + NETWORK CONTACTS
-  // ============================================================
-
-  {
-    id: 18, tier: 3, name: 'Riviera Partners',
-    why: 'Ryan Brogan in PE practice. Primarily CTO/CPO but PE practice does operating leader work.',
-    status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03',
-    notes: 'Email sent 3/27. Lower probability — primarily technical roles. LinkedIn connection pending.',
-    linkedin: 'https://www.linkedin.com/company/riviera-partners/', website: 'https://rivierapartners.com',
-    contacts: [
-      { id: 1, name: 'Ryan Brogan', title: 'Client Partner, Private Equity Practice', email: 'rbrogan@rivierapartners.com', linkedin: 'https://www.linkedin.com/in/ryanbrogan/', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27. Joined Riviera PE practice Sept 2025.' }
-    ]
-  },
-
-  {
-    id: 19, tier: 3, name: 'ReadySetExec',
-    why: 'Founder-led boutique. Operations and SaaS focus.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'Three bounces resolved. Correct address is pshea@readysetexec.com. Email sent 3/26.',
-    linkedin: '', website: 'https://readysetexec.com',
-    contacts: [
-      { id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'pshea@readysetexec.com', linkedin: 'https://www.linkedin.com/in/patrick-jm-shea/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Bounce resolved. Email sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 20, tier: 3, name: 'Klein Hersh',
-    why: 'Healthcare tech and digital health SaaS. ChartRequest background is a direct credential.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'Bounce on jesse@kleinhersh.com resolved. Sent to jklein@kleinhersh.com.',
-    linkedin: 'https://www.linkedin.com/company/klein-hersh/', website: 'https://kleinhersh.com',
-    contacts: [
-      { id: 1, name: 'Jesse Klein', title: 'Managing Director & COO', email: 'jklein@kleinhersh.com', linkedin: 'https://www.linkedin.com/in/kleinjesse/', last_contacted: '2026-03-26', status: 'emailed', notes: 'Bounce resolved. Email sent 3/26.' }
-    ]
-  },
-
-  {
-    id: 21, tier: 3, name: 'TGC Search',
-    why: 'Placed COOs for IPO-prep SaaS.',
-    status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02',
-    notes: 'No named partner found. Sent to general inbox. Follow up: find a named contact.',
-    linkedin: 'https://www.linkedin.com/company/tgc-search/', website: 'https://tgcsearch.com',
-    contacts: [
-      { id: 1, name: 'General Inbox', title: '', email: 'info@tgcsearch.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent to general inbox 3/26. Find a named contact for follow-up.' }
-    ]
-  },
-
-  {
-    id: 22, tier: 3, name: 'Heidrick and Struggles',
-    why: 'National. COO practice.',
-    status: 'passed', last_contacted: '2026-03-26', followup_date: null,
-    notes: 'Doug Greenberg confirmed at Korn Ferry, not Heidrick. Need new contact to reactivate.',
-    linkedin: 'https://www.linkedin.com/company/heidrick-struggles/', website: 'https://heidrick.com',
-    contacts: [
-      { id: 1, name: 'Doug Greenberg', title: 'Confirmed at Korn Ferry — not Heidrick', email: 'doug.greenberg@heidrick.com', linkedin: 'https://www.linkedin.com/in/doug-greenberg-6593a41/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Wrong firm. Now at Korn Ferry.' }
-    ]
-  },
-
-  {
-    id: 23, tier: 3, name: 'Diversified Search Group',
-    why: 'PE-backed tech practice.',
-    status: 'passed', last_contacted: '2026-03-26', followup_date: null,
-    notes: 'Nora Sutherland moved to True Search. DSG address bounced.',
-    linkedin: 'https://www.linkedin.com/company/diversifiedsearchgroup/', website: 'https://diversifiedsearchgroup.com',
-    contacts: [
-      { id: 1, name: 'Nora Sutherland', title: 'Moved to True Search', email: 'nora.sutherland@divsearch.com', linkedin: 'https://www.linkedin.com/in/nsutherlanddsg/', last_contacted: '2026-03-26', status: 'dead end', notes: 'Bounced. Now at True Search.' }
-    ]
-  },
-
-  // Network contact — not a recruiter
-  {
-    id: 41, tier: 3, name: 'Matt Goggin (Network)',
-    why: 'Atlanta tech executive. First-degree connection. Deep roots in Atlanta IT/VAR community (Veristor, Canvas Systems, Dell EMC advisory). Good source of warm intros to Atlanta tech and PE-adjacent leaders.',
-    status: 'not contacted', last_contacted: null, followup_date: '2026-04-03',
-    notes: 'NOT a recruiter. First-degree LinkedIn connection. Message drafted 3/27 — send via LinkedIn DM only. Ask for introductions to recruiters or companies, not a pitch. Gmail draft saved as reminder.',
-    linkedin: '', website: '',
-    contacts: [
-      { id: 1, name: 'Matt Goggin', title: 'Atlanta tech executive / advisor', email: '', linkedin: 'https://www.linkedin.com/in/matthew-goggin-3202803/', last_contacted: null, status: 'not contacted', notes: 'Send via LinkedIn DM. Message drafted 3/27. Ask for warm intros — do not pitch as if he is a recruiter.' }
-    ]
-  },
-
-  { id: 31, tier: 3, name: 'Spencer Stuart', why: 'Global Big 5 firm. COO/President placements at major PE-backed and public companies.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Need named contact in healthcare/tech ops practice. Email format: FLast@spencerstuart.com. Better with warm intro.', linkedin: 'https://www.linkedin.com/company/spencer-stuart/', website: 'https://spencerstuart.com', contacts: [{ id: 1, name: 'Research needed', title: 'Healthcare/Technology Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in SE region or healthcare/tech COO practice.' }] },
-  { id: 32, tier: 3, name: 'Russell Reynolds Associates', why: 'Global firm with dedicated COO/operations practice.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: First.Last@russellreynolds.com. Need named contact.', linkedin: 'https://www.linkedin.com/company/russell-reynolds-associates/', website: 'https://russellreynolds.com', contacts: [{ id: 1, name: 'Research needed', title: 'COO/Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact with COO/ops focus or Southeast region.' }] },
-  { id: 33, tier: 3, name: 'DHR Global', why: 'Operations and technology C-suite placements. PE-backed company experience. Atlanta office.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format likely FLast@dhrglobal.com. Atlanta office exists.', linkedin: 'https://www.linkedin.com/company/dhr-global/', website: 'https://dhrglobal.com', contacts: [{ id: 1, name: 'Research needed', title: 'Technology/Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in technology or operations COO practice. Atlanta office preferred.' }] },
-  { id: 34, tier: 3, name: 'Stanton Chase', why: 'Southeast US office. Technology and operations C-suite placements.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Need Atlanta/Southeast office contact. Email format varies.', linkedin: 'https://www.linkedin.com/company/stanton-chase/', website: 'https://stantonchase.com', contacts: [{ id: 1, name: 'Research needed', title: 'Atlanta/Southeast Office', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find Atlanta or Southeast practice leader.' }] },
-  { id: 35, tier: 3, name: 'Odgers Berndtson', why: 'Strong PE and technology practices. COO placements at PE-backed tech.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: FLast@odgersberndtson.com.', linkedin: 'https://www.linkedin.com/company/odgers-berndtson/', website: 'https://odgersberndtson.com', contacts: [{ id: 1, name: 'Research needed', title: 'Technology/PE Practice, US', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in US technology or PE practice.' }] },
-  { id: 36, tier: 3, name: 'Frederickson Partners', why: 'PE/VC-focused. Technology operations COO placements. Series B/C.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: first@fredpartners.com or FLast@fredpartners.com.', linkedin: 'https://www.linkedin.com/company/frederickson-partners/', website: 'https://fredpartners.com', contacts: [{ id: 1, name: 'Research needed', title: 'Technology/Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact with COO/operations focus.' }] },
-  { id: 37, tier: 3, name: 'Kaye/Bassman International', why: '30+ year HCIT executive search specialist. Directly relevant to ChartRequest vertical.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: FLast@kbic.com or First.Last@kbic.com.', linkedin: 'https://www.linkedin.com/company/kaye-bassman/', website: 'https://kbic.com', contacts: [{ id: 1, name: 'Research needed', title: 'Healthcare IT Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in HCIT/SaaS COO practice.' }] },
-  { id: 38, tier: 3, name: 'Slone Partners', why: 'Life sciences and digital health. VC/PE-backed COO placements.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: FLast@slonepartners.com.', linkedin: 'https://www.linkedin.com/company/slone-partners/', website: 'https://slonepartners.com', contacts: [{ id: 1, name: 'Research needed', title: 'Digital Health/Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in digital health/healthtech COO practice.' }] },
-  { id: 39, tier: 3, name: 'Furst Group', why: 'Healthcare operations exec search. COO/President at healthtech companies.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Need to identify contact in healthcare tech operations practice.', linkedin: 'https://www.linkedin.com/company/furst-group/', website: 'https://furstgroup.com', contacts: [{ id: 1, name: 'Research needed', title: 'Healthcare Technology Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in healthcare technology or digital health COO practice.' }] },
-  { id: 40, tier: 3, name: 'Kingsley Gate Partners', why: 'PE-backed C-suite specialist. CEO, COO, CFO placements. Growth equity and buyout focus.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Email format: FLast@kingsleygate.com.', linkedin: 'https://www.linkedin.com/company/kingsley-gate-partners/', website: 'https://kingsleygate.com', contacts: [{ id: 1, name: 'Research needed', title: 'Technology/Operations Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact with COO/ops focus for PE growth equity and buyout.' }] },
-
-  // ============================================================
-  // TIER 4: HEALTH TECH SPECIALISTS
-  // ============================================================
-
-  {
-    id: 24, tier: 4, name: 'Storm3',
-    why: 'HealthTech-specialist recruiter. Finance & Operations practice places COOs. Exact vertical fit.',
-    status: 'passed', last_contacted: '2026-03-27', followup_date: null,
-    notes: 'Email to perrin.joel@storm3.com blocked 3/27 — admin rule, inbox no longer active. Need to find current US contact at Storm3.',
-    linkedin: 'https://www.linkedin.com/company/storm3/', website: 'https://storm3.com',
-    contacts: [
-      { id: 1, name: 'Perrin Joel', title: 'Commercial Manager, US (may have departed)', email: 'perrin.joel@storm3.com', linkedin: '', last_contacted: '2026-03-27', status: 'dead end', notes: 'Email blocked 3/27 — inbox no longer active per admin rule. Find current US contact.' }
-    ]
-  },
-
-  {
-    id: 25, tier: 4, name: 'Epsen Fuller Group',
-    why: 'Healthcare IT exec search boutique. COO, CIO, VP Operations at healthcare SaaS. Directly relevant vertical.',
-    status: 'not contacted', last_contacted: null, followup_date: null,
-    notes: 'Need to identify contact. Email format: FLast@epsenfuller.com.',
-    linkedin: 'https://www.linkedin.com/company/epsen-fuller-group/', website: 'https://epsenfuller.com',
-    contacts: [
-      { id: 1, name: 'Research needed', title: 'Healthcare IT/SaaS Practice', email: '', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Find named contact in healthcare IT/digital health COO practice.' }
-    ]
-  }
-
+  { id: 1, tier: 1, name: 'Bespoke Partners', why: 'Top PE-backed SaaS exec search. COO/President roles. Healthcare software practice.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: 'https://www.linkedin.com/company/bespoke-partners/', website: 'https://bespokepartners.com', contacts: [{ id: 1, name: 'Katherine Baker', title: 'Partner, CEO & P&L Practice', email: 'katherine.baker@bespokepartners.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 2, tier: 1, name: 'Talentfoot', why: 'SaaS-only exec search. PE-backed sweet spot. Atlanta reach. Strong COO/ops practice.', status: 'in conversation', last_contacted: '2026-03-26', followup_date: null, notes: 'Camille responded same day. Connected to colleagues. Flagged President role. Replied highlighting marketing ownership.', linkedin: 'https://www.linkedin.com/company/talentfoot/', website: 'https://talentfoot.com', contacts: [{ id: 1, name: 'Camille Fetter', title: 'Founder & CEO', email: 'cfetter@talentfoot.com', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Active conversation.' }] },
+  { id: 3, tier: 1, name: 'Cowen Partners', why: 'Forbes Top 100. PE-backed COO specialists.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: '', website: 'https://cowenpartners.com', contacts: [{ id: 1, name: 'Shawn Cole', title: 'President & Founding Partner', email: 'shawn@cowenpartners.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 4, tier: 1, name: 'BSG (Boston Search Group)', why: 'Mid-market PE. Builder-leader profile match. SaaS and healthcare tech verticals.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: '', website: 'https://bostonsearchgroup.com', contacts: [{ id: 1, name: 'Clark Waterfall', title: 'Founder & Managing Director', email: 'cwaterfall@bostonsearchgroup.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 5, tier: 1, name: 'Bloom Recruiting', why: 'Warm relationship. Callie has full context.', status: 'in conversation', last_contacted: '2026-03-26', followup_date: null, notes: 'Active.', linkedin: '', website: '', contacts: [{ id: 1, name: 'Callie Vandegrift', title: 'Recruiter', email: '', linkedin: '', last_contacted: '2026-03-26', status: 'in conversation', notes: 'Active.' }] },
+  { id: 6, tier: 1, name: 'JM Search', why: 'PE-backed healthcare tech COO placements. Hunt Scanlon Top 50.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'ahenry@jmsearch.com bounced 3/27. LinkedIn is primary channel.', linkedin: 'https://www.linkedin.com/company/jm-search/', website: 'https://jmsearch.com', contacts: [{ id: 1, name: 'Andrew Henry', title: 'Managing Partner', email: 'ahenry@jmsearch.com', linkedin: '', last_contacted: null, status: 'bounced', notes: 'Email bounced 3/27. Use LinkedIn.' }] },
+  { id: 7, tier: 1, name: 'Daversa Partners', why: 'CEO/President/COO at growth-stage VC-backed SaaS.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://daversa.com', contacts: [{ id: 1, name: 'Will Sheridan', title: 'Director', email: 'will@daversa.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 8, tier: 1, name: 'Acertitude', why: 'Technology & Healthcare. PE portfolio C-suite specialist. Forbes #139.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Emailed 3/27 and again 4/1 (new template).', linkedin: '', website: 'https://acertitude.com', contacts: [{ id: 1, name: 'Rick DeRose', title: 'Co-Founder & Managing Partner', email: 'rderose@acertitude.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Emailed 3/27 and 4/1.' }] },
+  { id: 9, tier: 1, name: 'ON Partners', why: 'Dedicated SaaS practice. Forbes #34. Explicit VC/PE SaaS COO work.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'sharris@onpartners.com bounced 3/27. Use LinkedIn.', linkedin: 'https://www.linkedin.com/company/on-search-partners/', website: 'https://onpartners.com', contacts: [{ id: 1, name: 'Seth Harris', title: 'Partner, SaaS & Technology', email: 'sharris@onpartners.com', linkedin: '', last_contacted: null, status: 'bounced', notes: 'Email bounced 3/27. Use LinkedIn.' }] },
+  { id: 10, tier: 1, name: 'CarterBaldwin', why: 'Atlanta HQ. Technology practice. PE-backed C-suite. Local home-field.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://carterbaldwin.com', contacts: [{ id: 1, name: 'Jennifer Sobocinski', title: 'Founding Partner, Technology Practice', email: 'jsobocinski@carterbaldwin.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 11, tier: 1, name: 'Crist|Kolder Associates', why: 'CEO/CFO/COO/Board only firm. Scott Simmons leads COO search.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://cristkolder.com', contacts: [{ id: 1, name: 'Scott Simmons', title: 'Co-Managing Partner', email: 'ssimmons@cristkolder.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 26, tier: 1, name: 'SPMB Executive Search', why: 'VC/PE-backed CEO/COO practice. Okta, GitHub, Snowflake placements.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://spmb.com', contacts: [{ id: 1, name: 'Dave Mullarkey', title: 'Managing Partner', email: 'dave@spmb.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 28, tier: 2, name: 'ZRG Partners', why: 'Fast-growing global talent advisory. PE-backed tech and healthcare COO practice.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Three contacts emailed 3/27 and 4/1.', linkedin: '', website: 'https://zrgpartners.com', contacts: [{ id: 1, name: 'Joni Noel', title: 'Co-Head, Healthcare & Life Sciences', email: 'jnoel@zrgpartners.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }, { id: 2, name: 'Timothy Henn', title: 'Managing Director, Global Technology & Board Services (Atlanta)', email: 'thenn@zrgpartners.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1. Atlanta office.' }, { id: 3, name: 'Jim Urquhart', title: 'Managing Director, COO/C-suite SaaS & FinTech', email: 'jurquhart@zrgpartners.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1. COO/SaaS/FinTech focus.' }] },
+  { id: 42, tier: 1, name: 'Raines International', why: 'Difference Makers framework. COO and ops executives in PE/growth-stage. Technology and FinTech practices.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Two contacts emailed 4/1 — both delivered.', linkedin: '', website: 'https://rainesinternational.com', contacts: [{ id: 1, name: 'Ceylan Higgins', title: 'Managing Director, Global Software & Technology Practice', email: 'chiggins@rainesinternational.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1.' }, { id: 2, name: 'Gerard Dash', title: 'SVP, FinTech (Atlanta-based)', email: 'gdash@rainesinternational.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1. Atlanta-based.' }] },
+  { id: 43, tier: 1, name: 'DHR Global', why: 'COO/ops practice. PE-backed technology and mid-market companies. Atlanta office.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Two contacts emailed 4/1 — both delivered.', linkedin: '', website: 'https://dhrglobal.com', contacts: [{ id: 1, name: 'Kathryn Ullrich', title: 'Managing Partner, Technology/SaaS COO Practice (Silicon Valley)', email: 'kullrich@dhrglobal.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1. CEO/COO/SaaS focus.' }, { id: 2, name: 'Ginny Edwards', title: 'Partner, PE & Founder-led Companies', email: 'gedwards@dhrglobal.com', linkedin: '', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email delivered 4/1. PE/ops-intensive focus.' }] },
+  { id: 44, tier: 2, name: 'N2Growth', why: 'C-suite and COO search for growth-stage and PE-backed companies.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'mmyatt@n2growth.com bounced 4/1 — address not found. Find correct email or use LinkedIn.', linkedin: '', website: 'https://n2growth.com', contacts: [{ id: 1, name: 'Mike Myatt', title: 'Founder & Chairman', email: 'mmyatt@n2growth.com', linkedin: '', last_contacted: null, status: 'bounced', notes: 'Email bounced 4/1. Find correct address or contact via LinkedIn.' }] },
+  { id: 45, tier: 2, name: 'Odgers Berndtson', why: 'Strong PE and technology practices. COO placements. Atlanta office.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'mobydell@odgersberndtson.com bounced 4/1. Email format may be different — try first.last@odgersberndtson.com or use LinkedIn.', linkedin: '', website: 'https://odgersberndtson.com', contacts: [{ id: 1, name: 'Mats-Ola Bydell', title: 'Managing Partner, CEO Succession & Board Practice (Atlanta)', email: 'mobydell@odgersberndtson.com', linkedin: '', last_contacted: null, status: 'bounced', notes: 'Email bounced 4/1. Try matsola.bydell@odgersberndtson.com or LinkedIn.' }] },
+  { id: 46, tier: 1, name: 'Buffkin/Baker', why: 'PE and technology practice. Southeast footprint. Partner-led boutique.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'cbuffkin@buffkinbaker.com bounced 4/1. Try craig@buffkinbaker.com or c.buffkin@buffkinbaker.com or LinkedIn.', linkedin: '', website: 'https://buffkinbaker.com', contacts: [{ id: 1, name: 'Craig Buffkin', title: 'Managing Partner, PE & Transformation Practice', email: 'cbuffkin@buffkinbaker.com', linkedin: '', last_contacted: null, status: 'bounced', notes: 'Email bounced 4/1. Try alternate format or LinkedIn.' }] },
+  { id: 12, tier: 2, name: 'True Search', why: 'PE/VC tech. Strong Series B/C COO practice.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: '', website: 'https://trueplatform.com', contacts: [{ id: 1, name: 'Steve Tutelman', title: 'Managing Director, PE Practice', email: 'steve.tutelman@truesearch.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 13, tier: 2, name: 'Korn Ferry', why: 'National. COO/SVP Ops practice. Series C/D and PE-owned.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: '', website: 'https://kornferry.com', contacts: [{ id: 1, name: 'Doug Greenberg', title: 'Senior Partner, Healthcare Technology', email: 'doug.greenberg@kornferry.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 14, tier: 2, name: 'Charles Aris', why: 'NC-based, national reach. COO placements in Southeast growth companies.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: '', linkedin: '', website: 'https://charlesaris.com', contacts: [{ id: 1, name: 'Kevin Stemke', title: 'Practice Leader', email: 'kevin.stemke@charlesaris.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Email sent 3/26.' }] },
+  { id: 15, tier: 2, name: 'StevenDouglas', why: 'Atlanta-based. Operations & COO search. PE-backed portfolio.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://stevendouglas.com', contacts: [{ id: 1, name: 'Drew Zachmann', title: 'Director, Operations & Supply Chain', email: 'dzachmann@stevendouglas.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 16, tier: 2, name: 'Slayton Search Partners', why: 'Forbes #38. PE-backed portfolio COO/CFO/C-suite.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://slaytonsearch.com', contacts: [{ id: 1, name: 'Rick Slayton', title: 'Managing Partner & CEO', email: 'rslayton@slaytonsearch.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 17, tier: 2, name: 'Nexus Search Partners', why: 'Charlotte. PE-backed COO/President placements.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: '', linkedin: '', website: 'https://nexussearchpartners.com', contacts: [{ id: 1, name: 'Thaddeus Jones', title: 'Founder & Managing Partner', email: 'tjones@nexussearchpartners.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Email sent 3/27.' }] },
+  { id: 27, tier: 2, name: 'WittKieffer', why: 'Julie Chavey is Atlanta-based. VC/PE healthcare, healthtech, life sciences.', status: 'in conversation', last_contacted: '2026-03-27', followup_date: null, notes: 'Active conversation with Julie Chavey — responded and scheduled call.', linkedin: '', website: 'https://wittkieffer.com', contacts: [{ id: 1, name: 'Julie Chavey', title: 'Consultant, Investor-Backed Healthcare', email: 'jchavey@wittkieffer.com', linkedin: '', last_contacted: '2026-03-27', status: 'in conversation', notes: 'Responded. Call scheduled.' }] },
+  { id: 18, tier: 3, name: 'Riviera Partners', why: 'Ryan Brogan in PE practice. Primarily technical roles.', status: 'contacted', last_contacted: '2026-03-27', followup_date: '2026-04-03', notes: 'Passed on most recent role — no current fit. Keeping warm.', linkedin: '', website: 'https://rivierapartners.com', contacts: [{ id: 1, name: 'Ryan Brogan', title: 'Client Partner, Private Equity Practice', email: 'rbrogan@rivierapartners.com', linkedin: '', last_contacted: '2026-03-27', status: 'emailed', notes: 'Responded — no current fit, keeping in system.' }] },
+  { id: 19, tier: 3, name: 'ReadySetExec', why: 'Founder-led boutique. Operations and SaaS.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: 'Bounce resolved. Correct address is pshea@readysetexec.com.', linkedin: '', website: 'https://readysetexec.com', contacts: [{ id: 1, name: 'Patrick Shea', title: 'Co-Founder & Managing Partner', email: 'pshea@readysetexec.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Bounce resolved. Email sent 3/26.' }] },
+  { id: 20, tier: 3, name: 'Klein Hersh', why: 'Healthcare tech and digital health SaaS. Direct vertical fit.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: 'Bounce on jesse@ resolved. Sent to jklein@.', linkedin: '', website: 'https://kleinhersh.com', contacts: [{ id: 1, name: 'Jesse Klein', title: 'Managing Director & COO', email: 'jklein@kleinhersh.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Bounce resolved. Email sent 3/26.' }] },
+  { id: 21, tier: 3, name: 'TGC Search', why: 'COOs for IPO-prep SaaS.', status: 'contacted', last_contacted: '2026-03-26', followup_date: '2026-04-02', notes: 'Sent to general inbox. Find named contact.', linkedin: '', website: 'https://tgcsearch.com', contacts: [{ id: 1, name: 'General Inbox', title: '', email: 'info@tgcsearch.com', linkedin: '', last_contacted: '2026-03-26', status: 'emailed', notes: 'Sent to general inbox. Find named contact.' }] },
+  { id: 22, tier: 3, name: 'Heidrick & Struggles', why: 'National. COO practice.', status: 'passed', last_contacted: '2026-03-26', followup_date: null, notes: 'Wrong contact. Need new lead.', linkedin: '', website: 'https://heidrick.com', contacts: [{ id: 1, name: 'Doug Greenberg', title: 'Now at Korn Ferry', email: '', linkedin: '', last_contacted: null, status: 'dead end', notes: 'Moved to Korn Ferry.' }] },
+  { id: 23, tier: 3, name: 'Diversified Search Group', why: 'PE-backed tech practice.', status: 'passed', last_contacted: '2026-03-26', followup_date: null, notes: 'Nora Sutherland moved to True Search. Address bounced.', linkedin: '', website: 'https://diversifiedsearchgroup.com', contacts: [{ id: 1, name: 'Nora Sutherland', title: 'Now at True Search', email: '', linkedin: '', last_contacted: null, status: 'dead end', notes: 'Moved to True Search.' }] },
+  { id: 24, tier: 3, name: 'Storm3', why: 'HealthTech specialist. Finance & Operations practice places COOs.', status: 'passed', last_contacted: '2026-03-27', followup_date: null, notes: 'perrin.joel@storm3.com blocked. Find current US contact.', linkedin: '', website: 'https://storm3.com', contacts: [{ id: 1, name: 'Perrin Joel', title: 'May have departed', email: 'perrin.joel@storm3.com', linkedin: '', last_contacted: null, status: 'dead end', notes: 'Email blocked. Find current US contact.' }] },
+  { id: 30, tier: 2, name: 'Direct Recruiters Inc.', why: 'Digital health and healthcare IT executive search. ChartRequest background directly relevant.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Norman Volsky hosts Digital Health Heavyweights Podcast.', linkedin: '', website: 'https://directrecruiters.com', contacts: [{ id: 1, name: 'Norman Volsky', title: 'Managing Partner, Digital Health Practice', email: 'nvolsky@directrecruiters.com', linkedin: '', last_contacted: null, status: 'not contacted', notes: 'Primary target. Podcast angle.' }] }
 ];
 
-function loadDB() {
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify(SEED_FIRMS, null, 2));
-    return SEED_FIRMS;
-  }
-  const firms = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-  return firms.map(f => ({ last_contacted: null, followup_date: null, contacts: [], ...f }));
+const SEED_CEOS = [
+  { id: 101, company: 'Greenlight Financial', why: 'Fintech SaaS for families. $556M raised. 650+ employees. At scale inflection.', status: 'not contacted', last_contacted: null, followup_date: null, notes: 'Pete Santora email bounced 4/1 — pete@thundrlizard.com domain does not exist. Find correct email. Tim Sheehan is CEO.', contacts: [{ id: 1, name: 'Pete Santora', title: 'Contact (role TBD)', email: 'pete@thundrlizard.com', last_contacted: null, status: 'bounced', notes: 'Email bounced 4/1 — domain thundrlizard.com not found. Find correct address.' }, { id: 2, name: 'Tim Sheehan', title: 'Co-Founder & CEO', email: 'tsheehan@greenlight.com', last_contacted: null, status: 'not contacted', notes: 'CEO. Draft queued — did not send per Everett instruction to use Pete first.' }] },
+  { id: 102, company: 'Flock Safety', why: 'Public safety tech. $655M+ raised. 900 employees. Civic/government angle.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Draft sent 4/1 — referral ask.', contacts: [{ id: 1, name: 'Garrett Langley', title: 'Co-Founder & CEO', email: 'glangley@flocksafety.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Referral ask sent 4/1.' }] },
+  { id: 103, company: 'Stord', why: 'Logistics SaaS. $1.1B valuation. 1,500+ employees. Kanga parallel.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Draft sent 4/1 — logistics founder angle.', contacts: [{ id: 1, name: 'Sean Henry', title: 'Co-Founder & CEO', email: 'shenry@stord.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Logistics founder angle sent 4/1.' }] },
+  { id: 104, company: 'CallRail', why: 'Call tracking analytics SaaS. 350 employees. Bootstrapped to growth equity.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Referral ask sent 4/1.', contacts: [{ id: 1, name: 'Marc Ginsberg', title: 'CEO', email: 'mginsberg@callrail.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Referral ask sent 4/1.' }] },
+  { id: 105, company: 'FinQuery', why: 'Lease/contract accounting SaaS. 19 consecutive quarters top-ranked. Compliance vertical parallel to ChartRequest.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Compliance SaaS angle sent 4/1.', contacts: [{ id: 1, name: 'George Azih', title: 'Founder & Executive Chairman', email: 'gazih@finquery.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Vertical SaaS compliance angle sent 4/1.' }] },
+  { id: 106, company: 'BetterCloud', why: 'SaaS ops management. Vista Equity-backed. PE mandate COO fit.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Referral ask sent 4/1.', contacts: [{ id: 1, name: 'Jesse Levin', title: 'CEO', email: 'jesse.levin@bettercloud.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'PE mandate angle sent 4/1.' }] },
+  { id: 107, company: 'Pindrop', why: 'Voice security AI. Atlanta-based. 325 employees. Strong COO parallel.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Referral ask sent 4/1.', contacts: [{ id: 1, name: 'Vijay Balasubramaniyan', title: 'Co-Founder & CEO', email: 'vijay@pindrop.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Referral ask sent 4/1.' }] },
+  { id: 108, company: 'Salesloft', why: 'Revenue orchestration SaaS. Vista Equity-backed. Atlanta. Post-PE transformation.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Referral ask sent 4/1.', contacts: [{ id: 1, name: 'David Obrand', title: 'CEO', email: 'dobrand@salesloft.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Referral ask sent 4/1.' }] },
+  { id: 109, company: 'Florence Healthcare', why: 'Clinical trial SaaS. Atlanta. 307 employees. Healthcare vertical match.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Healthcare SaaS angle sent 4/1.', contacts: [{ id: 1, name: 'Ryan Jones', title: 'Co-Founder & CEO', email: 'ryan.jones@florencehc.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Healthcare SaaS angle sent 4/1.' }] }
+];
+
+const SEED_VCS = [
+  { id: 201, firm: 'BIP Ventures', why: 'Southeast largest VC. Multi-stage B2B SaaS portfolio. 150+ investments.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Mark Buffington', title: 'Co-Founder & Managing Partner', email: 'mbuffington@bip-capital.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 202, firm: 'Noro-Moseley Partners', why: '40-year Atlanta VC. B2B software and healthcare IT. $1B+ invested in 200+ companies.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Alan Taetle', title: 'General Partner, IT Practice', email: 'ataetle@noromoseley.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 203, firm: 'Overline', why: 'Operator-first seed VC. Southeast focus. Operating Partner network.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Michael Cohn', title: 'Managing Partner', email: 'mcohn@overline.vc', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 204, firm: 'TTV Capital', why: 'Atlanta fintech VC since 2000. $250M Fund VI. Seed through late-stage.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Gardiner Garrard', title: 'Co-Founder & Managing Partner', email: 'ggarrard@ttvcapital.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 205, firm: 'Fulcrum Equity Partners', why: 'Atlanta growth equity. B2B software and healthcare services. Operational discipline.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Philip Lewis', title: 'Partner', email: 'plewis@fulcrumep.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 206, firm: 'Resurgens Technology Partners', why: 'Atlanta PE. $800M Fund III. Software buyouts. Operating value model.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Fred Sturgis', title: 'Co-Founder & Managing Director', email: 'fred@resurgenstech.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 207, firm: 'TechOperators', why: 'Operators-as-investors. B2B SaaS and cybersecurity. Atlanta. Founder-led model.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Glenn McGonnigle', title: 'General Partner', email: 'gmcgonnigle@techoperators.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 208, firm: 'Atlanta Ventures', why: 'David Cummings portfolio: Calendly, SalesLoft, SingleOps, Terminus. Seed B2B SaaS.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'David Cummings', title: 'Founder', email: 'david@atlantaventures.com', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] },
+  { id: 209, firm: 'Valor Ventures', why: 'Atlanta seed VC. B2B SaaS and Southeast focus. Lisa Calhoun founded 2015.', status: 'contacted', last_contacted: '2026-04-01', followup_date: '2026-04-08', notes: 'Clean short email sent 4/1.', contacts: [{ id: 1, name: 'Lisa Calhoun', title: 'Founding General Partner', email: 'lisa@valorventures.co', last_contacted: '2026-04-01', status: 'emailed', notes: 'Email sent 4/1.' }] }
+];
+
+function loadDB(path, seed) {
+  if (!fs.existsSync(path)) { fs.writeFileSync(path, JSON.stringify(seed, null, 2)); return seed; }
+  return JSON.parse(fs.readFileSync(path, 'utf8'));
 }
-function saveDB(firms) { fs.writeFileSync(DB_PATH, JSON.stringify(firms, null, 2)); }
+function saveDB(path, data) { fs.writeFileSync(path, JSON.stringify(data, null, 2)); }
 
 function requireAuth(req, res, next) {
   if (!PASSWORD) return next();
@@ -422,80 +99,34 @@ app.post('/api/login', (req, res) => {
 });
 
 app.get('/api/auth-required', (req, res) => res.json({ required: !!PASSWORD }));
-app.get('/api/firms', requireAuth, (req, res) => res.json(loadDB()));
+app.get('/api/firms', requireAuth, (req, res) => res.json(loadDB(DB_PATH, SEED_FIRMS)));
+app.get('/api/ceos', requireAuth, (req, res) => res.json(loadDB(CEO_PATH, SEED_CEOS)));
+app.get('/api/vcs', requireAuth, (req, res) => res.json(loadDB(VC_PATH, SEED_VCS)));
 
-app.patch('/api/firms/:id', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id);
-  const firms = loadDB();
-  const idx = firms.findIndex(f => f.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  ['status', 'notes', 'followup_date'].forEach(k => { if (req.body[k] !== undefined) firms[idx][k] = req.body[k]; });
-  if (req.body.status && req.body.status !== 'not contacted') firms[idx].last_contacted = new Date().toISOString().split('T')[0];
-  saveDB(firms); res.json(firms[idx]);
-});
+function makePatch(dbPath, seed, idField) {
+  return (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = loadDB(dbPath, seed);
+    const idx = data.findIndex(f => f.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+    ['status', 'notes', 'followup_date'].forEach(k => { if (req.body[k] !== undefined) data[idx][k] = req.body[k]; });
+    if (req.body.status && req.body.status !== 'not contacted') data[idx].last_contacted = new Date().toISOString().split('T')[0];
+    saveDB(dbPath, data); res.json(data[idx]);
+  };
+}
 
-app.post('/api/firms', requireAuth, (req, res) => {
-  const firms = loadDB();
-  const next = { id: Math.max(0, ...firms.map(f => f.id)) + 1, tier: req.body.tier || 3, name: req.body.name || 'New Firm', why: req.body.why || '', status: 'not contacted', notes: '', linkedin: req.body.linkedin || '', website: req.body.website || '', last_contacted: null, followup_date: null, contacts: [] };
-  firms.push(next); saveDB(firms); res.status(201).json(next);
-});
-
-app.post('/api/firms/:id/contacts', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id);
-  const firms = loadDB();
-  const firm = firms.find(f => f.id === id);
-  if (!firm) return res.status(404).json({ error: 'Firm not found' });
-  const contacts = firm.contacts || [];
-  const contact = { id: Math.max(0, ...contacts.map(c => c.id)) + 1, name: req.body.name || '', title: req.body.title || '', email: req.body.email || '', linkedin: req.body.linkedin || '', last_contacted: req.body.last_contacted || null, status: req.body.status || 'not contacted', notes: req.body.notes || '' };
-  firm.contacts = [...contacts, contact]; saveDB(firms); res.status(201).json(contact);
-});
-
-app.patch('/api/firms/:id/contacts/:cid', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id), cid = parseInt(req.params.cid);
-  const firms = loadDB();
-  const firm = firms.find(f => f.id === id);
-  if (!firm) return res.status(404).json({ error: 'Firm not found' });
-  const contact = (firm.contacts || []).find(c => c.id === cid);
-  if (!contact) return res.status(404).json({ error: 'Contact not found' });
-  ['name', 'title', 'email', 'linkedin', 'last_contacted', 'status', 'notes'].forEach(k => { if (req.body[k] !== undefined) contact[k] = req.body[k]; });
-  saveDB(firms); res.json(contact);
-});
-
-app.delete('/api/firms/:id/contacts/:cid', requireAuth, (req, res) => {
-  const id = parseInt(req.params.id), cid = parseInt(req.params.cid);
-  const firms = loadDB();
-  const firm = firms.find(f => f.id === id);
-  if (!firm) return res.status(404).json({ error: 'Firm not found' });
-  firm.contacts = (firm.contacts || []).filter(c => c.id !== cid);
-  saveDB(firms); res.json({ ok: true });
-});
+app.patch('/api/firms/:id', requireAuth, makePatch(DB_PATH, SEED_FIRMS, 'id'));
+app.patch('/api/ceos/:id', requireAuth, makePatch(CEO_PATH, SEED_CEOS, 'id'));
+app.patch('/api/vcs/:id', requireAuth, makePatch(VC_PATH, SEED_VCS, 'id'));
 
 app.get('/api/export.csv', requireAuth, (req, res) => {
-  const firms = loadDB();
-  const headers = ['id', 'tier', 'name', 'status', 'last_contacted', 'followup_date', 'why', 'website', 'linkedin', 'notes', 'contacts_count'];
-  const escape = v => '"' + String(v || '').replace(/"/g, '""') + '"';
-  const rows = firms.map(f => [...headers.slice(0,-1).map(h => escape(f[h])), escape((f.contacts||[]).length)].join(','));
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="recruiter-tracker.csv"');
-  res.send([headers.join(','), ...rows].join('\n'));
-});
-
-app.post('/api/import', requireAuth, (req, res) => {
-  const rows = req.body.rows;
-  if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows must be array' });
-  const firms = loadDB();
-  let added = 0, updated = 0;
-  rows.forEach(row => {
-    const existing = firms.find(f => f.name.toLowerCase() === (row.name || '').toLowerCase());
-    if (existing) {
-      ['tier', 'why', 'website', 'linkedin', 'notes', 'status', 'followup_date'].forEach(k => { if (row[k] !== undefined && row[k] !== '') existing[k] = row[k]; });
-      updated++;
-    } else {
-      firms.push({ id: Math.max(0, ...firms.map(f => f.id)) + 1, tier: parseInt(row.tier) || 3, name: row.name || 'Unnamed', why: row.why || '', status: row.status || 'not contacted', notes: row.notes || '', linkedin: row.linkedin || '', website: row.website || '', last_contacted: row.last_contacted || null, followup_date: row.followup_date || null, contacts: [] });
-      added++;
-    }
-  });
-  saveDB(firms); res.json({ ok: true, added, updated });
+  const firms = loadDB(DB_PATH, SEED_FIRMS);
+  const headers = ['id','tier','name','status','last_contacted','followup_date','notes'];
+  const escape = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+  const rows = firms.map(f => headers.map(h => escape(f[h])).join(','));
+  res.setHeader('Content-Type','text/csv');
+  res.setHeader('Content-Disposition','attachment; filename="recruiter-tracker.csv"');
+  res.send([headers.join(','),...rows].join('\n'));
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
