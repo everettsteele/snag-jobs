@@ -6,28 +6,48 @@
 <title>HopeSpot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;color:#1F2D3D;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid #E5E7EB;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:#1F2D3D}
-.logo svg{color:#F97316}
-.nav-tabs{display:flex;border-bottom:2px solid #E5E7EB;margin:0 24px;background:#fff;position:sticky;top:56px;z-index:99;padding-top:12px}
-.tab{padding:10px 18px;font-size:13px;font-weight:500;color:#6B7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
-.tab:hover{color:#1F2D3D}
-.tab.active{color:#F97316;border-bottom-color:#F97316;font-weight:600}
-.badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;background:#F97316;color:#fff;font-size:10px;font-weight:700;border-radius:9px;padding:0 4px}
-.badge.green{background:#10B981}.badge.blue{background:#3B82F6}.badge.purple{background:#8B5CF6}.badge.gray{background:#9CA3AF}.badge.urgent{background:#EF4444}
-.main{padding:16px 24px}
-/* Queue */
-.queue-date{font-size:11px;color:#9CA3AF;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
-.queue-title{font-size:20px;font-weight:700;margin-bottom:4px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;color:#1F2D3D;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── LAYOUT ────────────────────────────────────── */
+.app-shell{display:flex;flex:1;overflow:hidden;height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:#1F2D3D;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-logo-mark{display:flex;align-items:center;gap:9px}
+.sidebar-logo-mark svg{color:#F97316}
+.sidebar-logo-name{font-weight:700;font-size:16px;color:#fff}
+.sidebar-logo-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;padding-left:29px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.3);padding:12px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;border-left:2px solid transparent;transition:all .15s;white-space:nowrap}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(249,115,22,.12);color:#F97316;border-left-color:#F97316}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;min-width:18px;height:18px;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.nav-badge.urgent{background:#EF4444}
+.nav-badge.blue{background:#3B82F6}
+.nav-badge.green{background:#10B981}
+.sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:rgba(255,255,255,.2)}
+
+.content-area{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid #E5E7EB;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600;color:#1F2D3D}
+.topbar-sub{font-size:12px;color:#9CA3AF}
+.main{padding:20px 24px;flex:1}
+
+/* ── QUEUE ──────────────────────────────────────── */
+.queue-date{font-size:11px;color:#9CA3AF;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.queue-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .queue-sub{font-size:13px;color:#6B7280;margin-bottom:20px}
 .section-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:20px}
-.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1F2D3D}
+.section-header:first-of-type{margin-top:0}
+.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1F2D3D}
 .section-count{font-size:12px;color:#9CA3AF}
-.queue-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.queue-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:box-shadow .15s}
+.queue-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .queue-card.followup{border-left:3px solid #F59E0B}
 .queue-card.followup-overdue{border-left:3px solid #EF4444}
-.pillar-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.pillar-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;letter-spacing:.03em}
 .pillar-recruiter{background:#EFF6FF;color:#3B82F6}
 .pillar-ceo{background:#FFF7ED;color:#F97316}
 .pillar-vc{background:#ECFDF5;color:#10B981}
@@ -36,60 +56,62 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .queue-contact{font-size:12px;color:#6B7280}
 .queue-email{font-size:11px;color:#9CA3AF;font-family:monospace}
 .queue-meta{font-size:11px;color:#9CA3AF;margin-top:3px}
-.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap}
+.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
 .btn-send{background:#F97316;color:#fff}.btn-send:hover{background:#ea6c06}
 .btn-followup{background:#F3F4F6;color:#1F2D3D}.btn-followup:hover{background:#E5E7EB}
-/* Stats */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}
-.stat{background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #E5E7EB}
+
+/* ── STATS ──────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px}
+.stat{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E5E7EB}
 .stat-label{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
-.stat-val{font-size:22px;font-weight:600;color:#1F2D3D}
+.stat-val{font-size:24px;font-weight:600;color:#1F2D3D}
 .stat-sub{font-size:10px;color:#9CA3AF;margin-top:2px}
-/* Dashboard */
-.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.dash-grid.three{grid-template-columns:1fr 1fr 1fr}
-@media(max-width:700px){.dash-grid,.dash-grid.three{grid-template-columns:1fr}}
-.dash-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px}
-.dash-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:12px}
-.seg-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #F3F4F6}
-.seg-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
-.seg-name{font-size:13px;font-weight:600;flex:1}
-.seg-stat{text-align:right;min-width:40px}
-.seg-stat-val{font-size:15px;font-weight:600;color:#1F2D3D}
-.seg-stat-lbl{font-size:10px;color:#9CA3AF}
-.bar-wrap{flex:1;height:6px;background:#F3F4F6;border-radius:3px;overflow:hidden}
-.bar-fill{height:100%;border-radius:3px;transition:width .4s}
-.bar-blue{background:#3B82F6}.bar-orange{background:#F97316}.bar-green{background:#10B981}
-.daily-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
-.daily-date{color:#9CA3AF;width:64px;flex-shrink:0}
-.daily-bars{flex:1;display:flex;gap:3px;align-items:flex-end;height:20px}
-.daily-bar{border-radius:2px 2px 0 0;min-width:6px}
-.daily-total{font-weight:600;color:#1F2D3D;width:24px;text-align:right}
-.big-num{font-size:36px;font-weight:700;color:#1F2D3D;line-height:1}
+
+/* ── DASHBOARD ──────────────────────────────────── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
+.dash-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:18px}
+.dash-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:14px}
+.big-num{font-size:38px;font-weight:700;color:#1F2D3D;line-height:1}
 .big-sub{font-size:12px;color:#9CA3AF;margin-top:4px}
-.rate-circle{display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:80px;border-radius:50%;border:3px solid #E5E7EB;margin:0 auto 8px}
-.rate-pct{font-size:20px;font-weight:700;color:#1F2D3D}
+.rate-circle{display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:76px;border-radius:50%;border:3px solid #E5E7EB}
+.rate-pct{font-size:19px;font-weight:700;color:#1F2D3D}
 .rate-lbl{font-size:9px;color:#9CA3AF;text-transform:uppercase}
-/* Cards / list */
+.seg-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:12px}
+.seg-row:last-child{border-bottom:none}
+.seg-lbl{flex:1;color:#6B7280}
+.seg-val{font-weight:600;color:#1F2D3D}
+.daily-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px}
+.daily-date{color:#9CA3AF;width:58px;flex-shrink:0}
+.daily-bars{flex:1;display:flex;gap:3px;align-items:flex-end;height:22px}
+.daily-bar{border-radius:2px 2px 0 0;min-width:8px}
+.bar-blue{background:#3B82F6}.bar-orange{background:#F97316}.bar-green{background:#10B981}
+.daily-total{font-weight:600;color:#1F2D3D;width:24px;text-align:right}
+.legend{display:flex;gap:14px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#6B7280}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* ── LIST / CARDS ───────────────────────────────── */
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .search-box{flex:1;min-width:160px;padding:7px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
 .search-box:focus{border-color:#F97316}
-.filter-btn{padding:5px 10px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;font-size:11px;cursor:pointer;color:#6B7280}
+.filter-btn{padding:5px 10px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;font-size:11px;cursor:pointer;color:#6B7280;transition:all .15s}
 .filter-btn.active,.filter-btn:hover{background:#FFF7ED;color:#F97316;border-color:#F97316}
 .cards{display:flex;flex-direction:column;gap:8px}
-.card{background:#fff;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden}
-.card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
-.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px}
+.card{background:#fff;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;transition:box-shadow .15s}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card-header{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none}
+.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.03em}
 .card-name{font-size:14px;font-weight:600;flex:1}
 .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sdot-contacted{background:#3B82F6}.sdot-in-conversation{background:#10B981}
 .sdot-not-contacted{background:#D1D5DB}.sdot-passed{background:#EF4444}
 .sdot-bounced{background:#F59E0B}.sdot-draft{background:#8B5CF6}.sdot-linkedin{background:#0EA5E9}
 .status-lbl{font-size:11px;color:#9CA3AF}
-.card-body{padding:0 14px 12px;border-top:1px solid #F3F4F6;display:none}
+.card-body{padding:0 16px 14px;border-top:1px solid #F3F4F6;display:none}
 .card-body.open{display:block}
-.why{font-size:12px;color:#6B7280;margin:8px 0;line-height:1.5}
-.contact-row{display:flex;align-items:flex-start;gap:8px;padding:7px;background:#F9FAFB;border-radius:6px;margin-bottom:5px;font-size:12px}
+.why{font-size:12px;color:#6B7280;margin:10px 0 8px;line-height:1.5}
+.contact-row{display:flex;align-items:flex-start;gap:8px;padding:8px;background:#F9FAFB;border-radius:6px;margin-bottom:5px;font-size:12px}
 .contact-info{flex:1}
 .contact-name{font-weight:600;color:#1F2D3D;margin-bottom:1px}
 .contact-title{color:#9CA3AF;font-size:11px;margin-bottom:2px}
@@ -100,20 +122,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cs-bounced{background:#FEF3C7;color:#D97706}.cs-passed{background:#FEE2E2;color:#EF4444}
 .cs-in-conversation{background:#ECFDF5;color:#059669}.cs-contacted{background:#EFF6FF;color:#3B82F6}
 .cs-not-contacted{background:#F3F4F6;color:#6B7280}
-.field-row{display:flex;gap:6px;align-items:flex-start;margin-top:8px}
-.notes-input{flex:1;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:48px;resize:vertical;font-family:inherit;outline:none}
+.field-row{display:flex;gap:6px;align-items:flex-start;margin-top:10px}
+.notes-input{flex:1;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:52px;resize:vertical;font-family:inherit;outline:none}
 .notes-input:focus{border-color:#F97316}
 .status-select,.date-input{padding:5px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;background:#fff}
-.save-btn{padding:5px 12px;background:#F97316;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500}
+.save-btn{padding:5px 14px;background:#F97316;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500}
 .sec-lbl{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
-.empty{text-align:center;padding:48px 20px;color:#9CA3AF}
 .divider{height:1px;background:#F3F4F6;margin:16px 0}
-/* Login */
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
-.login-box{background:#fff;border-radius:12px;padding:36px;max-width:380px;width:100%;border:1px solid #E5E7EB;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-.login-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.empty{text-align:center;padding:52px 20px;color:#9CA3AF}
+
+/* ── LOGIN ──────────────────────────────────────── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F5F7FA}
+.login-box{background:#fff;border-radius:14px;padding:40px;max-width:380px;width:100%;border:1px solid #E5E7EB;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-logo{display:flex;align-items:center;gap:9px;margin-bottom:20px}
+.login-logo svg{color:#F97316}
+.login-logo-name{font-weight:700;font-size:18px;color:#1F2D3D}
 .login-sub{font-size:13px;color:#9CA3AF;margin-bottom:24px}
 .login-input{width:100%;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;outline:none;margin-bottom:12px}
+.login-input:focus{border-color:#F97316}
 .login-btn{width:100%;padding:10px;background:#F97316;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
 .login-err{color:#EF4444;font-size:12px;margin-top:8px;display:none}
 .login-status{font-size:12px;color:#9CA3AF;margin-top:8px;text-align:center}
@@ -123,7 +149,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div id="login-view" class="login-wrap">
   <div class="login-box">
-    <div class="login-title">HopeSpot</div>
+    <div class="login-logo">
+      <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <span class="login-logo-name">HopeSpot</span>
+    </div>
     <div class="login-sub">Could've used HubSpot.</div>
     <input class="login-input" type="password" id="pw-input" placeholder="Password (if set)" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Sign in</button>
@@ -132,28 +161,76 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<div id="app-view" style="display:none">
-  <div class="topbar">
-    <div class="logo">
-      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      HopeSpot
+<div id="app-view" style="display:none" class="app-shell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span class="sidebar-logo-name">HopeSpot</span>
+      </div>
+      <div class="sidebar-logo-sub">Built instead of applying.</div>
     </div>
-    <div style="font-size:11px;color:#9CA3AF">Built instead of applying.</div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Operations</div>
+      <div class="nav-item active" id="nav-queue" onclick="switchTab('queue')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Queue
+        <span class="nav-badge urgent" id="badge-queue">0</span>
+      </div>
+      <div class="nav-item" id="nav-dashboard" onclick="switchTab('dashboard')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+
+      <div class="nav-section-label">Pillars</div>
+      <div class="nav-item" id="nav-recruiters" onclick="switchTab('recruiters')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Recruiters
+        <span class="nav-badge" id="badge-recruiters">0</span>
+      </div>
+      <div class="nav-item" id="nav-ceos" onclick="switchTab('ceos')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Direct CEO
+        <span class="nav-badge blue" id="badge-ceos">0</span>
+      </div>
+      <div class="nav-item" id="nav-vcs" onclick="switchTab('vcs')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        VC Firms
+        <span class="nav-badge green" id="badge-vcs">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">everett.steele@gmail.com</div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content-area">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Morning Queue</div>
+        <div class="topbar-sub" id="topbar-sub">Today's outreach and follow-ups</div>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
   </div>
-  <div class="nav-tabs">
-    <div class="tab active" id="tab-queue"      onclick="switchTab('queue')">Queue <span class="badge urgent" id="badge-queue">0</span></div>
-    <div class="tab"        id="tab-dashboard"  onclick="switchTab('dashboard')">Dashboard</div>
-    <div class="tab"        id="tab-recruiters" onclick="switchTab('recruiters')">Recruiters <span class="badge" id="badge-recruiters">0</span></div>
-    <div class="tab"        id="tab-ceos"       onclick="switchTab('ceos')">Direct CEO <span class="badge blue" id="badge-ceos">0</span></div>
-    <div class="tab"        id="tab-vcs"        onclick="switchTab('vcs')">VC Firms <span class="badge green" id="badge-vcs">0</span></div>
-  </div>
-  <div class="main" id="main-content"></div>
+
 </div>
 
 <script>
 let TOKEN='', DATA=[], CEOs=[], VCs=[], STATS=null;
 let FILTER='all', TAB='queue';
 const TODAY=new Date().toISOString().split('T')[0];
+
+const TITLES={
+  queue:['Morning Queue','Today\'s outreach and follow-ups'],
+  dashboard:['Dashboard','Outreach performance and activity'],
+  recruiters:['Recruiters','Executive search firms'],
+  ceos:['Direct CEO','Referral asks to Atlanta SaaS founders'],
+  vcs:['VC Firms','Portfolio COO and operating partner outreach'],
+};
 
 function setStatus(m){const e=document.getElementById('login-status');if(e)e.textContent=m;}
 
@@ -187,7 +264,7 @@ async function loadAll(){
 }
 function showApp(){
   document.getElementById('login-view').style.display='none';
-  document.getElementById('app-view').style.display='block';
+  document.getElementById('app-view').style.display='flex';
 }
 function allItems(){
   return[
@@ -207,7 +284,12 @@ function updateBadges(){
 }
 function switchTab(t){
   TAB=t;FILTER='all';
-  ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('active',x===t));
+  ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>{
+    document.getElementById('nav-'+x).classList.toggle('active',x===t);
+  });
+  const [title,sub]=TITLES[t]||['',''];
+  document.getElementById('topbar-title').textContent=title;
+  document.getElementById('topbar-sub').textContent=sub;
   renderCurrent();
 }
 function renderCurrent(){
@@ -216,19 +298,31 @@ function renderCurrent(){
   else renderList();
 }
 
-// ── QUEUE ─────────────────────────────────────────────
+// ── QUEUE ────────────────────────────────────────────
 function renderQueue(){
   const all=allItems();
   const sendNow=all.filter(x=>x.status==='draft');
   const followUp=all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY).sort((a,b)=>a.followup_date>b.followup_date?1:-1);
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const totalMin=Math.round(sendNow.length*0.4+followUp.length*1.5);
-  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;·&nbsp; ${followUp.length} follow-ups &nbsp;·&nbsp; ~${totalMin} min</div><div class="section-header"><div class="section-title">Send Now</div><div class="section-count">${sendNow.length} drafts waiting</div></div>`;
-  if(!sendNow.length){html+='<div class="empty" style="padding:20px">Queue is clear.</div>';}
-  else{['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};html+=`<div class="queue-card"><span class="pillar-tag pillar-${p}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''}</div><div class="queue-email">${c.email||''}</div></div><button class="btn btn-send" onclick="markSent('${item._endpoint}',${item.id},this)">Mark Sent</button></div>`;});});}
+
+  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;·&nbsp; ${followUp.length} follow-ups &nbsp;·&nbsp; ~${totalMin} min</div>`;
+
+  html+=`<div class="section-header"><div class="section-title">Send Now</div><div class="section-count">${sendNow.length} drafts waiting</div></div>`;
+  if(!sendNow.length){html+='<div class="empty" style="padding:20px 0">No drafts queued. Add outreach to see it here.</div>';}
+  else{['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{
+    const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};
+    html+=`<div class="queue-card"><span class="pillar-tag pillar-${p}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''}</div><div class="queue-email">${c.email||''}</div></div><button class="btn btn-send" onclick="markSent('${item._endpoint}',${item.id},this)">Mark Sent</button></div>`;
+  });});}
+
   html+=`<div class="divider"></div><div class="section-header"><div class="section-title">Follow Up Today</div><div class="section-count">${followUp.length} due</div></div>`;
-  if(!followUp.length){html+='<div class="empty" style="padding:20px">No follow-ups due.</div>';}
-  else{followUp.forEach(item=>{const c=(item.contacts||[])[0]||{};const da=item.last_contacted?Math.floor((new Date()-new Date(item.last_contacted))/864e5):null;const ov=item.followup_date<TODAY;html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${item._pillar}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''} &nbsp;·&nbsp; ${c.email||''}</div><div class="queue-meta">Last contacted ${da!=null?da+' days ago':'—'} &nbsp;·&nbsp; Due ${item.followup_date}</div></div><button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button></div>`;});}
+  if(!followUp.length){html+='<div class="empty" style="padding:20px 0">No follow-ups due today.</div>';}
+  else{followUp.forEach(item=>{
+    const c=(item.contacts||[])[0]||{};
+    const da=item.last_contacted?Math.floor((new Date()-new Date(item.last_contacted))/864e5):null;
+    const ov=item.followup_date<TODAY;
+    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${item._pillar}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''} &nbsp;·&nbsp; ${c.email||''}</div><div class="queue-meta">Contacted ${da!=null?da+' days ago':'—'} &nbsp;·&nbsp; Due ${item.followup_date}</div></div><button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button></div>`;
+  });}
   document.getElementById('main-content').innerHTML=html;
 }
 async function markSent(endpoint,id,btn){
@@ -245,74 +339,68 @@ async function logFollowup(endpoint,id){
   await loadAll();
 }
 
-// ── DASHBOARD ─────────────────────────────────────────
+// ── DASHBOARD ────────────────────────────────────────
 function renderDashboard(){
-  if(!STATS){document.getElementById('main-content').innerHTML='<div class="empty">Loading stats...</div>';return;}
+  if(!STATS){document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';return;}
   const {segments,daily,totals}=STATS;
   const overallRate=totals.contacted>0?Math.round((totals.inConversation/totals.contacted)*100):0;
-  const maxDaily=daily.length?Math.max(...daily.map(d=>d.total),1):1;
+  const maxD=daily.length?Math.max(...daily.map(d=>d.total),1):1;
 
-  // Top KPI row
   let html=`<div class="stats">
     <div class="stat"><div class="stat-label">Total Outreach</div><div class="stat-val">${totals.contacted}</div><div class="stat-sub">sent & delivered</div></div>
     <div class="stat"><div class="stat-label">In Conversation</div><div class="stat-val">${totals.inConversation}</div><div class="stat-sub">active replies</div></div>
-    <div class="stat"><div class="stat-label">Response Rate</div><div class="stat-val">${overallRate}%</div><div class="stat-sub">across all segments</div></div>
+    <div class="stat"><div class="stat-label">Reply Rate</div><div class="stat-val">${overallRate}%</div><div class="stat-sub">all segments</div></div>
     <div class="stat"><div class="stat-label">Drafts Ready</div><div class="stat-val">${totals.drafts}</div><div class="stat-sub">queued to send</div></div>
     <div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${totals.bounced}</div><div class="stat-sub">need alt contact</div></div>
   </div>`;
 
-  // Segment breakdown
-  const segColors=['bar-blue','bar-orange','bar-green'];
-  html+=`<div class="dash-grid three">`;
+  html+=`<div class="dash-grid">`;
+  const borderColors=['#3B82F6','#F97316','#10B981'];
   segments.forEach((s,i)=>{
     const pct=s.contacted>0?Math.round((s.conv/s.contacted)*100):0;
-    const barW=s.contacted>0?Math.round((s.contacted/Math.max(...segments.map(x=>x.contacted),1))*100):0;
     html+=`<div class="dash-card">
       <div class="dash-card-title">${s.label}</div>
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
         <div><div class="big-num">${s.contacted}</div><div class="big-sub">contacted</div></div>
-        <div class="rate-circle" style="border-color:${i===0?'#3B82F6':i===1?'#F97316':'#10B981'}">
-          <div class="rate-pct">${pct}%</div><div class="rate-lbl">reply rate</div>
+        <div class="rate-circle" style="border-color:${borderColors[i]}">
+          <div class="rate-pct">${pct}%</div><div class="rate-lbl">replies</div>
         </div>
       </div>
-      <div class="seg-row"><span style="font-size:12px;color:#6B7280;flex:1">In conversation</span><span style="font-size:13px;font-weight:600">${s.conv}</span></div>
-      <div class="seg-row"><span style="font-size:12px;color:#6B7280;flex:1">Drafts pending</span><span style="font-size:13px;font-weight:600;color:#8B5CF6">${s.drafts}</span></div>
-      <div class="seg-row"><span style="font-size:12px;color:#6B7280;flex:1">Bounced</span><span style="font-size:13px;font-weight:600;color:#F59E0B">${s.bounced}</span></div>
+      <div class="seg-row"><span class="seg-lbl">In conversation</span><span class="seg-val">${s.conv}</span></div>
+      <div class="seg-row"><span class="seg-lbl">Drafts pending</span><span class="seg-val" style="color:#8B5CF6">${s.drafts}</span></div>
+      <div class="seg-row"><span class="seg-lbl">Bounced</span><span class="seg-val" style="color:#F59E0B">${s.bounced}</span></div>
     </div>`;
   });
   html+=`</div>`;
 
-  // Daily activity chart
-  html+=`<div class="dash-card" style="margin-bottom:16px">
-    <div class="dash-card-title">Daily Outreach Activity</div>`;
-  if(!daily.length){html+='<div style="color:#9CA3AF;font-size:13px">No activity recorded yet.</div>';}
+  html+=`<div class="dash-card"><div class="dash-card-title">Daily Outreach Activity</div>`;
+  if(!daily.length){html+='<div style="color:#9CA3AF;font-size:13px">No activity yet.</div>';}
   else{
     daily.forEach(d=>{
-      const rW=Math.round((d.recruiters/maxDaily)*120);
-      const cW=Math.round((d.ceos/maxDaily)*120);
-      const vW=Math.round((d.vcs/maxDaily)*120);
       const label=new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const scale=h=>Math.max(4,Math.round((h/maxD)*24));
+      const w=h=>Math.round((h/maxD)*100);
       html+=`<div class="daily-row">
         <div class="daily-date">${label}</div>
         <div class="daily-bars">
-          ${d.recruiters?`<div class="daily-bar bar-blue" style="width:${rW}px;height:${Math.max(4,Math.round((d.recruiters/maxDaily)*20))}px" title="Recruiters: ${d.recruiters}"></div>`:''}
-          ${d.ceos?`<div class="daily-bar bar-orange" style="width:${cW}px;height:${Math.max(4,Math.round((d.ceos/maxDaily)*20))}px" title="CEOs: ${d.ceos}"></div>`:''}
-          ${d.vcs?`<div class="daily-bar bar-green" style="width:${vW}px;height:${Math.max(4,Math.round((d.vcs/maxDaily)*20))}px" title="VCs: ${d.vcs}"></div>`:''}
+          ${d.recruiters?`<div class="daily-bar bar-blue" style="width:${w(d.recruiters)}px;height:${scale(d.recruiters)}px" title="Recruiters: ${d.recruiters}"></div>`:''}
+          ${d.ceos?`<div class="daily-bar bar-orange" style="width:${w(d.ceos)}px;height:${scale(d.ceos)}px" title="CEOs: ${d.ceos}"></div>`:''}
+          ${d.vcs?`<div class="daily-bar bar-green" style="width:${w(d.vcs)}px;height:${scale(d.vcs)}px" title="VCs: ${d.vcs}"></div>`:''}
         </div>
         <div class="daily-total">${d.total}</div>
       </div>`;
     });
-    html+=`<div style="display:flex;gap:16px;margin-top:10px">
-      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:#3B82F6;border-radius:2px"></span>Recruiters</span>
-      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:#F97316;border-radius:2px"></span>CEOs</span>
-      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:#10B981;border-radius:2px"></span>VCs</span>
+    html+=`<div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Recruiters</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>CEOs</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>VCs</div>
     </div>`;
   }
   html+=`</div>`;
   document.getElementById('main-content').innerHTML=html;
 }
 
-// ── LIST TABS ─────────────────────────────────────────
+// ── LIST TABS ────────────────────────────────────────
 function currentData(){return TAB==='ceos'?CEOs:TAB==='vcs'?VCs:DATA;}
 function nameField(item){return TAB==='ceos'?item.company:TAB==='vcs'?item.firm:item.name;}
 function setFilter(f,btn){
@@ -325,7 +413,8 @@ function renderList(){
   let items=currentData();
   const fMap={
     active:x=>['contacted','in conversation','draft','linkedin'].includes(x.status),
-    draft:x=>x.status==='draft',contacted:x=>x.status==='contacted',
+    draft:x=>x.status==='draft',
+    contacted:x=>x.status==='contacted',
     'in conversation':x=>x.status==='in conversation',
     'not contacted':x=>x.status==='not contacted',
     bounced:x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced'),
@@ -333,17 +422,61 @@ function renderList(){
   };
   if(FILTER!=='all'&&fMap[FILTER])items=items.filter(fMap[FILTER]);
   if(q)items=items.filter(x=>nameField(x).toLowerCase().includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||(x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)));
+
   const all=currentData();
   const sMap=s=>all.filter(x=>x.status===s).length;
-  const statHtml=[['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
+  const statHtml=[
+    ['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],
+    ['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],
+    ['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length],
+  ].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
+
   const cardsHtml=items.length?items.map(item=>{
     const id=item.id,name=nameField(item);
     const dotCls='sdot-'+(item.status||'not-contacted').replace(/ /g,'-');
     const tier=item.tier?`<span class="tier-badge">T${item.tier}</span>`:TAB==='ceos'?'<span class="tier-badge">CEO</span>':'<span class="tier-badge">VC</span>';
-    const contacts=(item.contacts||[]).map(c=>{const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');return`<div class="contact-row"><div class="contact-info"><div class="contact-name">${c.name}</div>${c.title?`<div class="contact-title">${c.title}</div>`:''} ${c.email?`<div class="contact-email">${c.email}</div>`:''} ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}</div><span class="cs-tag ${cs}">${c.status||'not contacted'}</span></div>`;}).join('');
-    return`<div class="card"><div class="card-header" onclick="toggle('${TAB}',${id})">${tier}<div class="card-name">${name}</div><span class="status-lbl">${item.status||'not contacted'}</span><span class="sdot ${dotCls}"></span></div><div class="card-body" id="body-${TAB}-${id}"><div class="why">${item.why||''}</div>${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}<div class="sec-lbl" style="margin-top:10px">Notes & Status</div><div class="field-row"><textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea><div style="display:flex;flex-direction:column;gap:5px"><select class="status-select" id="status-${TAB}-${id}">${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}</select><input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}"><button class="save-btn" onclick="save('${TAB}',${id})">Save</button></div></div></div></div>`;
+    const contacts=(item.contacts||[]).map(c=>{
+      const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');
+      return`<div class="contact-row"><div class="contact-info"><div class="contact-name">${c.name}</div>${c.title?`<div class="contact-title">${c.title}</div>`:''} ${c.email?`<div class="contact-email">${c.email}</div>`:''} ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}</div><span class="cs-tag ${cs}">${c.status||'not contacted'}</span></div>`;
+    }).join('');
+    return`<div class="card">
+      <div class="card-header" onclick="toggle('${TAB}',${id})">
+        ${tier}<div class="card-name">${name}</div>
+        <span class="status-lbl">${item.status||'not contacted'}</span>
+        <span class="sdot ${dotCls}"></span>
+      </div>
+      <div class="card-body" id="body-${TAB}-${id}">
+        <div class="why">${item.why||''}</div>
+        ${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}
+        <div class="sec-lbl" style="margin-top:12px">Notes & Status</div>
+        <div class="field-row">
+          <textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <select class="status-select" id="status-${TAB}-${id}">
+              ${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+            <input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}">
+            <button class="save-btn" onclick="save('${TAB}',${id})">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join(''):'<div class="empty">No results.</div>';
-  document.getElementById('main-content').innerHTML=`<div class="controls"><input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}"><button class="filter-btn active" onclick="setFilter('all',this)">All</button><button class="filter-btn" onclick="setFilter('draft',this)">Draft</button><button class="filter-btn" onclick="setFilter('active',this)">Active</button><button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button><button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button><button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button><button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button></div><div class="stats">${statHtml}</div><div class="cards">${cardsHtml}</div>`;
+
+  document.getElementById('main-content').innerHTML=`
+    <div class="controls">
+      <input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('draft',this)">Draft</button>
+      <button class="filter-btn" onclick="setFilter('active',this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button>
+      <button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button>
+      <button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button>
+      <button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button>
+      <button class="filter-btn" onclick="setFilter('passed',this)">Passed</button>
+    </div>
+    <div class="stats">${statHtml}</div>
+    <div class="cards">${cardsHtml}</div>`;
 }
 function toggle(tab,id){document.getElementById(`body-${tab}-${id}`)?.classList.toggle('open');}
 async function save(tab,id){
