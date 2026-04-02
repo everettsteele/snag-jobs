@@ -18,7 +18,7 @@ const SEED_PATHS = {
   vcs:   path.join(SEEDS_DIR, 'seed_vcs.json'),
 };
 
-try { if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e){}
+try { if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e){ console.error('[ERROR]', e.message); }
 
 function readSeed(key) {
   try { return JSON.parse(fs.readFileSync(SEED_PATHS[key], 'utf8')); } catch(e) {
@@ -30,12 +30,12 @@ function readSeed(key) {
 function loadOverrides() {
   try {
     if (fs.existsSync(OVERRIDES_PATH)) return JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
-  } catch(e) {}
+  } catch(e) { console.error('[ERROR]', e.message); }
   return { firms: {}, ceos: {}, vcs: {} };
 }
 
 function saveOverrides(o) {
-  try { fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(o, null, 2)); } catch(e) {}
+  try { fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(o, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
 }
 
 function getDB(key) {
@@ -60,6 +60,7 @@ function todayET() {
     return `${y}-${m}-${day}`;
   } catch(e) {
     // Fallback: UTC date
+    console.warn('[WARN] todayET() fell back to UTC — timezone support may be unavailable on this system');
     return new Date().toISOString().split('T')[0];
   }
 }
@@ -67,18 +68,27 @@ function todayET() {
 function loadCronState() {
   try {
     if (fs.existsSync(CRON_STATE_PATH)) return JSON.parse(fs.readFileSync(CRON_STATE_PATH, 'utf8'));
-  } catch(e) {}
+  } catch(e) { console.error('[ERROR]', e.message); }
   return { lastRunDate: null };
 }
 
 function saveCronState(state) {
-  try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2)); } catch(e) {}
+  try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
 }
 
 const DAILY_TARGET = 15;
 const PILLARS = ['firms', 'ceos', 'vcs'];
 
 function runDailyCron() {
+  // Idempotency check: skip if sufficient drafts already queued
+  const currentDraftCount = PILLARS.reduce((sum, key) => {
+    return sum + getDB(key).filter(x => x.status === 'draft').length;
+  }, 0);
+  if (currentDraftCount >= DAILY_TARGET) {
+    console.log(`[CRON] Sufficient drafts already queued (${currentDraftCount}). Skipping run.`);
+    return { totalDrafted: 0, allocations: {}, skipped: true };
+  }
+
   const ov = loadOverrides();
   const perPillar = Math.ceil(DAILY_TARGET / PILLARS.length);
 
@@ -175,7 +185,12 @@ app.get('/api/firms', requireAuth, (req, res) => res.json(getDB('firms')));
 app.get('/api/ceos',  requireAuth, (req, res) => res.json(getDB('ceos')));
 app.get('/api/vcs',   requireAuth, (req, res) => res.json(getDB('vcs')));
 
+let lastCronRunCall = 0;
 app.post('/api/cron/run', requireAuth, (req, res) => {
+  if (Date.now() - lastCronRunCall < 60000) {
+    return res.status(429).json({ error: 'Rate limited. Wait 60 seconds before running again.' });
+  }
+  lastCronRunCall = Date.now();
   const result = runDailyCron();
   res.json({ ok: true, ...result });
 });
@@ -247,9 +262,17 @@ app.get('/api/stats', requireAuth, (req, res) => {
   });
 });
 
+const VALID_STATUSES = ['not contacted', 'draft', 'linkedin', 'contacted', 'in conversation', 'bounced', 'passed'];
+
 function makePatch(key) {
   return (req, res) => {
     try {
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Invalid request body' });
+      }
+      if (req.body.status !== undefined && !VALID_STATUSES.includes(req.body.status)) {
+        return res.status(400).json({ error: 'Invalid status value' });
+      }
       const id = parseInt(req.params.id);
       const seed = readSeed(key);
       const item = seed.find(x => x.id === id);
@@ -264,7 +287,7 @@ function makePatch(key) {
       ov[key][String(id)] = upd;
       saveOverrides(ov);
       res.json({ ...item, ...upd });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    } catch(e) { console.error('[ERROR]', e.message); res.status(500).json({ error: e.message }); }
   };
 }
 
