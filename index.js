@@ -50,7 +50,6 @@ function getDB(key) {
     const o = ov[String(item.id)];
     if (!o) return item;
     // Don't let a stale 'draft' override mask a seed that is already sent/contacted.
-    // Seeds are updated after each Gmail sync, so their status is authoritative.
     if (o.status === 'draft' && SENT_STATUSES.has(item.status)) {
       return { ...item, ...o, status: item.status };
     }
@@ -199,7 +198,8 @@ app.post('/api/cron/run', requireAuth, (req, res) => {
   res.json({ ok: true, ...result });
 });
 
-app.get('/api/debug', requireAuth, (req, res) => {
+// Public — no sensitive data, useful for diagnostics without login
+app.get('/api/debug', (req, res) => {
   const ov = loadOverrides();
   const state = loadCronState();
   res.json({
@@ -211,6 +211,16 @@ app.get('/api/debug', requireAuth, (req, res) => {
       firms: getDB('firms').filter(x=>x.status==='not contacted').length,
       ceos:  getDB('ceos').filter(x=>x.status==='not contacted').length,
       vcs:   getDB('vcs').filter(x=>x.status==='not contacted').length,
+    },
+    contactedCounts: {
+      firms: getDB('firms').filter(x=>SENT_STATUSES.has(x.status)).length,
+      ceos:  getDB('ceos').filter(x=>SENT_STATUSES.has(x.status)).length,
+      vcs:   getDB('vcs').filter(x=>SENT_STATUSES.has(x.status)).length,
+    },
+    draftCounts: {
+      firms: getDB('firms').filter(x=>x.status==='draft').length,
+      ceos:  getDB('ceos').filter(x=>x.status==='draft').length,
+      vcs:   getDB('vcs').filter(x=>x.status==='draft').length,
     },
     cronState: state,
     todayET: todayET(),

@@ -221,6 +221,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
+const STORAGE_KEY = 'hopespot_token';
 let TOKEN='',DATA=[],CEOs=[],VCs=[],STATS=null,FILTER='all',TAB='queue';
 const TODAY=new Date().toISOString().split('T')[0];
 const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach']};
@@ -231,34 +232,88 @@ function toast(msg, dur=3000){
   setTimeout(()=>el.classList.remove('show'),dur);
 }
 function setStatus(m){const e=document.getElementById('login-status');if(e)e.textContent=m;}
+
+function showLogin(msg){
+  if(msg) setStatus(msg);
+  document.getElementById('login-view').style.display='flex';
+  document.getElementById('app-view').style.display='none';
+}
+
+function showApp(){
+  document.getElementById('login-view').style.display='none';
+  document.getElementById('app-view').style.display='flex';
+}
+
+async function validateToken(token){
+  try{
+    const r = await fetch('/api/firms', {headers:{'x-auth-token':token}});
+    return r.status !== 401;
+  }catch(e){ return false; }
+}
+
 async function init(){
   setStatus('Connecting...');
   try{
     const r=await fetch('/api/auth-required').then(x=>x.json());
-    if(!r.required){TOKEN='no-auth';setStatus('Loading...');await loadAll();showApp();}
-    else setStatus('Enter password to continue.');
+    if(!r.required){
+      TOKEN='no-auth';
+      setStatus('Loading...');
+      await loadAll();
+      showApp();
+      return;
+    }
+    // Try persisted token from localStorage first
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved){
+      const valid = await validateToken(saved);
+      if(valid){
+        TOKEN = saved;
+        await loadAll();
+        showApp();
+        return;
+      }
+      // Token was rejected (server restarted) — clear it and show login
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setStatus('Enter password to continue.');
   }catch(e){setStatus('Could not reach server.');}
 }
+
 async function doLogin(){
   const pw=document.getElementById('pw-input').value;
   try{
     const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(x=>x.json());
-    if(r.ok){TOKEN=r.token;await loadAll();showApp();}
+    if(r.ok){
+      TOKEN=r.token;
+      localStorage.setItem(STORAGE_KEY, TOKEN);
+      await loadAll();
+      showApp();
+    }
     else document.getElementById('login-error').style.display='block';
   }catch(e){setStatus('Login failed.');}
 }
+
 async function loadAll(){
   const h={'x-auth-token':TOKEN};
   try{
-    [DATA,CEOs,VCs,STATS]=await Promise.all([
-      fetch('/api/firms',{headers:h}).then(x=>x.json()),
-      fetch('/api/ceos',{headers:h}).then(x=>x.json()),
-      fetch('/api/vcs',{headers:h}).then(x=>x.json()),
-      fetch('/api/stats',{headers:h}).then(x=>x.json()),
+    const [fr,cr,vr,sr] = await Promise.all([
+      fetch('/api/firms',{headers:h}),
+      fetch('/api/ceos',{headers:h}),
+      fetch('/api/vcs',{headers:h}),
+      fetch('/api/stats',{headers:h}),
     ]);
+    // If session expired mid-session, clear token and show login
+    if(fr.status===401||cr.status===401){
+      localStorage.removeItem(STORAGE_KEY);
+      TOKEN='';
+      showLogin('Session expired — sign in again.');
+      return;
+    }
+    [DATA,CEOs,VCs,STATS]=await Promise.all([fr.json(),cr.json(),vr.json(),sr.json()]);
   }catch(e){DATA=[];CEOs=[];VCs=[];STATS=null;}
   updateBadges();renderCurrent();
 }
+
 async function refreshData(){
   const btn=document.getElementById('refresh-btn');
   btn.classList.add('spinning');btn.disabled=true;
@@ -278,10 +333,7 @@ async function runQueue(){
   btn.disabled=false;
   btn.innerHTML='<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Queue';
 }
-function showApp(){
-  document.getElementById('login-view').style.display='none';
-  document.getElementById('app-view').style.display='flex';
-}
+
 function allItems(){
   return[
     ...DATA.map(x=>({...x,_pillar:'recruiter',_endpoint:'/api/firms',_label:'Recruiter'})),
