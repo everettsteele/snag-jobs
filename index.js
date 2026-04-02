@@ -12,6 +12,7 @@ const PASSWORD = process.env.AUTH_PASSWORD || '';
 const SEEDS_DIR = path.join(__dirname, 'seeds');
 const DATA_DIR  = path.join(__dirname, 'data');
 const OVERRIDES_PATH = path.join(DATA_DIR, 'overrides.json');
+const CRON_STATE_PATH = path.join(DATA_DIR, 'cron_state.json');
 
 const SEED_PATHS = {
   firms: path.join(SEEDS_DIR, 'seed_firms.json'),
@@ -48,12 +49,26 @@ function getDB(key) {
   });
 }
 
-// ── DAILY CRON ─────────────────────────────────────────────────────
-// Runs at 6:00 AM ET every day.
-// Pulls up to 5 contacts per pillar (firms, ceos, vcs) from 'not contacted' status
-// and marks them as 'draft' so they appear in the Queue tab.
-// Skips any pillar with no uncontacted entries — redistributes quota to others.
-// Goal: at least 15 drafts queued every morning.
+function todayET() {
+  // Returns today's date string in America/New_York timezone
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+}
+
+function loadCronState() {
+  try {
+    if (fs.existsSync(CRON_STATE_PATH)) return JSON.parse(fs.readFileSync(CRON_STATE_PATH, 'utf8'));
+  } catch(e) {}
+  return { lastRunDate: null };
+}
+
+function saveCronState(state) {
+  try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2)); } catch(e) {}
+}
+
+// ── DAILY QUEUE LOGIC ───────────────────────────────────────────────
+// Pulls up to 5 contacts per pillar from 'not contacted', marks as 'draft'.
+// Tier 1 contacts pulled first. Surplus redistributed across pillars.
+// Goal: 15 drafts queued per run.
 
 const DAILY_TARGET = 15;
 const PILLARS = ['firms', 'ceos', 'vcs'];
@@ -62,7 +77,6 @@ function runDailyCron() {
   const ov = loadOverrides();
   const perPillar = Math.ceil(DAILY_TARGET / PILLARS.length); // 5 each
 
-  // First pass: collect how many uncontacted exist per pillar
   const pools = {};
   PILLARS.forEach(key => {
     const seed = readSeed(key);
@@ -70,10 +84,9 @@ function runDailyCron() {
     pools[key] = seed.filter(item => {
       const status = (existing[String(item.id)] || {}).status || item.status || 'not contacted';
       return status === 'not contacted';
-    }).sort((a, b) => (a.tier || 99) - (b.tier || 99)); // tier 1 first
+    }).sort((a, b) => (a.tier || 99) - (b.tier || 99));
   });
 
-  // Calculate how many to pull per pillar, redistribute leftovers
   let allocations = {};
   let surplus = 0;
   PILLARS.forEach(key => {
@@ -83,7 +96,6 @@ function runDailyCron() {
     surplus += (perPillar - take);
   });
 
-  // Redistribute surplus to pillars that have more contacts
   if (surplus > 0) {
     PILLARS.forEach(key => {
       if (surplus <= 0) return;
@@ -99,27 +111,47 @@ function runDailyCron() {
   let totalDrafted = 0;
   PILLARS.forEach(key => {
     if (!ov[key]) ov[key] = {};
-    const toMark = pools[key].slice(0, allocations[key]);
-    toMark.forEach(item => {
+    pools[key].slice(0, allocations[key]).forEach(item => {
       ov[key][String(item.id)] = { ...(ov[key][String(item.id)] || {}), status: 'draft' };
       totalDrafted++;
     });
   });
 
   saveOverrides(ov);
+  saveCronState({ lastRunDate: todayET(), totalDrafted, allocations });
 
   const summary = PILLARS.map(k => `${k}:${allocations[k]}`).join(', ');
   console.log(`[CRON] Daily queue run — ${totalDrafted} contacts drafted (${summary})`);
   return { totalDrafted, allocations };
 }
 
-// 6 AM ET daily (UTC-4 in summer, UTC-5 in winter; using 10:00 UTC to cover ET)
-cron.schedule('0 10 * * *', () => {
-  console.log('[CRON] Running daily outreach queue...');
+// ── STARTUP BOOT CHECK ──────────────────────────────────────────────
+// On every boot, check if today's queue has already run.
+// If not (e.g. service restarted after 6 AM), run it immediately.
+// This ensures a Railway restart never causes a missed morning queue.
+
+function bootCheck() {
+  const state = loadCronState();
+  const today = todayET();
+  if (state.lastRunDate === today) {
+    console.log(`[BOOT] Queue already ran today (${today}), ${state.totalDrafted} drafted. Skipping.`);
+    return;
+  }
+  console.log(`[BOOT] No queue run found for ${today} — running now.`);
+  runDailyCron();
+}
+
+// ── SCHEDULED CRON ──────────────────────────────────────────────────
+// 6 AM ET daily as primary trigger. Boot check above handles missed fires.
+cron.schedule('0 6 * * *', () => {
+  console.log('[CRON] 6 AM ET — running daily outreach queue...');
   runDailyCron();
 }, { timezone: 'America/New_York' });
 
-console.log(`HopeSpot ready — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v — daily cron active (6 AM ET)`);
+// Run boot check after a short delay to let the server fully initialize
+setTimeout(bootCheck, 3000);
+
+console.log(`HopeSpot ready — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v — cron 6AM ET + boot check active`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -144,7 +176,6 @@ app.get('/api/firms', requireAuth, (req, res) => res.json(getDB('firms')));
 app.get('/api/ceos',  requireAuth, (req, res) => res.json(getDB('ceos')));
 app.get('/api/vcs',   requireAuth, (req, res) => res.json(getDB('vcs')));
 
-// Manually trigger the daily cron (for testing or manual queue top-up)
 app.post('/api/cron/run', requireAuth, (req, res) => {
   const result = runDailyCron();
   res.json({ ok: true, ...result });
@@ -152,6 +183,7 @@ app.post('/api/cron/run', requireAuth, (req, res) => {
 
 app.get('/api/debug', requireAuth, (req, res) => {
   const ov = loadOverrides();
+  const state = loadCronState();
   res.json({
     seedsDir: SEEDS_DIR,
     dataDir: DATA_DIR,
@@ -161,7 +193,9 @@ app.get('/api/debug', requireAuth, (req, res) => {
       firms: getDB('firms').filter(x=>x.status==='not contacted').length,
       ceos:  getDB('ceos').filter(x=>x.status==='not contacted').length,
       vcs:   getDB('vcs').filter(x=>x.status==='not contacted').length,
-    }
+    },
+    cronState: state,
+    todayET: todayET(),
   });
 });
 
@@ -273,6 +307,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT, cronState: loadCronState(), todayET: todayET() }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, '0.0.0.0', () => console.log('Listening on port '+PORT));
