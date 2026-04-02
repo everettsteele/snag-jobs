@@ -38,19 +38,27 @@ function saveOverrides(o) {
   try { fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(o, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
 }
 
+// Statuses that are more authoritative than 'draft'.
+// A 'draft' override is a transient queuing state — it should never mask
+// a seed entry that has already been sent/contacted/bounced/passed.
+const SENT_STATUSES = new Set(['contacted', 'in conversation', 'bounced', 'passed', 'linkedin']);
+
 function getDB(key) {
   const seed = readSeed(key);
   const ov = (loadOverrides()[key]) || {};
   return seed.map(item => {
     const o = ov[String(item.id)];
-    return o ? { ...item, ...o } : item;
+    if (!o) return item;
+    // Don't let a stale 'draft' override mask a seed that is already sent/contacted.
+    // Seeds are updated after each Gmail sync, so their status is authoritative.
+    if (o.status === 'draft' && SENT_STATUSES.has(item.status)) {
+      return { ...item, ...o, status: item.status };
+    }
+    return { ...item, ...o };
   });
 }
 
-// Safe date formatting — no locale dependency, works in any Node ICU build.
-// Returns YYYY-MM-DD in America/New_York time by offsetting UTC.
 function todayET() {
-  // ET is UTC-5 (EST) or UTC-4 (EDT). Use toLocaleString with en-US which is always available.
   try {
     const etStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
     const d = new Date(etStr);
@@ -59,7 +67,6 @@ function todayET() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   } catch(e) {
-    // Fallback: UTC date
     console.warn('[WARN] todayET() fell back to UTC — timezone support may be unavailable on this system');
     return new Date().toISOString().split('T')[0];
   }
@@ -80,7 +87,6 @@ const DAILY_TARGET = 15;
 const PILLARS = ['firms', 'ceos', 'vcs'];
 
 function runDailyCron() {
-  // Idempotency check: skip if sufficient drafts already queued
   const currentDraftCount = PILLARS.reduce((sum, key) => {
     return sum + getDB(key).filter(x => x.status === 'draft').length;
   }, 0);
@@ -151,8 +157,6 @@ function bootCheck() {
   runDailyCron();
 }
 
-// Schedule at 10:00 UTC = 6:00 AM ET (summer/EDT).
-// No timezone option needed — avoids dependency on system timezone data.
 cron.schedule('0 10 * * *', () => {
   console.log('[CRON] 10:00 UTC — running daily outreach queue...');
   runDailyCron();
