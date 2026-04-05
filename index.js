@@ -1,15 +1,18 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PASSWORD = process.env.AUTH_PASSWORD || '';
+const API_KEY = process.env.API_KEY || '';
 
 const SEEDS_DIR = path.join(__dirname, 'seeds');
 const DATA_DIR  = path.join(__dirname, 'data');
 const OVERRIDES_PATH = path.join(DATA_DIR, 'overrides.json');
 const CRON_STATE_PATH = path.join(DATA_DIR, 'cron_state.json');
+const DYNAMIC_CONTACTS_PATH = path.join(DATA_DIR, 'dynamic_contacts.json');
 
 const SEED_PATHS = {
   firms: path.join(SEEDS_DIR, 'seed_firms.json'),
@@ -37,9 +40,18 @@ function saveOverrides(o) {
   try { fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(o, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
 }
 
+function loadDynamic() {
+  try {
+    if (fs.existsSync(DYNAMIC_CONTACTS_PATH)) return JSON.parse(fs.readFileSync(DYNAMIC_CONTACTS_PATH, 'utf8'));
+  } catch(e) { console.error('[ERROR]', e.message); }
+  return [];
+}
+
+function saveDynamic(contacts) {
+  try { fs.writeFileSync(DYNAMIC_CONTACTS_PATH, JSON.stringify(contacts, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
+}
+
 // Statuses that are more authoritative than 'draft'.
-// A 'draft' override is a transient queuing state and should never mask
-// a seed entry that has already been sent/contacted/bounced/passed.
 const SENT_STATUSES = new Set(['contacted', 'in conversation', 'bounced', 'passed', 'linkedin']);
 
 function getDB(key) {
@@ -48,7 +60,6 @@ function getDB(key) {
   return seed.map(item => {
     const o = ov[String(item.id)];
     if (!o) return item;
-    // Don't let a stale 'draft' override mask a seed already marked sent/contacted.
     if (o.status === 'draft' && SENT_STATUSES.has(item.status)) {
       return { ...item, ...o, status: item.status };
     }
@@ -67,6 +78,14 @@ function todayET() {
   }
 }
 
+function daysBetween(dateStr) {
+  try {
+    const then = new Date(dateStr + 'T00:00:00-05:00');
+    const now = new Date();
+    return Math.floor((now - then) / (1000 * 60 * 60 * 24));
+  } catch(e) { return null; }
+}
+
 function loadCronState() {
   try {
     if (fs.existsSync(CRON_STATE_PATH)) return JSON.parse(fs.readFileSync(CRON_STATE_PATH, 'utf8'));
@@ -82,7 +101,6 @@ const DAILY_TARGET = 15;
 const PILLARS = ['firms', 'ceos', 'vcs'];
 
 function runDailyCron() {
-  // Idempotency: skip if sufficient drafts already queued
   const currentDrafts = PILLARS.reduce((sum, key) =>
     sum + getDB(key).filter(x => x.status === 'draft').length, 0);
   if (currentDrafts >= DAILY_TARGET) {
@@ -99,8 +117,6 @@ function runDailyCron() {
     const existing = ov[key] || {};
     pools[key] = seed.filter(item => {
       const status = (existing[String(item.id)] || {}).status || item.status || 'not contacted';
-      // Only queue items that have at least one contact with a real email address.
-      // Placeholder entries ("Research needed", empty email) should never be drafted.
       const hasContact = (item.contacts || []).some(c => c.email && c.email.trim().length > 0);
       return status === 'not contacted' && hasContact;
     }).sort((a, b) => (a.tier || 99) - (b.tier || 99));
@@ -137,7 +153,6 @@ function runDailyCron() {
   return { totalDrafted, allocations };
 }
 
-// Boot check: run queue immediately if it hasn't run today
 function bootCheck() {
   const state = loadCronState();
   const today = todayET();
@@ -149,8 +164,6 @@ function bootCheck() {
   runDailyCron();
 }
 
-// Daily queue: check every 5 minutes whether it's 6 AM ET and queue hasn't run yet.
-// No external cron library needed.
 setInterval(() => {
   try {
     const etStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
@@ -173,6 +186,11 @@ console.log(`HopeSpot ready — seeds:${readSeed('firms').length}f/${readSeed('c
 const sessions = new Set();
 function requireAuth(req, res, next) {
   if (!PASSWORD) return next();
+  // API key auth: x-api-key header or Authorization: Bearer <key>
+  if (API_KEY) {
+    const headerKey = req.headers['x-api-key'] || (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (headerKey && headerKey === API_KEY) return next();
+  }
   const token = req.headers['x-auth-token'] || req.query.token;
   if (sessions.has(token)) return next();
   res.status(401).json({ error: 'Unauthorized' });
@@ -194,6 +212,110 @@ app.get('/api/firms', requireAuth, (req, res) => res.json(getDB('firms')));
 app.get('/api/ceos',  requireAuth, (req, res) => res.json(getDB('ceos')));
 app.get('/api/vcs',   requireAuth, (req, res) => res.json(getDB('vcs')));
 
+// GET /api/due — contacts due for follow-up today or overdue
+// A contact is due when: status=contacted, followup_date <= today, is_job_search != false
+app.get('/api/due', requireAuth, (req, res) => {
+  const today = todayET();
+  const due = [];
+
+  PILLARS.forEach(track => {
+    getDB(track).forEach(item => {
+      const status = item.status || 'not contacted';
+      const followup = item.followup_date;
+      const isJobSearch = item.is_job_search !== false && item.is_job_search !== 'false';
+      if (status !== 'contacted') return;
+      if (!followup || followup > today) return;
+      if (!isJobSearch) return;
+
+      // Flatten contacts — return one entry per emailable contact
+      const contacts = (item.contacts || []).filter(c => c.email && c.email.trim());
+      const primaryContact = contacts[0] || {};
+
+      due.push({
+        track,
+        org_id: item.id,
+        org_name: item.name,
+        contact_name: primaryContact.name || '',
+        contact_email: primaryContact.email || '',
+        followup_date: followup,
+        last_contacted: item.last_contacted || null,
+        days_since_contact: item.last_contacted ? daysBetween(item.last_contacted) : null,
+        gmail_thread_id: item.gmail_thread_id || null,
+        cadence_day: item.cadence_day || 1,
+        notes: item.notes || '',
+        status,
+      });
+    });
+  });
+
+  // Include dynamic contacts that are due
+  loadDynamic().forEach(item => {
+    const status = item.status || 'contacted';
+    const followup = item.followup_date;
+    const isJobSearch = item.is_job_search !== false && item.is_job_search !== 'false';
+    if (status !== 'contacted') return;
+    if (!followup || followup > today) return;
+    if (!isJobSearch) return;
+    due.push({
+      track: item.track || 'ceos',
+      org_id: item.id,
+      org_name: item.org_name || '',
+      contact_name: item.contact_name || '',
+      contact_email: item.contact_email || '',
+      followup_date: followup,
+      last_contacted: item.last_contacted || null,
+      days_since_contact: item.last_contacted ? daysBetween(item.last_contacted) : null,
+      gmail_thread_id: item.gmail_thread_id || null,
+      cadence_day: item.cadence_day || 1,
+      notes: item.notes || '',
+      status,
+      dynamic: true,
+    });
+  });
+
+  // Sort by followup_date ascending (most overdue first)
+  due.sort((a, b) => (a.followup_date || '').localeCompare(b.followup_date || ''));
+  res.json(due);
+});
+
+// GET /api/contacts — list dynamic contacts
+app.get('/api/contacts', requireAuth, (req, res) => {
+  const contacts = loadDynamic();
+  const { track } = req.query;
+  res.json(track ? contacts.filter(c => c.track === track) : contacts);
+});
+
+// POST /api/contacts/import — bulk import dynamic contacts, deduplicates by email
+app.post('/api/contacts/import', requireAuth, (req, res) => {
+  const entries = req.body;
+  if (!Array.isArray(entries)) return res.status(400).json({ error: 'Expected array' });
+  const contacts = loadDynamic();
+  let inserted = 0, updated = 0;
+  entries.forEach(entry => {
+    if (!entry.contact_email) return;
+    const existing = contacts.findIndex(c => c.contact_email && c.contact_email.toLowerCase() === entry.contact_email.toLowerCase());
+    if (existing >= 0) {
+      contacts[existing] = { ...contacts[existing], ...entry, id: contacts[existing].id };
+      updated++;
+    } else {
+      contacts.push({ id: randomUUID(), ...entry });
+      inserted++;
+    }
+  });
+  saveDynamic(contacts);
+  res.json({ ok: true, inserted, updated, total: contacts.length });
+});
+
+// PATCH /api/contacts/:id — update a dynamic contact
+app.patch('/api/contacts/:id', requireAuth, (req, res) => {
+  const contacts = loadDynamic();
+  const idx = contacts.findIndex(c => c.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  contacts[idx] = { ...contacts[idx], ...req.body, id: contacts[idx].id };
+  saveDynamic(contacts);
+  res.json(contacts[idx]);
+});
+
 let lastCronRunCall = 0;
 app.post('/api/cron/run', requireAuth, (req, res) => {
   if (Date.now() - lastCronRunCall < 60000)
@@ -202,12 +324,26 @@ app.post('/api/cron/run', requireAuth, (req, res) => {
   res.json({ ok: true, ...runDailyCron() });
 });
 
-// Public endpoint — no sensitive data, useful for diagnostics without login
+// Public endpoint
 app.get('/api/debug', (req, res) => {
   const ov = loadOverrides();
+  const today = todayET();
+
+  // Count due contacts for dueCount
+  let dueCount = 0;
+  PILLARS.forEach(track => {
+    getDB(track).forEach(item => {
+      if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++;
+    });
+  });
+  loadDynamic().forEach(item => {
+    if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++;
+  });
+
   res.json({
-    version: '2.0',
+    version: '3.0',
     seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length },
+    dynamicCount: loadDynamic().length,
     overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length },
     contactedCounts: {
       firms: getDB('firms').filter(x => SENT_STATUSES.has(x.status)).length,
@@ -224,8 +360,9 @@ app.get('/api/debug', (req, res) => {
       ceos:  getDB('ceos').filter(x => x.status === 'not contacted').length,
       vcs:   getDB('vcs').filter(x => x.status === 'not contacted').length,
     },
+    dueCount,
     cronState: loadCronState(),
-    todayET: todayET(),
+    todayET: today,
   });
 });
 
@@ -276,6 +413,7 @@ app.get('/api/stats', requireAuth, (req, res) => {
 });
 
 const VALID_STATUSES = ['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'];
+const EXTENDED_FIELDS = ['status','notes','followup_date','is_job_search','gmail_thread_id','cadence_day'];
 
 function makePatch(key) {
   return (req, res) => {
@@ -290,7 +428,7 @@ function makePatch(key) {
       const ov = loadOverrides();
       if (!ov[key]) ov[key] = {};
       const upd = { ...(ov[key][String(id)] || {}) };
-      ['status','notes','followup_date'].forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
+      EXTENDED_FIELDS.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
       if (req.body.status && !['not contacted','draft'].includes(req.body.status))
         upd.last_contacted = new Date().toISOString().split('T')[0];
       ov[key][String(id)] = upd;
@@ -309,6 +447,7 @@ app.post('/api/reseed', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/sync — update contacts by email match, now accepts extended fields
 app.post('/api/sync', requireAuth, (req, res) => {
   const updates = req.body.updates || [];
   if (!updates.length) return res.json({ ok: true, changed: 0 });
@@ -327,12 +466,36 @@ app.post('/api/sync', requireAuth, (req, res) => {
           const ts = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
           upd.notes = upd.notes ? upd.notes+'\n['+ts+'] '+match.note : '['+ts+'] '+match.note;
         }
+        // Extended fields
+        ['gmail_thread_id','followup_date','cadence_day','is_job_search'].forEach(f => {
+          if (match[f] !== undefined) upd[f] = match[f];
+        });
         upd.last_contacted = new Date().toISOString().split('T')[0];
         ov[key][String(item.id)] = upd;
         changed++;
       });
     });
   });
+  // Also sync dynamic contacts by email
+  const dynamic = loadDynamic();
+  let dynChanged = false;
+  dynamic.forEach((item, idx) => {
+    const match = updates.find(u => u.email && item.contact_email &&
+      u.email.toLowerCase() === item.contact_email.toLowerCase());
+    if (!match) return;
+    if (match.status) dynamic[idx].status = match.status;
+    if (match.note) {
+      const ts = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      dynamic[idx].notes = dynamic[idx].notes ? dynamic[idx].notes+'\n['+ts+'] '+match.note : '['+ts+'] '+match.note;
+    }
+    ['gmail_thread_id','followup_date','cadence_day','is_job_search'].forEach(f => {
+      if (match[f] !== undefined) dynamic[idx][f] = match[f];
+    });
+    dynamic[idx].last_contacted = new Date().toISOString().split('T')[0];
+    changed++;
+    dynChanged = true;
+  });
+  if (dynChanged) saveDynamic(dynamic);
   saveOverrides(ov);
   res.json({ ok: true, changed });
 });
