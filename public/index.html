@@ -152,7 +152,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span class="login-logo-name">HopeSpot</span>
     </div>
     <div class="login-sub">Could've used HubSpot.</div>
-    <input class="login-input" type="password" id="pw-input" placeholder="Password (if set)" onkeydown="if(event.key==='Enter')doLogin()">
+    <input class="login-input" type="password" id="pw-input" placeholder="Password or API key" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Sign in</button>
     <div class="login-err" id="login-error">Wrong password.</div>
     <div class="login-status" id="login-status">Connecting...</div>
@@ -222,7 +222,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 const STORAGE_KEY = 'hopespot_token';
-let TOKEN='',DATA=[],CEOs=[],VCs=[],STATS=null,FILTER='all',TAB='queue';
+const API_KEY_STORE = 'hopespot_apikey';
+let TOKEN='', API_KEY_MODE=false, DATA=[], CEOs=[], VCs=[], STATS=null, DUE=[], FILTER='all', TAB='queue';
 const TODAY=new Date().toISOString().split('T')[0];
 const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach']};
 
@@ -232,6 +233,29 @@ function toast(msg, dur=3000){
   setTimeout(()=>el.classList.remove('show'),dur);
 }
 function setStatus(m){const e=document.getElementById('login-status');if(e)e.textContent=m;}
+
+function authHeaders(){
+  if(API_KEY_MODE) return{'x-api-key':TOKEN,'Content-Type':'application/json'};
+  return{'x-auth-token':TOKEN,'Content-Type':'application/json'};
+}
+function authFetchHeaders(){
+  if(API_KEY_MODE) return{'x-api-key':TOKEN};
+  return{'x-auth-token':TOKEN};
+}
+
+async function tryApiKey(key){
+  try{
+    const r = await fetch('/api/due',{headers:{'x-api-key':key}});
+    return r.status !== 401;
+  }catch(e){return false;}
+}
+
+async function validateToken(token){
+  try{
+    const r = await fetch('/api/firms',{headers:{'x-auth-token':token}});
+    return r.status !== 401;
+  }catch(e){return false;}
+}
 
 function showLogin(msg){
   if(msg) setStatus(msg);
@@ -244,89 +268,114 @@ function showApp(){
   document.getElementById('app-view').style.display='flex';
 }
 
-async function validateToken(token){
-  try{
-    const r = await fetch('/api/firms', {headers:{'x-auth-token':token}});
-    return r.status !== 401;
-  }catch(e){ return false; }
-}
-
 async function init(){
   setStatus('Connecting...');
-  try{
-    const r=await fetch('/api/auth-required').then(x=>x.json());
-    if(!r.required){
-      TOKEN='no-auth';
-      setStatus('Loading...');
+  // 1. Try saved API key first (survives server restarts)
+  const savedKey = localStorage.getItem(API_KEY_STORE);
+  if(savedKey){
+    const valid = await tryApiKey(savedKey);
+    if(valid){
+      TOKEN=savedKey; API_KEY_MODE=true;
       await loadAll();
       showApp();
       return;
     }
-    // Try persisted token from localStorage first
+    localStorage.removeItem(API_KEY_STORE);
+  }
+  try{
+    const r=await fetch('/api/auth-required').then(x=>x.json());
+    if(!r.required){
+      TOKEN='no-auth';
+      await loadAll();
+      showApp();
+      return;
+    }
+    // Try saved session token
     const saved = localStorage.getItem(STORAGE_KEY);
     if(saved){
       const valid = await validateToken(saved);
       if(valid){
-        TOKEN = saved;
+        TOKEN=saved; API_KEY_MODE=false;
         await loadAll();
         showApp();
         return;
       }
-      // Token was rejected (server restarted) — clear it and show login
       localStorage.removeItem(STORAGE_KEY);
     }
-    setStatus('Enter password to continue.');
+    setStatus('Enter password or API key to continue.');
   }catch(e){setStatus('Could not reach server.');}
 }
 
 async function doLogin(){
   const pw=document.getElementById('pw-input').value;
+  // First try as API key (most reliable across restarts)
+  const keyValid = await tryApiKey(pw);
+  if(keyValid){
+    TOKEN=pw; API_KEY_MODE=true;
+    localStorage.setItem(API_KEY_STORE, pw);
+    await loadAll();
+    showApp();
+    return;
+  }
+  // Fall back to password/session auth
   try{
     const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(x=>x.json());
     if(r.ok){
-      TOKEN=r.token;
+      TOKEN=r.token; API_KEY_MODE=false;
       localStorage.setItem(STORAGE_KEY, TOKEN);
       await loadAll();
       showApp();
+    } else {
+      document.getElementById('login-error').style.display='block';
     }
-    else document.getElementById('login-error').style.display='block';
   }catch(e){setStatus('Login failed.');}
 }
 
 async function loadAll(){
-  const h={'x-auth-token':TOKEN};
+  const h=authFetchHeaders();
   try{
-    const [fr,cr,vr,sr] = await Promise.all([
+    const [fr,cr,vr,sr,dr] = await Promise.all([
       fetch('/api/firms',{headers:h}),
       fetch('/api/ceos',{headers:h}),
       fetch('/api/vcs',{headers:h}),
       fetch('/api/stats',{headers:h}),
+      fetch('/api/due',{headers:h}),
     ]);
-    // If session expired mid-session, clear token and show login
     if(fr.status===401||cr.status===401){
+      // Session expired — clear session token but keep API key if present
       localStorage.removeItem(STORAGE_KEY);
-      TOKEN='';
-      showLogin('Session expired — sign in again.');
-      return;
+      if(!API_KEY_MODE){
+        TOKEN='';
+        showLogin('Session expired — sign in again.');
+        return;
+      }
     }
-    [DATA,CEOs,VCs,STATS]=await Promise.all([fr.json(),cr.json(),vr.json(),sr.json()]);
-  }catch(e){DATA=[];CEOs=[];VCs=[];STATS=null;}
+    [DATA,CEOs,VCs,STATS,DUE]=await Promise.all([fr.json(),cr.json(),vr.json(),sr.json(),dr.json()]);
+  }catch(e){DATA=[];CEOs=[];VCs=[];STATS=null;DUE=[];}
   updateBadges();renderCurrent();
 }
 
 async function refreshData(){
   const btn=document.getElementById('refresh-btn');
   btn.classList.add('spinning');btn.disabled=true;
+  const prevDue=DUE.length;
   await loadAll();
   btn.classList.remove('spinning');btn.disabled=false;
+  const draftCount=allItems().filter(x=>x.status==='draft').length;
+  toast(`Refreshed — ${DUE.length} follow-up${DUE.length!==1?'s':''} due, ${draftCount} draft${draftCount!==1?'s':''}`);
 }
+
 async function runQueue(){
   const btn=document.getElementById('run-queue-btn');
   btn.disabled=true;btn.textContent='Running...';
   try{
-    const r=await fetch('/api/cron/run',{method:'POST',headers:{'x-auth-token':TOKEN}}).then(x=>x.json());
+    const r=await fetch('/api/cron/run',{method:'POST',headers:authFetchHeaders()}).then(x=>x.json());
     await loadAll();
-    toast(`Queue loaded \u2014 ${r.totalDrafted} contacts drafted across all pillars`);
+    if(r.skipped){
+      toast('Queue already loaded for today. Use Refresh to check for new replies.');
+    } else {
+      toast(`Queue loaded — ${r.totalDrafted} new contact${r.totalDrafted!==1?'s':''} staged across all pillars`);
+    }
   }catch(e){
     toast('Failed to run queue. Try refreshing.');
   }
@@ -343,7 +392,8 @@ function allItems(){
 }
 function updateBadges(){
   const all=allItems();
-  const q=all.filter(x=>x.status==='draft').length+all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY).length;
+  const draftCount=all.filter(x=>x.status==='draft').length;
+  const q=draftCount+DUE.length;
   document.getElementById('badge-queue').textContent=q;
   document.getElementById('badge-recruiters').textContent=DATA.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
   document.getElementById('badge-ceos').textContent=CEOs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
@@ -362,29 +412,45 @@ function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard
 function renderQueue(){
   const all=allItems();
   const sendNow=all.filter(x=>x.status==='draft');
-  const followUp=all.filter(x=>x.status==='contacted'&&x.followup_date&&x.followup_date<=TODAY).sort((a,b)=>a.followup_date>b.followup_date?1:-1);
+  // Follow-ups come from /api/due (server-side, authoritative)
+  const followUp=[...DUE].sort((a,b)=>a.followup_date>b.followup_date?1:-1);
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const totalMin=Math.round(sendNow.length*0.4+followUp.length*1.5);
-  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;\u00b7&nbsp; ${followUp.length} follow-ups &nbsp;\u00b7&nbsp; ~${totalMin} min</div>`;
+  let html=`<div class="queue-date">${dateStr}</div><div class="queue-title">Morning Queue</div><div class="queue-sub">${sendNow.length} to send &nbsp;&middot;&nbsp; ${followUp.length} follow-ups &nbsp;&middot;&nbsp; ~${totalMin} min</div>`;
   html+=`<div class="section-header"><div class="section-title">Send Now</div><div class="section-count">${sendNow.length} drafts waiting</div></div>`;
-  if(!sendNow.length)html+='<div class="empty" style="padding:20px 0">No drafts queued. Hit Run Queue to load the next batch.</div>';
+  if(!sendNow.length)html+='<div class="empty" style="padding:20px 0">No drafts queued. Hit Run Queue to stage the next batch.</div>';
   else['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};html+=`<div class="queue-card"><span class="pillar-tag pillar-${p}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''}</div><div class="queue-email">${c.email||''}</div></div><button class="btn btn-send" onclick="markSent('${item._endpoint}',${item.id},this)">Mark Sent</button></div>`;});});
   html+=`<div class="divider"></div><div class="section-header"><div class="section-title">Follow Up Today</div><div class="section-count">${followUp.length} due</div></div>`;
   if(!followUp.length)html+='<div class="empty" style="padding:20px 0">No follow-ups due today.</div>';
-  else followUp.forEach(item=>{const c=(item.contacts||[])[0]||{};const da=item.last_contacted?Math.floor((new Date()-new Date(item.last_contacted))/864e5):null;const ov=item.followup_date<TODAY;html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${item._pillar}">${item._label}</span><div class="queue-info"><div class="queue-name">${item.name}</div><div class="queue-contact">${c.name||''} &nbsp;\u00b7&nbsp; ${c.email||''}</div><div class="queue-meta">Contacted ${da!=null?da+' days ago':'\u2014'} &nbsp;\u00b7&nbsp; Due ${item.followup_date}</div></div><button class="btn btn-followup" onclick="logFollowup('${item._endpoint}',${item.id})">Log</button></div>`;});
+  else followUp.forEach(item=>{
+    const ov=item.followup_date<TODAY;
+    const pillarKey=item.track==='firms'?'recruiter':item.track==='ceos'?'ceo':'vc';
+    const pillarLabel=item.track==='firms'?'Recruiter':item.track==='ceos'?'CEO':'VC';
+    const endpointMap={firms:'/api/firms',ceos:'/api/ceos',vcs:'/api/vcs'};
+    const ep=item.dynamic?null:endpointMap[item.track];
+    const logBtn=ep?`<button class="btn btn-followup" onclick="logFollowup('${ep}',${item.org_id})">Log</button>`:`<button class="btn btn-followup" onclick="logDynamic('${item.org_id}')">Log</button>`;
+    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${pillarKey}">${pillarLabel}</span><div class="queue-info"><div class="queue-name">${item.org_name}</div><div class="queue-contact">${item.contact_name} &nbsp;&middot;&nbsp; <span style="font-family:monospace;font-size:11px">${item.contact_email}</span></div><div class="queue-meta">Last contacted ${item.days_since_contact!=null?item.days_since_contact+' days ago':'\u2014'} &nbsp;&middot;&nbsp; Due ${item.followup_date} &nbsp;&middot;&nbsp; Day ${item.cadence_day||1}</div></div>${logBtn}</div>`;
+  });
   document.getElementById('main-content').innerHTML=html;
 }
 async function markSent(endpoint,id,btn){
   btn.textContent='Sent \u2713';btn.disabled=true;btn.style.background='#10B981';
   const followup=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
-  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify({status:'contacted',followup_date:followup})});
+  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:'contacted',followup_date:followup})});
   await loadAll();
 }
 async function logFollowup(endpoint,id){
   const note=prompt('Follow-up note (blank to just reset date):');
   const newDate=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
-  const payload={followup_date:newDate};if(note)payload.notes=note;
-  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify(payload)});
+  const payload={followup_date:newDate,cadence_day:5};if(note)payload.notes=note;
+  await fetch(`${endpoint}/${id}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(payload)});
+  await loadAll();
+}
+async function logDynamic(id){
+  const note=prompt('Follow-up note (blank to just reset date):');
+  const newDate=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
+  const payload={followup_date:newDate,cadence_day:5};if(note)payload.notes=note;
+  await fetch(`/api/contacts/${id}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(payload)});
   await loadAll();
 }
 
@@ -398,7 +464,7 @@ function renderDashboard(){
     <div class="stat"><div class="stat-label">Total Outreach</div><div class="stat-val">${totals.contacted}</div><div class="stat-sub">sent & delivered</div></div>
     <div class="stat"><div class="stat-label">In Conversation</div><div class="stat-val">${totals.inConversation}</div><div class="stat-sub">active replies</div></div>
     <div class="stat"><div class="stat-label">Reply Rate</div><div class="stat-val">${overallRate}%</div><div class="stat-sub">all segments</div></div>
-    <div class="stat"><div class="stat-label">Drafts Ready</div><div class="stat-val">${totals.drafts}</div><div class="stat-sub">queued to send</div></div>
+    <div class="stat"><div class="stat-label">Follow-ups Due</div><div class="stat-val" style="color:#EF4444">${DUE.length}</div><div class="stat-sub">need action today</div></div>
     <div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${totals.bounced}</div><div class="stat-sub">need alt contact</div></div>
   </div>`;
   const bc=['#3B82F6','#F97316','#10B981'];
@@ -444,7 +510,7 @@ async function save(tab,id){
   const status=document.getElementById(`status-${tab}-${id}`).value;
   const followup=document.getElementById(`followup-${tab}-${id}`).value;
   const ep=tab==='ceos'?'/api/ceos':tab==='vcs'?'/api/vcs':'/api/firms';
-  await fetch(`${ep}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-auth-token':TOKEN},body:JSON.stringify({notes,status,followup_date:followup||null})});
+  await fetch(`${ep}/${id}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({notes,status,followup_date:followup||null})});
   await loadAll();
 }
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();document.querySelector('.search-box')?.focus();}});
