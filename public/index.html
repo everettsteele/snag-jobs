@@ -8,7 +8,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;color:#1F2D3D;min-height:100vh;display:flex;flex-direction:column}
 .app-shell{display:flex;flex:1;overflow:hidden;height:100vh}
-.sidebar{width:220px;flex-shrink:0;background:#1F2D3D;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.sidebar{width:220px;flex-shrink:0;background:#1F2D3D;display:flex;flex-direction:column;height:100vh;position:sticky;top:0;transition:transform .2s ease;z-index:200}
 .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
 .sidebar-logo-mark{display:flex;align-items:center;gap:9px}
 .sidebar-logo-mark svg{color:#F97316}
@@ -24,7 +24,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-badge{margin-left:auto;min-width:18px;height:18px;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
 .nav-badge.urgent{background:#EF4444}.nav-badge.blue{background:#3B82F6}.nav-badge.green{background:#10B981}
 .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:rgba(255,255,255,.2)}
-.content-area{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
+.sidebar-overlay.show{display:block}
+.content-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.mobile-header{display:none;align-items:center;gap:12px;background:#1F2D3D;padding:12px 16px;position:sticky;top:0;z-index:100;flex-shrink:0}
+.mobile-header-title{font-weight:700;font-size:15px;color:#fff;flex:1}
+.mobile-badge{min-width:20px;height:20px;background:#EF4444;color:#fff;font-size:11px;font-weight:700;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.hamburger{background:none;border:none;color:#fff;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center}
 .topbar{background:#fff;border-bottom:1px solid #E5E7EB;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:sticky;top:0;z-index:50}
 .topbar-left{display:flex;flex-direction:column;gap:1px}
 .topbar-title{font-size:15px;font-weight:600;color:#1F2D3D}
@@ -37,7 +43,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .topbar-btn.run-queue:hover{background:#ea6c06;border-color:#ea6c06;color:#fff}
 .topbar-btn.run-queue:disabled{opacity:.6;cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:24px;right:24px;background:#1F2D3D;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:999;opacity:0;transform:translateY(8px);transition:all .2s}
+.toast{position:fixed;bottom:24px;right:24px;background:#1F2D3D;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;max-width:calc(100vw - 32px)}
 .toast.show{opacity:1;transform:translateY(0)}
 .main{padding:20px 24px;flex:1}
 .queue-date{font-size:11px;color:#9CA3AF;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
@@ -56,20 +62,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pillar-ceo{background:#FFF7ED;color:#F97316}
 .pillar-vc{background:#ECFDF5;color:#10B981}
 .queue-info{flex:1;min-width:0}
-.queue-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.queue-name{font-size:14px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .queue-contact{font-size:12px;color:#6B7280}
-.queue-email{font-size:11px;color:#9CA3AF;font-family:monospace}
+.queue-email{font-size:11px;color:#9CA3AF;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .queue-meta{font-size:11px;color:#9CA3AF;margin-top:3px}
 .btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
 .btn-send{background:#F97316;color:#fff}.btn-send:hover{background:#ea6c06}
 .btn-followup{background:#F3F4F6;color:#1F2D3D}.btn-followup:hover{background:#E5E7EB}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:18px}
 .stat{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E5E7EB}
 .stat-label{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .stat-val{font-size:24px;font-weight:600;color:#1F2D3D}
 .stat-sub{font-size:10px;color:#9CA3AF;margin-top:2px}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
-@media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 .dash-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:18px}
 .dash-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:14px}
 .big-num{font-size:38px;font-weight:700;color:#1F2D3D;line-height:1}
@@ -87,11 +92,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .chart-seg{width:100%;flex-shrink:0}
 .chart-label{font-size:10px;color:#9CA3AF;margin-top:6px;white-space:nowrap}
 .chart-count{font-size:11px;font-weight:600;color:#1F2D3D;margin-bottom:3px}
-.legend{display:flex;gap:16px;margin-top:14px}
+.legend{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#6B7280}
 .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-.search-box{flex:1;min-width:160px;padding:7px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
+.search-box{flex:1;min-width:140px;padding:7px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none}
 .search-box:focus{border-color:#F97316}
 .filter-btn{padding:5px 10px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;font-size:11px;cursor:pointer;color:#6B7280;transition:all .15s}
 .filter-btn.active,.filter-btn:hover{background:#FFF7ED;color:#F97316;border-color:#F97316}
@@ -99,36 +104,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .card{background:#fff;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;transition:box-shadow .15s}
 .card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .card-header{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none}
-.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.03em}
-.card-name{font-size:14px;font-weight:600;flex:1}
+.tier-badge{background:#F3F4F6;color:#6B7280;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.03em;flex-shrink:0}
+.card-name{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sdot-contacted{background:#3B82F6}.sdot-in-conversation{background:#10B981}
 .sdot-not-contacted{background:#D1D5DB}.sdot-passed{background:#EF4444}
 .sdot-bounced{background:#F59E0B}.sdot-draft{background:#8B5CF6}.sdot-linkedin{background:#0EA5E9}
-.status-lbl{font-size:11px;color:#9CA3AF}
+.status-lbl{font-size:11px;color:#9CA3AF;flex-shrink:0}
 .card-body{padding:0 16px 14px;border-top:1px solid #F3F4F6;display:none}
 .card-body.open{display:block}
 .why{font-size:12px;color:#6B7280;margin:10px 0 8px;line-height:1.5}
 .contact-row{display:flex;align-items:flex-start;gap:8px;padding:8px;background:#F9FAFB;border-radius:6px;margin-bottom:5px;font-size:12px}
-.contact-info{flex:1}
+.contact-info{flex:1;min-width:0}
 .contact-name{font-weight:600;color:#1F2D3D;margin-bottom:1px}
 .contact-title{color:#9CA3AF;font-size:11px;margin-bottom:2px}
-.contact-email{color:#F97316;font-family:monospace;font-size:11px}
+.contact-email{color:#F97316;font-family:monospace;font-size:11px;word-break:break-all}
 .contact-notes{color:#6B7280;font-size:11px;margin-top:2px;font-style:italic}
-.cs-tag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;white-space:nowrap}
+.cs-tag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;white-space:nowrap;flex-shrink:0}
 .cs-draft{background:#EDE9FE;color:#6D28D9}.cs-linkedin{background:#E0F2FE;color:#0369A1}
 .cs-bounced{background:#FEF3C7;color:#D97706}.cs-passed{background:#FEE2E2;color:#EF4444}
 .cs-in-conversation{background:#ECFDF5;color:#059669}.cs-contacted{background:#EFF6FF;color:#3B82F6}
 .cs-not-contacted{background:#F3F4F6;color:#6B7280}
-.field-row{display:flex;gap:6px;align-items:flex-start;margin-top:10px}
-.notes-input{flex:1;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:52px;resize:vertical;font-family:inherit;outline:none}
+.field-row{display:flex;gap:6px;align-items:flex-start;margin-top:10px;flex-wrap:wrap}
+.notes-input{flex:1;min-width:150px;padding:6px 10px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;min-height:52px;resize:vertical;font-family:inherit;outline:none}
 .notes-input:focus{border-color:#F97316}
 .status-select,.date-input{padding:5px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;background:#fff}
 .save-btn{padding:5px 14px;background:#F97316;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500}
 .sec-lbl{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
 .divider{height:1px;background:#F3F4F6;margin:16px 0}
 .empty{text-align:center;padding:52px 20px;color:#9CA3AF}
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F5F7FA}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F5F7FA;padding:20px}
 .login-box{background:#fff;border-radius:14px;padding:40px;max-width:380px;width:100%;border:1px solid #E5E7EB;box-shadow:0 4px 24px rgba(0,0,0,.08)}
 .login-logo{display:flex;align-items:center;gap:9px;margin-bottom:20px}
 .login-logo svg{color:#F97316}
@@ -139,11 +144,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .login-btn{width:100%;padding:10px;background:#F97316;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
 .login-err{color:#EF4444;font-size:12px;margin-top:8px;display:none}
 .login-status{font-size:12px;color:#9CA3AF;margin-top:8px;text-align:center}
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);z-index:200}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar-overlay{display:none}
+  .sidebar-overlay.show{display:block}
+  .content-area{width:100%;flex:1}
+  .mobile-header{display:flex}
+  .topbar{display:none}
+  .main{padding:16px}
+  .dash-grid{grid-template-columns:1fr}
+  .queue-card{flex-wrap:wrap;gap:8px}
+  .queue-card .btn{width:100%}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .chart-wrap{gap:12px}
+  .chart-bar{width:32px}
+  .controls{gap:6px}
+  .filter-btn{font-size:10px;padding:4px 8px}
+}
 </style>
 </head>
 <body>
 
 <div id="toast" class="toast"></div>
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div id="login-view" class="login-wrap">
   <div class="login-box">
@@ -160,7 +184,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <div id="app-view" style="display:none" class="app-shell">
-  <nav class="sidebar">
+  <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-mark">
         <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -170,27 +194,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="sidebar-nav">
       <div class="nav-section-label">Operations</div>
-      <div class="nav-item active" id="nav-queue" onclick="switchTab('queue')">
+      <div class="nav-item active" id="nav-queue" onclick="switchTab('queue');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
         Queue
         <span class="nav-badge urgent" id="badge-queue">0</span>
       </div>
-      <div class="nav-item" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <div class="nav-item" id="nav-dashboard" onclick="switchTab('dashboard');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Dashboard
       </div>
       <div class="nav-section-label">Pillars</div>
-      <div class="nav-item" id="nav-recruiters" onclick="switchTab('recruiters')">
+      <div class="nav-item" id="nav-recruiters" onclick="switchTab('recruiters');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Recruiters
         <span class="nav-badge" id="badge-recruiters">0</span>
       </div>
-      <div class="nav-item" id="nav-ceos" onclick="switchTab('ceos')">
+      <div class="nav-item" id="nav-ceos" onclick="switchTab('ceos');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Direct CEO
         <span class="nav-badge blue" id="badge-ceos">0</span>
       </div>
-      <div class="nav-item" id="nav-vcs" onclick="switchTab('vcs')">
+      <div class="nav-item" id="nav-vcs" onclick="switchTab('vcs');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         VC Firms
         <span class="nav-badge green" id="badge-vcs">0</span>
@@ -200,6 +224,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </nav>
 
   <div class="content-area">
+    <div class="mobile-header">
+      <button class="hamburger" onclick="toggleSidebar()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="mobile-header-title" id="mobile-title">Morning Queue</span>
+      <span class="mobile-badge" id="mobile-badge">0</span>
+    </div>
     <div class="topbar">
       <div class="topbar-left">
         <div class="topbar-title" id="topbar-title">Morning Queue</div>
@@ -221,144 +252,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
-const STORAGE_KEY = 'hopespot_token';
-const API_KEY_STORE = 'hopespot_apikey';
-let TOKEN='', API_KEY_MODE=false, DATA=[], CEOs=[], VCs=[], STATS=null, DUE=[], FILTER='all', TAB='queue';
+const STORAGE_KEY='hopespot_token',API_KEY_STORE='hopespot_apikey';
+let TOKEN='',API_KEY_MODE=false,DATA=[],CEOs=[],VCs=[],STATS=null,DUE=[],FILTER='all',TAB='queue';
 const TODAY=new Date().toISOString().split('T')[0];
 const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach']};
 
-function toast(msg, dur=3000){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),dur);
-}
+function toast(msg,dur=3000){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
 function setStatus(m){const e=document.getElementById('login-status');if(e)e.textContent=m;}
+function authHeaders(){if(API_KEY_MODE)return{'x-api-key':TOKEN,'Content-Type':'application/json'};return{'x-auth-token':TOKEN,'Content-Type':'application/json'};}
+function authFetchHeaders(){if(API_KEY_MODE)return{'x-api-key':TOKEN};return{'x-auth-token':TOKEN};}
 
-function authHeaders(){
-  if(API_KEY_MODE) return{'x-api-key':TOKEN,'Content-Type':'application/json'};
-  return{'x-auth-token':TOKEN,'Content-Type':'application/json'};
-}
-function authFetchHeaders(){
-  if(API_KEY_MODE) return{'x-api-key':TOKEN};
-  return{'x-auth-token':TOKEN};
-}
+function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay');s.classList.toggle('mobile-open');o.classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('mobile-open');document.getElementById('sidebar-overlay').classList.remove('show');}
 
-async function tryApiKey(key){
-  try{
-    const r = await fetch('/api/due',{headers:{'x-api-key':key}});
-    return r.status !== 401;
-  }catch(e){return false;}
-}
-
-async function validateToken(token){
-  try{
-    const r = await fetch('/api/firms',{headers:{'x-auth-token':token}});
-    return r.status !== 401;
-  }catch(e){return false;}
-}
-
-function showLogin(msg){
-  if(msg) setStatus(msg);
-  document.getElementById('login-view').style.display='flex';
-  document.getElementById('app-view').style.display='none';
-}
-
-function showApp(){
-  document.getElementById('login-view').style.display='none';
-  document.getElementById('app-view').style.display='flex';
-}
+async function tryApiKey(key){try{const r=await fetch('/api/due',{headers:{'x-api-key':key}});return r.status!==401;}catch(e){return false;}}
+async function validateToken(token){try{const r=await fetch('/api/firms',{headers:{'x-auth-token':token}});return r.status!==401;}catch(e){return false;}}
+function showLogin(msg){if(msg)setStatus(msg);document.getElementById('login-view').style.display='flex';document.getElementById('app-view').style.display='none';}
+function showApp(){document.getElementById('login-view').style.display='none';document.getElementById('app-view').style.display='flex';}
 
 async function init(){
   setStatus('Connecting...');
-  // 1. Try saved API key first (survives server restarts)
-  const savedKey = localStorage.getItem(API_KEY_STORE);
-  if(savedKey){
-    const valid = await tryApiKey(savedKey);
-    if(valid){
-      TOKEN=savedKey; API_KEY_MODE=true;
-      await loadAll();
-      showApp();
-      return;
-    }
-    localStorage.removeItem(API_KEY_STORE);
-  }
+  const savedKey=localStorage.getItem(API_KEY_STORE);
+  if(savedKey){const valid=await tryApiKey(savedKey);if(valid){TOKEN=savedKey;API_KEY_MODE=true;await loadAll();showApp();return;}localStorage.removeItem(API_KEY_STORE);}
   try{
     const r=await fetch('/api/auth-required').then(x=>x.json());
-    if(!r.required){
-      TOKEN='no-auth';
-      await loadAll();
-      showApp();
-      return;
-    }
-    // Try saved session token
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if(saved){
-      const valid = await validateToken(saved);
-      if(valid){
-        TOKEN=saved; API_KEY_MODE=false;
-        await loadAll();
-        showApp();
-        return;
-      }
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    if(!r.required){TOKEN='no-auth';await loadAll();showApp();return;}
+    const saved=localStorage.getItem(STORAGE_KEY);
+    if(saved){const valid=await validateToken(saved);if(valid){TOKEN=saved;API_KEY_MODE=false;await loadAll();showApp();return;}localStorage.removeItem(STORAGE_KEY);}
     setStatus('Enter password or API key to continue.');
   }catch(e){setStatus('Could not reach server.');}
 }
 
 async function doLogin(){
   const pw=document.getElementById('pw-input').value;
-  // First try as API key (most reliable across restarts)
-  const keyValid = await tryApiKey(pw);
-  if(keyValid){
-    TOKEN=pw; API_KEY_MODE=true;
-    localStorage.setItem(API_KEY_STORE, pw);
-    await loadAll();
-    showApp();
-    return;
-  }
-  // Fall back to password/session auth
+  const keyValid=await tryApiKey(pw);
+  if(keyValid){TOKEN=pw;API_KEY_MODE=true;localStorage.setItem(API_KEY_STORE,pw);await loadAll();showApp();return;}
   try{
     const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(x=>x.json());
-    if(r.ok){
-      TOKEN=r.token; API_KEY_MODE=false;
-      localStorage.setItem(STORAGE_KEY, TOKEN);
-      await loadAll();
-      showApp();
-    } else {
-      document.getElementById('login-error').style.display='block';
-    }
+    if(r.ok){TOKEN=r.token;API_KEY_MODE=false;localStorage.setItem(STORAGE_KEY,TOKEN);await loadAll();showApp();}
+    else document.getElementById('login-error').style.display='block';
   }catch(e){setStatus('Login failed.');}
 }
 
 async function loadAll(){
   const h=authFetchHeaders();
   try{
-    const [fr,cr,vr,sr,dr] = await Promise.all([
-      fetch('/api/firms',{headers:h}),
-      fetch('/api/ceos',{headers:h}),
-      fetch('/api/vcs',{headers:h}),
-      fetch('/api/stats',{headers:h}),
-      fetch('/api/due',{headers:h}),
-    ]);
-    if(fr.status===401||cr.status===401){
-      // Session expired — clear session token but keep API key if present
-      localStorage.removeItem(STORAGE_KEY);
-      if(!API_KEY_MODE){
-        TOKEN='';
-        showLogin('Session expired — sign in again.');
-        return;
-      }
-    }
+    const [fr,cr,vr,sr,dr]=await Promise.all([fetch('/api/firms',{headers:h}),fetch('/api/ceos',{headers:h}),fetch('/api/vcs',{headers:h}),fetch('/api/stats',{headers:h}),fetch('/api/due',{headers:h})]);
+    if(fr.status===401||cr.status===401){localStorage.removeItem(STORAGE_KEY);if(!API_KEY_MODE){TOKEN='';showLogin('Session expired — sign in again.');return;}}
     [DATA,CEOs,VCs,STATS,DUE]=await Promise.all([fr.json(),cr.json(),vr.json(),sr.json(),dr.json()]);
   }catch(e){DATA=[];CEOs=[];VCs=[];STATS=null;DUE=[];}
   updateBadges();renderCurrent();
 }
 
 async function refreshData(){
-  const btn=document.getElementById('refresh-btn');
-  btn.classList.add('spinning');btn.disabled=true;
-  const prevDue=DUE.length;
+  const btn=document.getElementById('refresh-btn');btn.classList.add('spinning');btn.disabled=true;
   await loadAll();
   btn.classList.remove('spinning');btn.disabled=false;
   const draftCount=allItems().filter(x=>x.status==='draft').length;
@@ -366,45 +313,37 @@ async function refreshData(){
 }
 
 async function runQueue(){
-  const btn=document.getElementById('run-queue-btn');
-  btn.disabled=true;btn.textContent='Running...';
+  const btn=document.getElementById('run-queue-btn');btn.disabled=true;btn.textContent='Running...';
   try{
     const r=await fetch('/api/cron/run',{method:'POST',headers:authFetchHeaders()}).then(x=>x.json());
     await loadAll();
-    if(r.skipped){
-      toast('Queue already loaded for today. Use Refresh to check for new replies.');
-    } else {
-      toast(`Queue loaded — ${r.totalDrafted} new contact${r.totalDrafted!==1?'s':''} staged across all pillars`);
-    }
-  }catch(e){
-    toast('Failed to run queue. Try refreshing.');
-  }
+    if(r.skipped){toast('Queue already loaded for today. Use Refresh to check for new replies.');}
+    else{toast(`Queue loaded — ${r.totalDrafted} new contact${r.totalDrafted!==1?'s':''} staged`);}
+  }catch(e){toast('Failed to run queue. Try refreshing.');}
   btn.disabled=false;
   btn.innerHTML='<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Queue';
 }
 
-function allItems(){
-  return[
-    ...DATA.map(x=>({...x,_pillar:'recruiter',_endpoint:'/api/firms',_label:'Recruiter'})),
-    ...CEOs.map(x=>({...x,_pillar:'ceo',_endpoint:'/api/ceos',_label:'CEO',name:x.company})),
-    ...VCs.map(x=>({...x,_pillar:'vc',_endpoint:'/api/vcs',_label:'VC',name:x.firm})),
-  ];
-}
+function allItems(){return[...DATA.map(x=>({...x,_pillar:'recruiter',_endpoint:'/api/firms',_label:'Recruiter'})),...CEOs.map(x=>({...x,_pillar:'ceo',_endpoint:'/api/ceos',_label:'CEO',name:x.company})),...VCs.map(x=>({...x,_pillar:'vc',_endpoint:'/api/vcs',_label:'VC',name:x.firm}))];}
+
 function updateBadges(){
   const all=allItems();
-  const draftCount=all.filter(x=>x.status==='draft').length;
-  const q=draftCount+DUE.length;
+  const q=all.filter(x=>x.status==='draft').length+DUE.length;
   document.getElementById('badge-queue').textContent=q;
   document.getElementById('badge-recruiters').textContent=DATA.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
   document.getElementById('badge-ceos').textContent=CEOs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
   document.getElementById('badge-vcs').textContent=VCs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
+  const mb=document.getElementById('mobile-badge');if(mb)mb.textContent=q;
+  const mt=document.getElementById('mobile-title');if(mt){const t=TITLES[TAB];if(t)mt.textContent=t[0];}
 }
+
 function switchTab(t){
   TAB=t;FILTER='all';
   ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('active',x===t));
   const [title,sub]=TITLES[t]||['',''];
   document.getElementById('topbar-title').textContent=title;
   document.getElementById('topbar-sub').textContent=sub;
+  const mt=document.getElementById('mobile-title');if(mt)mt.textContent=title;
   renderCurrent();
 }
 function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard')renderDashboard();else renderList();}
@@ -412,7 +351,6 @@ function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard
 function renderQueue(){
   const all=allItems();
   const sendNow=all.filter(x=>x.status==='draft');
-  // Follow-ups come from /api/due (server-side, authoritative)
   const followUp=[...DUE].sort((a,b)=>a.followup_date>b.followup_date?1:-1);
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const totalMin=Math.round(sendNow.length*0.4+followUp.length*1.5);
@@ -429,10 +367,11 @@ function renderQueue(){
     const endpointMap={firms:'/api/firms',ceos:'/api/ceos',vcs:'/api/vcs'};
     const ep=item.dynamic?null:endpointMap[item.track];
     const logBtn=ep?`<button class="btn btn-followup" onclick="logFollowup('${ep}',${item.org_id})">Log</button>`:`<button class="btn btn-followup" onclick="logDynamic('${item.org_id}')">Log</button>`;
-    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${pillarKey}">${pillarLabel}</span><div class="queue-info"><div class="queue-name">${item.org_name}</div><div class="queue-contact">${item.contact_name} &nbsp;&middot;&nbsp; <span style="font-family:monospace;font-size:11px">${item.contact_email}</span></div><div class="queue-meta">Last contacted ${item.days_since_contact!=null?item.days_since_contact+' days ago':'\u2014'} &nbsp;&middot;&nbsp; Due ${item.followup_date} &nbsp;&middot;&nbsp; Day ${item.cadence_day||1}</div></div>${logBtn}</div>`;
+    html+=`<div class="queue-card ${ov?'followup-overdue':'followup'}"><span class="pillar-tag pillar-${pillarKey}">${pillarLabel}</span><div class="queue-info"><div class="queue-name">${item.org_name}</div><div class="queue-contact">${item.contact_name}</div><div class="queue-email">${item.contact_email}</div><div class="queue-meta">Last contacted ${item.days_since_contact!=null?item.days_since_contact+' days ago':'\u2014'} &middot; Due ${item.followup_date} &middot; Day ${item.cadence_day||1}</div></div>${logBtn}</div>`;
   });
   document.getElementById('main-content').innerHTML=html;
 }
+
 async function markSent(endpoint,id,btn){
   btn.textContent='Sent \u2713';btn.disabled=true;btn.style.background='#10B981';
   const followup=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
@@ -460,13 +399,7 @@ function renderDashboard(){
   const overallRate=totals.contacted>0?Math.round((totals.inConversation/totals.contacted)*100):0;
   const maxD=daily.length?Math.max(...daily.map(d=>d.total),1):1;
   const CHART_H=120;
-  let html=`<div class="stats">
-    <div class="stat"><div class="stat-label">Total Outreach</div><div class="stat-val">${totals.contacted}</div><div class="stat-sub">sent & delivered</div></div>
-    <div class="stat"><div class="stat-label">In Conversation</div><div class="stat-val">${totals.inConversation}</div><div class="stat-sub">active replies</div></div>
-    <div class="stat"><div class="stat-label">Reply Rate</div><div class="stat-val">${overallRate}%</div><div class="stat-sub">all segments</div></div>
-    <div class="stat"><div class="stat-label">Follow-ups Due</div><div class="stat-val" style="color:#EF4444">${DUE.length}</div><div class="stat-sub">need action today</div></div>
-    <div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${totals.bounced}</div><div class="stat-sub">need alt contact</div></div>
-  </div>`;
+  let html=`<div class="stats"><div class="stat"><div class="stat-label">Outreach</div><div class="stat-val">${totals.contacted}</div><div class="stat-sub">sent</div></div><div class="stat"><div class="stat-label">Replies</div><div class="stat-val">${totals.inConversation}</div><div class="stat-sub">in convo</div></div><div class="stat"><div class="stat-label">Rate</div><div class="stat-val">${overallRate}%</div></div><div class="stat"><div class="stat-label">Due</div><div class="stat-val" style="color:#EF4444">${DUE.length}</div></div><div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">${totals.bounced}</div></div></div>`;
   const bc=['#3B82F6','#F97316','#10B981'];
   html+=`<div class="dash-grid">`;
   segments.forEach((s,i)=>{const pct=s.contacted>0?Math.round((s.conv/s.contacted)*100):0;html+=`<div class="dash-card"><div class="dash-card-title">${s.label}</div><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px"><div><div class="big-num">${s.contacted}</div><div class="big-sub">contacted</div></div><div class="rate-circle" style="border-color:${bc[i]}"><div class="rate-pct">${pct}%</div><div class="rate-lbl">replies</div></div></div><div class="seg-row"><span class="seg-lbl">In conversation</span><span class="seg-val">${s.conv}</span></div><div class="seg-row"><span class="seg-lbl">Drafts pending</span><span class="seg-val" style="color:#8B5CF6">${s.drafts}</span></div><div class="seg-row"><span class="seg-lbl">Bounced</span><span class="seg-val" style="color:#F59E0B">${s.bounced}</span></div></div>`;});
@@ -481,7 +414,7 @@ function renderDashboard(){
       const cH=d.total>0?Math.round((d.ceos/d.total)*totalH):0;
       const vH=totalH-rH-cH;
       const label=new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      html+=`<div class="chart-col"><div class="chart-count">${d.total}</div><div class="chart-bar" style="height:${totalH}px">${d.vcs?`<div class="chart-seg" style="height:${vH}px;background:#10B981" title="VCs: ${d.vcs}"></div>`:''}${d.ceos?`<div class="chart-seg" style="height:${cH}px;background:#F97316" title="CEOs: ${d.ceos}"></div>`:''}${d.recruiters?`<div class="chart-seg" style="height:${rH}px;background:#3B82F6" title="Recruiters: ${d.recruiters}"></div>`:''}</div><div class="chart-label">${label}</div></div>`;
+      html+=`<div class="chart-col"><div class="chart-count">${d.total}</div><div class="chart-bar" style="height:${totalH}px">${d.vcs?`<div class="chart-seg" style="height:${vH}px;background:#10B981"></div>`:''}${d.ceos?`<div class="chart-seg" style="height:${cH}px;background:#F97316"></div>`:''}${d.recruiters?`<div class="chart-seg" style="height:${rH}px;background:#3B82F6"></div>`:''}</div><div class="chart-label">${label}</div></div>`;
     });
     html+=`</div><div class="legend"><div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Recruiters</div><div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>CEOs</div><div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>VCs</div></div>`;
   }
@@ -500,9 +433,9 @@ function renderList(){
   if(q)items=items.filter(x=>nameField(x).toLowerCase().includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||(x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)));
   const all=currentData();
   const sMap=s=>all.filter(x=>x.status===s).length;
-  const statHtml=[['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],['In Convo',sMap('in conversation')],['Not Started',sMap('not contacted')],['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
+  const statHtml=[['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],['In Convo',sMap('in conversation')],['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]].map(([l,v])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
   const cardsHtml=items.length?items.map(item=>{const id=item.id,name=nameField(item);const dotCls='sdot-'+(item.status||'not-contacted').replace(/ /g,'-');const tier=item.tier?`<span class="tier-badge">T${item.tier}</span>`:TAB==='ceos'?'<span class="tier-badge">CEO</span>':'<span class="tier-badge">VC</span>';const contacts=(item.contacts||[]).map(c=>{const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');return`<div class="contact-row"><div class="contact-info"><div class="contact-name">${c.name}</div>${c.title?`<div class="contact-title">${c.title}</div>`:''} ${c.email?`<div class="contact-email">${c.email}</div>`:''} ${c.notes?`<div class="contact-notes">${c.notes}</div>`:''}</div><span class="cs-tag ${cs}">${c.status||'not contacted'}</span></div>`;}).join('');return`<div class="card"><div class="card-header" onclick="toggle('${TAB}',${id})">${tier}<div class="card-name">${name}</div><span class="status-lbl">${item.status||'not contacted'}</span><span class="sdot ${dotCls}"></span></div><div class="card-body" id="body-${TAB}-${id}"><div class="why">${item.why||''}</div>${contacts?`<div class="sec-lbl">Contacts</div>${contacts}`:''}<div class="sec-lbl" style="margin-top:12px">Notes & Status</div><div class="field-row"><textarea class="notes-input" id="notes-${TAB}-${id}">${item.notes||''}</textarea><div style="display:flex;flex-direction:column;gap:6px"><select class="status-select" id="status-${TAB}-${id}">${['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>`<option value="${s}"${item.status===s?' selected':''}>${s}</option>`).join('')}</select><input class="date-input" type="date" id="followup-${TAB}-${id}" value="${item.followup_date||''}"><button class="save-btn" onclick="save('${TAB}',${id})">Save</button></div></div></div></div>`;}).join(''):'<div class="empty">No results.</div>';
-  document.getElementById('main-content').innerHTML=`<div class="controls"><input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}"><button class="filter-btn active" onclick="setFilter('all',this)">All</button><button class="filter-btn" onclick="setFilter('draft',this)">Draft</button><button class="filter-btn" onclick="setFilter('active',this)">Active</button><button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button><button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button><button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button><button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button><button class="filter-btn" onclick="setFilter('passed',this)">Passed</button></div><div class="stats">${statHtml}</div><div class="cards">${cardsHtml}</div>`;
+  document.getElementById('main-content').innerHTML=`<div class="controls"><input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="${q}"><button class="filter-btn active" onclick="setFilter('all',this)">All</button><button class="filter-btn" onclick="setFilter('active',this)">Active</button><button class="filter-btn" onclick="setFilter('contacted',this)">Contacted</button><button class="filter-btn" onclick="setFilter('in conversation',this)">In Convo</button><button class="filter-btn" onclick="setFilter('not contacted',this)">Not Started</button><button class="filter-btn" onclick="setFilter('bounced',this)">Bounced</button></div><div class="stats">${statHtml}</div><div class="cards">${cardsHtml}</div>`;
 }
 function toggle(tab,id){document.getElementById(`body-${tab}-${id}`)?.classList.toggle('open');}
 async function save(tab,id){
