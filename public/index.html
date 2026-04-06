@@ -162,6 +162,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tv-v2{background:#ECFDF5;color:#059669}
 .perf-table{width:100%;border-collapse:collapse;font-size:12px}
 .perf-table th{color:#9CA3AF;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:4px 0 8px;border-bottom:1px solid #F3F4F6;font-weight:700;text-align:left}
+.perf-table th+th{text-align:right}
 .perf-table td{padding:7px 0;border-bottom:1px solid #F3F4F6;color:#1F2D3D;vertical-align:middle}
 .perf-table tr:last-child td{border-bottom:none}
 .perf-table td+td{text-align:right;color:#6B7280}
@@ -235,6 +236,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <li>Chart moves to left column; SLA and Template A/B stack on the right<span class="cl-tag cl-tag-new">new</span></li>
           <li>Bar chart count labels position as absolute above each bar, no more clipping<span class="cl-tag cl-tag-fix">fix</span></li>
           <li>Sector table simplified: removed Bounced column, tighter presentation<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Table column headers now right-aligned to match numeric data columns<span class="cl-tag cl-tag-fix">fix</span></li>
         </ul>
       </div>
       <div class="cl-version">
@@ -246,7 +248,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <li>Dashboard: Template A/B performance table<span class="cl-tag cl-tag-new">new</span></li>
           <li>Dashboard: CEO Outreach by Sector breakdown with reply rates<span class="cl-tag cl-tag-new">new</span></li>
           <li>CEO tab: sector filter buttons, sector and template badges on cards<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Version badge in sidebar footer with this changelog<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Version badge in sidebar footer with changelog<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
       <div class="cl-version">
@@ -541,13 +543,11 @@ function renderDashboard(){
   const CHART_H=140;
   const bc=['#3B82F6','#F97316','#10B981'];
 
-  // Segment cards
   let html='<div class="stats"><div class="stat"><div class="stat-label">Outreach</div><div class="stat-val">'+totals.contacted+'</div><div class="stat-sub">sent</div></div><div class="stat"><div class="stat-label">Replies</div><div class="stat-val">'+totals.inConversation+'</div><div class="stat-sub">in convo</div></div><div class="stat"><div class="stat-label">Rate</div><div class="stat-val">'+overallRate+'%</div></div><div class="stat"><div class="stat-label">Due</div><div class="stat-val" style="color:#EF4444">'+DUE.length+'</div></div><div class="stat"><div class="stat-label">Bounced</div><div class="stat-val">'+totals.bounced+'</div></div></div>';
   html+='<div class="dash-grid">';
   segments.forEach((s,i)=>{const pct=s.contacted>0?Math.round((s.conv/s.contacted)*100):0;html+='<div class="dash-card"><div class="dash-card-title">'+s.label+'</div><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px"><div><div class="big-num">'+s.contacted+'</div><div class="big-sub">contacted</div></div><div class="rate-circle" style="border-color:'+bc[i]+'"><div class="rate-pct">'+pct+'%</div><div class="rate-lbl">replies</div></div></div><div class="seg-row"><span class="seg-lbl">In conversation</span><span class="seg-val">'+s.conv+'</span></div><div class="seg-row"><span class="seg-lbl">Drafts pending</span><span class="seg-val" style="color:#8B5CF6">'+s.drafts+'</span></div><div class="seg-row"><span class="seg-lbl">Bounced</span><span class="seg-val" style="color:#F59E0B">'+s.bounced+'</span></div></div>';});
   html+='</div>';
 
-  // Chart HTML
   let chartInner='';
   if(!daily.length){chartInner='<div style="color:#9CA3AF;font-size:13px;padding-top:12px">No activity yet.</div>';}
   else{
@@ -563,7 +563,6 @@ function renderDashboard(){
     chartInner='<div class="chart-wrap">'+bars+'</div><div class="legend"><div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Recruiters</div><div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>CEOs</div><div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>VCs</div></div>';
   }
 
-  // SLA + Template HTML
   const sla=STATS.slaStats||{target:10,dailyAvg7:0,onTrack:false};
   const tmplStats=STATS.templateStats||[];
   let slaHtml='<div class="dash-card"><div class="dash-card-title">SLA Compliance</div>';
@@ -574,13 +573,11 @@ function renderDashboard(){
   else{tmplHtml+='<table class="perf-table"><tr><th>Version</th><th>Sent</th><th>Replies</th><th>Rate</th></tr>'+tmplStats.map(t=>'<tr><td><span class="tv-badge tv-'+t.version+'">'+t.version+'</span></td><td>'+t.sent+'</td><td class="hl">'+t.replies+'</td><td>'+t.replyRate+'%</td></tr>').join('')+'</table>';}
   tmplHtml+='</div>';
 
-  // Main layout: chart left, SLA+template stacked right
   html+='<div class="dash-main-row">';
   html+='<div class="dash-card"><div class="dash-card-title">Daily Outreach Activity</div>'+chartInner+'</div>';
   html+='<div class="right-stack">'+slaHtml+tmplHtml+'</div>';
   html+='</div>';
 
-  // Sector breakdown — full width, Sent/Replies/Rate only
   const secStats=STATS.sectorStats||[];
   if(secStats.length){
     html+='<div class="dash-card" style="margin-bottom:16px"><div class="dash-card-title">CEO Outreach by Sector</div>';
