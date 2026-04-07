@@ -102,7 +102,7 @@ function saveCronState(state) {
   try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2)); } catch(e) { console.error('[ERROR]', e.message); }
 }
 
-const DAILY_TARGET = 15;
+const DAILY_TARGET = 20;
 const PILLARS = ['firms', 'ceos', 'vcs'];
 
 function runDailyCron() {
@@ -331,7 +331,7 @@ app.get('/api/debug', (req, res) => {
     if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++;
   });
   res.json({
-    version: '3.4',
+    version: '3.5',
     seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length },
     dynamicCount: loadDynamic().length,
     overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length },
@@ -427,7 +427,7 @@ app.get('/api/stats', requireAuth, (req, res) => {
     return { version, sent, replies, bounced, replyRate: sent > 0 ? Math.round((replies/sent)*100) : 0 };
   }).sort((a,b) => a.version.localeCompare(b.version));
 
-  // SLA stats — 7-day rolling average vs 10/day target
+  // SLA stats — 7-day rolling average vs 20/day target
   const todayStr = todayET();
   const cutoffDate = new Date(todayStr + 'T12:00:00-05:00');
   cutoffDate.setDate(cutoffDate.getDate() - 6);
@@ -435,7 +435,7 @@ app.get('/api/stats', requireAuth, (req, res) => {
   let totalRecent = 0;
   Object.entries(byDate).forEach(([d, v]) => { if (d >= cutoffStr) totalRecent += v.total; });
   const dailyAvg7 = Math.round(totalRecent / 7);
-  const slaStats = { target: 10, dailyAvg7, onTrack: dailyAvg7 >= 10 };
+  const slaStats = { target: 20, dailyAvg7, onTrack: dailyAvg7 >= 20 };
 
   res.json({
     segments: [seg(firms,'Recruiters'), seg(ceos,'Direct CEO'), seg(vcs,'VC Firms')],
