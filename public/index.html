@@ -22,7 +22,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-item svg{flex-shrink:0;opacity:.7}
 .nav-item.active svg{opacity:1}
 .nav-badge{margin-left:auto;min-width:18px;height:18px;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
-.nav-badge.urgent{background:#EF4444}.nav-badge.blue{background:#3B82F6}.nav-badge.green{background:#10B981}.nav-badge.orange{background:#F97316}
+.nav-badge.urgent{background:#EF4444}.nav-badge.blue{background:#3B82F6}.nav-badge.green{background:#10B981}
 .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:space-between}
 .version-badge{font-size:10px;font-weight:700;color:#F97316;cursor:pointer;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);padding:2px 6px;border-radius:4px;transition:all .15s;flex-shrink:0}
 .version-badge:hover{background:rgba(249,115,22,.25);color:#fff}
@@ -241,7 +241,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-body">
       <div class="log-contact" id="log-contact-name"></div>
       <div class="log-email" id="log-contact-email"></div>
-      <textarea class="log-textarea" id="log-note" placeholder="Note (optional) &#x2014; leave blank to just reset the follow-up date"></textarea>
+      <textarea class="log-textarea" id="log-note" placeholder="Note (optional) — leave blank to just reset the follow-up date"></textarea>
       <div class="log-actions">
         <button class="log-cancel" onclick="closeLogModal()">Cancel</button>
         <button class="log-confirm" onclick="submitLog()">Log &amp; Reset Date</button>
@@ -263,26 +263,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="cl-version">
         <div class="cl-ver-header"><span class="cl-ver-num current">v7.0</span><span class="cl-ver-label">Networking Pillar + Rich Dashboard + Morning Sync</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
-          <li>Networking pillar: Events &amp; Meetings with inline notes, contacts, next steps<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Google Calendar sync via morning sync session<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Nav restructured: Email Outreach / Applications / Networking sections<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Dashboard rebuilt with 3 pillar KPI cards, trend arrows, SLA chips, insight chips<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Morning sync endpoint returns needsPackage, networking status, outreach SLA<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Packages auto-built during morning sync without manual trigger<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Networking pillar: Events &amp; Meetings with notes, contacts, next steps<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Google Calendar sync via morning sync session (deduped by event ID)<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Morning sync is now fully self-contained: packages, calendar, Gmail all in one<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Dashboard rebuilt with KPIs for all three pillars, SLA compliance, insight chips<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Week-over-week trend arrows on all headline numbers<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Nav restructured: Email Outreach / Applications / Networking<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>/api/morning-sync/status endpoint for self-contained sync sessions<span class="cl-tag cl-tag-infra">infra</span></li>
         </ul>
       </div>
       <div class="cl-version">
         <div class="cl-ver-header"><span class="cl-ver-num">v6.0</span><span class="cl-ver-label">Multi-Source Job Board + Snag + Combined Dashboard</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
           <li>5 job board sources: JewishJobs, ExecThread, CoS Network, Idealist, Built In ATL<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Snag button moves lead from Job Board into Applications queue<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Snag button moves lead into Applications queue<span class="cl-tag cl-tag-new">new</span></li>
           <li>Queued status added to application pipeline<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Dashboard combined outreach + applications<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
       <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v5.2</span><span class="cl-ver-label">Drive Integration</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <div class="cl-ver-header"><span class="cl-ver-num">v5.2</span><span class="cl-ver-label">Drive Integration + Job Board</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
           <li>Google Drive package creation from application record<span class="cl-tag cl-tag-new">new</span></li>
+          <li>JewishJobs crawl, Job Board tab, login SyntaxError fix<span class="cl-tag cl-tag-fix">fix</span></li>
         </ul>
       </div>
     </div>
@@ -351,9 +354,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="nav-section-label">Networking</div>
       <div class="nav-item" id="nav-events" onclick="switchTab('events');closeSidebar()">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Events &amp; Meetings
-        <span class="nav-badge orange" id="badge-networking"></span>
+        <span class="nav-badge urgent" id="badge-networking"></span>
       </div>
       <div class="nav-item" id="nav-netcontacts" onclick="switchTab('netcontacts');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
@@ -404,14 +407,14 @@ let TOKEN='',API_KEY_MODE=false,DATA=[],CEOs=[],VCs=[],STATS=null,DUE=[],FILTER=
 const TODAY=new Date().toISOString().split('T')[0];
 const TITLES={
   queue:['Morning Queue',"Today's outreach and follow-ups"],
-  dashboard:['Dashboard','All three pillars at a glance'],
+  dashboard:['Dashboard','Pipeline overview across all three pillars'],
   recruiters:['Recruiters','Executive search firms'],
   ceos:['Direct CEO / Network','Referral asks and warm network contacts'],
   vcs:['VC Firms','Portfolio COO and operating partner outreach'],
   applications:['Applications','Job application pipeline'],
   jobboard:['Job Board','JewishJobs \u00b7 ExecThread \u00b7 CoS Network \u00b7 Idealist \u00b7 Built In ATL'],
-  events:['Events & Meetings','Networking log with notes, contacts, and next steps'],
-  netcontacts:['Networking Contacts','Contacts from events and meetings']
+  events:['Events & Meetings','Networking appointments, notes, and follow-ups'],
+  netcontacts:['Networking Contacts','People you\'ve met and built relationships with']
 };
 const SECTOR_LABELS={healthtech:'Healthtech',revenue_gtm:'Revenue/GTM',analytics:'Analytics',fintech:'FinTech',vertical_saas:'Vertical SaaS',general:'General SaaS',network:'Network'};
 
@@ -553,16 +556,11 @@ function switchTab(t){
 function renderCurrent(){
   if(TAB==='queue')renderQueue();
   else if(TAB==='dashboard')renderDashboard();
-  else if(TAB==='applications'){if(typeof loadApps==='function')loadApps();else document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';}
+  else if(TAB==='applications')loadApps();
   else if(TAB==='jobboard'){if(typeof renderJobBoard==='function')renderJobBoard();else document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';}
   else if(TAB==='events'){if(typeof renderNetworking==='function')renderNetworking();else document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';}
   else if(TAB==='netcontacts'){if(typeof renderNetworkingContacts==='function')renderNetworkingContacts();else document.getElementById('main-content').innerHTML='<div class="empty">Loading...</div>';}
   else renderList();
-}
-
-function renderDashboard(){
-  // Overridden by apps.js. Fallback:
-  document.getElementById('main-content').innerHTML='<div class="empty">Loading dashboard...</div>';
 }
 
 function renderQueue(){
@@ -575,7 +573,7 @@ function renderQueue(){
   const markAllBtn=sendNow.length>0?'<button class="btn-green section-action" onclick="markDraftsSent()">&check; Mark All Sent</button>':'';
   html+='<div class="section-header"><div class="section-title">Send Now</div><div class="section-count">'+sendNow.length+' drafts waiting</div>'+markAllBtn+'</div>';
   if(!sendNow.length)html+='<div class="empty" style="padding:20px 0">No drafts queued. Hit Run Queue to stage the next batch.</div>';
-  else['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};html+='<div class="queue-card"><span class="pillar-tag pillar-'+p+'">'+item._label+'</span><div class="queue-info"><div class="queue-name">'+item.name+'</div><div class="queue-contact">'+(c.name||'')+'</div><div class="queue-email">'+(c.email||'')+'</div></div><button class="btn btn-send" onclick="markSent(\"'+item._endpoint+'\",'+item.id+',this)">Mark Sent</button></div>';});});
+  else['recruiter','ceo','vc'].forEach(p=>{sendNow.filter(x=>x._pillar===p).forEach(item=>{const c=(item.contacts||[]).find(c=>c.status==='draft')||(item.contacts||[])[0]||{};html+='<div class="queue-card"><span class="pillar-tag pillar-'+p+'">'+item._label+'</span><div class="queue-info"><div class="queue-name">'+item.name+'</div><div class="queue-contact">'+(c.name||'')+'</div><div class="queue-email">'+(c.email||'')+'</div></div><button class="btn btn-send" onclick="markSent(\''+ item._endpoint+'\','+item.id+',this)">Mark Sent</button></div>';});});
   html+='<div class="divider"></div><div class="section-header"><div class="section-title">Follow Up Today</div><div class="section-count">'+followUp.length+' due</div></div>';
   if(!followUp.length)html+='<div class="empty" style="padding:20px 0">No follow-ups due today.</div>';
   else followUp.forEach(item=>{
@@ -587,8 +585,8 @@ function renderQueue(){
     const escapedName=item.org_name.replace(/'/g,"\\'");
     const escapedEmail=item.contact_email.replace(/'/g,"\\'");
     const logBtn=ep
-      ?'<button class="btn btn-followup" onclick="openLogModal(\"'+escapedName+'\",\"'+escapedEmail+'\",\"'+ep+'\",'+item.org_id+',false)">Log</button>'
-      :'<button class="btn btn-followup" onclick="openLogModal(\"'+escapedName+'\",\"'+escapedEmail+'\",null,\"'+item.org_id+'\",true)">Log</button>';
+      ?'<button class="btn btn-followup" onclick="openLogModal(\''+escapedName+'\',\''+escapedEmail+'\',\''+ep+'\','+item.org_id+',false)">Log</button>'
+      :'<button class="btn btn-followup" onclick="openLogModal(\''+escapedName+'\',\''+escapedEmail+'\',null,\''+item.org_id+'\',true)">Log</button>';
     html+='<div class="queue-card '+(ov?'followup-overdue':'followup')+'"><span class="pillar-tag pillar-'+pillarKey+'">'+pillarLabel+'</span><div class="queue-info"><div class="queue-name">'+item.org_name+'</div><div class="queue-contact">'+item.contact_name+'</div><div class="queue-email">'+item.contact_email+'</div><div class="queue-meta">Last contacted '+(item.days_since_contact!=null?item.days_since_contact+' days ago':'\u2014')+' &middot; Due '+item.followup_date+' &middot; Day '+(item.cadence_day||1)+'</div></div>'+logBtn+'</div>';
   });
   document.getElementById('main-content').innerHTML=html;
@@ -599,6 +597,16 @@ async function markSent(endpoint,id,btn){
   const followup=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
   await fetch(endpoint+'/'+id,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:'contacted',followup_date:followup})});
   await loadAll();
+}
+
+// Fallback dashboard (overridden by apps.js)
+function renderDashboard(){
+  document.getElementById('main-content').innerHTML='<div class="empty">Loading dashboard...</div>';
+}
+
+// Fallback loadApps (overridden by apps.js)
+function loadApps(){
+  document.getElementById('main-content').innerHTML='<div class="empty">Loading applications...</div>';
 }
 
 function currentData(){return TAB==='ceos'?CEOs:TAB==='vcs'?VCs:DATA;}
@@ -628,7 +636,7 @@ function renderList(){
   let sectorRow='';
   if(TAB==='ceos'){
     const sectors=[...new Set(currentData().map(x=>x.sector||'general'))].filter(Boolean).sort();
-    const secBtns=sectors.map(s=>'<button class="filter-btn sfbtn'+(SECTOR_FILTER===s?' active':'')+' " onclick="setSectorFilter(\"'+s+'\",this)">'+(SECTOR_LABELS[s]||s)+'</button>').join('');
+    const secBtns=sectors.map(s=>'<button class="filter-btn sfbtn'+(SECTOR_FILTER===s?' active':'')+' " onclick="setSectorFilter(\''+s+'\',this)">'+(SECTOR_LABELS[s]||s)+'</button>').join('');
     sectorRow='<div class="sector-filters"><button class="filter-btn sfbtn'+(SECTOR_FILTER==='all'?' active':'')+' " onclick="setSectorFilter(\'all\',this)">All Sectors</button>'+secBtns+'</div>';
   }
   const cardsHtml=items.length?items.map(item=>{
