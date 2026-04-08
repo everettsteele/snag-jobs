@@ -32,10 +32,11 @@ async function renderDashboard() {
   try {
     const [ar, nr] = await Promise.all([
       fetch('/api/applications', { headers: _authFH() }),
-      fetch('/api/networking/events', { headers: _authFH() }) // default: no hidden
+      fetch('/api/networking/events', { headers: _authFH() })
     ]);
     apps = await ar.json(); net = await nr.json();
     _appsData = apps; _netData = net;
+    net = net.filter(e => !e.hidden); // exclude hidden events from all dashboard KPIs
   } catch(e) {}
 
   if (!STATS) { document.getElementById('main-content').innerHTML = '<div class="empty">Loading...</div>'; return; }
@@ -65,6 +66,7 @@ async function renderDashboard() {
   const appsLWk = apps.filter(a=>a.applied_date && a.applied_date >= twoWkAgo && a.applied_date < wkAgo).length;
   const appTrend = appsLWk > 0 ? Math.round(((appsWk-appsLWk)/appsLWk)*100) : null;
 
+  // net is already filtered to exclude hidden events above
   const netWk = net.filter(e=>e.start_date >= wkAgo && e.start_date <= todayStr).length;
   const netLWk = net.filter(e=>e.start_date >= twoWkAgo && e.start_date < wkAgo).length;
   const netMo = net.filter(e=>e.start_date >= moAgo && e.start_date <= todayStr).length;
@@ -259,7 +261,7 @@ async function renderJobBoard() {
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-size:22px;font-weight:700">Job Board</div><div style="font-size:13px;color:#9ca3af;margin-top:2px">JewishJobs &middot; ExecThread &middot; CoS Network &middot; Idealist &middot; Built In ATL &middot; Daily 6 AM</div></div><button onclick="triggerCrawl(this)" style="padding:9px 18px;background:#1f2d3d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button></div>
     ${srcBadges?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${srcBadges}</div>`:''}
     ${newLeads.length>0?`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New (${newLeads.length}) &mdash; Snag to add to Applications</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb"><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th><th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th><th style="padding:10px 14px"></th></tr></thead><tbody>${newLeads.map(row).join('')}</tbody></table></div>`:'<div style="color:#9ca3af;font-size:13px;margin-bottom:20px;padding:40px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:10px">No new leads. Hit Crawl Now to run all sources.</div>'}
-    ${reviewed.length>0?`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Skipped (${reviewed.length})</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;opacity:.5"><table style="width:100%;border-collapse:collapse"><tbody>${reviewed.slice(0,8).map(row).join('')}</tbody></table></div>`:''}`;
+    ${reviewed.length>0?`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Skipped (${reviewed.length})</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;opacity:.5"><table style="width:100%;border-collapse:collapse"><tbody>${reviewed.slice(0,8).map(row).join('')}</tbody></table></div>`:''}` ;
   const badge = document.getElementById('badge-jobboard');
   if (badge) badge.textContent = newLeads.length;
 }
@@ -290,8 +292,7 @@ async function triggerCrawl(btn) {
 // NETWORKING
 // ================================================================
 async function renderNetworking() {
-  // Always fetch all events including hidden so we can offer unhide
-  try { _netData = await (await fetch('/api/networking/events?include_hidden=true', { headers: _authFH() })).json(); } catch(e) { _netData = []; }
+  try { _netData = await (await fetch('/api/networking/events', { headers: _authFH() })).json(); } catch(e) { _netData = []; }
   const today = new Date().toISOString().split('T')[0];
   const visible = _netData.filter(e => !e.hidden);
   const hiddenEvts = _netData.filter(e => e.hidden);
@@ -351,11 +352,11 @@ async function renderNetworking() {
       <div style="font-size:13px;color:#9ca3af;margin-top:2px">${visible.length} logged &nbsp;&middot;&nbsp; ${totalOverdue} overdue steps${hiddenToggle}</div></div>
       <button onclick="showAddEventModal()" style="padding:9px 18px;background:#F97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Log Event</button>
     </div>
-    <p style="font-size:12px;color:#9CA3AF;margin-bottom:16px">Calendar syncs during morning sync. Use the <strong>hide</strong> button to remove non-relevant appointments from stats and this view.</p>
+    <p style="font-size:12px;color:#9CA3AF;margin-bottom:16px">Calendar syncs during morning sync (primary calendar only). Use <strong>hide</strong> to remove non-relevant appointments from stats and this view.</p>
     ${upcoming.length>0?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3B82F6;margin-bottom:8px">Upcoming (${upcoming.length})</div>${upcoming.map(e=>renderEvent(e)).join('')}`:''}
     ${past.length>0?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:8px;margin-top:${upcoming.length>0?'20px':'0'}">Past (${past.length})</div>${past.map(e=>renderEvent(e)).join('')}`:''}
     ${visible.length===0?'<div style="text-align:center;padding:60px;color:#9CA3AF;background:#fff;border:1px solid #E5E7EB;border-radius:10px">No events yet. Log one manually or run morning sync to import from Google Calendar.</div>':''}
-    ${_showHiddenNet&&hiddenEvts.length>0?`<div style="margin-top:24px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:10px">Hidden (${hiddenEvts.length}) &nbsp;&mdash;&nbsp; not counted in stats</div>${hiddenEvts.map(e=>renderEvent(e,true)).join('')}</div>`:''}`;
+    ${_showHiddenNet&&hiddenEvts.length>0?`<div style="margin-top:24px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:10px">Hidden (${hiddenEvts.length}) &nbsp;&mdash;&nbsp; not counted in stats</div>${hiddenEvts.map(e=>renderEvent(e,true)).join('')}</div>`:''}` ;
 }
 
 function _toggleHiddenNet() {
@@ -374,10 +375,10 @@ async function unhideEvent(id) {
 }
 
 async function renderNetworkingContacts() {
-  // Contacts tab uses default fetch (no hidden events)
   try { _netData = await (await fetch('/api/networking/events', { headers: _authFH() })).json(); } catch(e) { _netData = []; }
   const contactMap = {};
-  _netData.forEach(e => {
+  // Only show contacts from visible (non-hidden) events
+  _netData.filter(e=>!e.hidden).forEach(e => {
     (e.contacts||[]).forEach(c => {
       const key = c.email ? c.email.toLowerCase() : c.name.toLowerCase();
       if (!contactMap[key]) contactMap[key] = { ...c, events: [], latestDate: '' };
@@ -389,10 +390,10 @@ async function renderNetworkingContacts() {
   const rows = contacts.map(c => `<tr style="border-bottom:1px solid #F3F4F6"><td style="padding:10px 0;font-weight:600;font-size:13px">${c.name}</td><td style="padding:10px 8px;font-size:12px;color:#6B7280">${c.company||''}</td><td style="padding:10px 8px;font-size:12px;color:#9CA3AF">${c.role||''}</td><td style="padding:10px 8px;font-family:monospace;font-size:11px;color:#F97316">${c.email||''}</td><td style="padding:10px 8px;font-size:11px;color:#9CA3AF">${c.latestDate}</td><td style="padding:10px 8px;font-size:11px;color:#6B7280">${c.events.map(ev=>ev.title).join(', ')}</td></tr>`).join('');
   document.getElementById('main-content').innerHTML =
     `<div style="font-size:22px;font-weight:700;margin-bottom:4px">Networking Contacts</div>
-    <div style="font-size:13px;color:#9ca3af;margin-bottom:20px">${contacts.length} contacts from ${_netData.length} events</div>
+    <div style="font-size:13px;color:#9ca3af;margin-bottom:20px">${contacts.length} contacts from ${_netData.filter(e=>!e.hidden).length} events</div>
     ${contacts.length===0
       ? '<div style="text-align:center;padding:60px;color:#9CA3AF;background:#fff;border:1px solid #E5E7EB;border-radius:10px">No contacts yet. Add contacts to events.</div>'
-      : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Name</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Email</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Met</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Events</th></tr></thead><tbody>${rows}</tbody></table></div>`}`;
+      : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Name</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Email</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Met</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Events</th></tr></thead><tbody>${rows}</tbody></table></div>`}` ;
 }
 
 // Networking event helpers
@@ -458,10 +459,10 @@ async function showAddEventModal() {
     fetch('/api/job-board?status=new', { headers: _authFH() }).then(r=>r.json()).then(leads => {
       const b = document.getElementById('badge-jobboard'); if (b) b.textContent = leads.length;
     }).catch(()=>{});
-    // Badge uses default fetch (visible events only)
+    // Badge only counts overdue steps from visible (non-hidden) events
     fetch('/api/networking/events', { headers: _authFH() }).then(r=>r.json()).then(events => {
       const today = new Date().toISOString().split('T')[0];
-      const overdue = events.reduce((n,e) => n+(e.next_steps||[]).filter(ns=>!ns.done&&ns.due_date&&ns.due_date<=today).length, 0);
+      const overdue = events.filter(e=>!e.hidden).reduce((n,e) => n+(e.next_steps||[]).filter(ns=>!ns.done&&ns.due_date&&ns.due_date<=today).length, 0);
       const b = document.getElementById('badge-networking'); if (b) b.textContent = overdue||'';
     }).catch(()=>{});
   }
