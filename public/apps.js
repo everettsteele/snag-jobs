@@ -23,6 +23,13 @@ function _authFH() {
   if (k) return { 'x-api-key': k };
   return { 'x-auth-token': localStorage.getItem('hopespot_token') || '' };
 }
+function _authToken() {
+  // Returns auth token for use in query params (for direct link downloads)
+  var k = localStorage.getItem('hopespot_apikey');
+  if (k) return 'apikey=' + encodeURIComponent(k);
+  var t = localStorage.getItem('hopespot_token') || '';
+  return 'token=' + encodeURIComponent(t);
+}
 
 // ================================================================
 // RICH COMBINED DASHBOARD
@@ -206,6 +213,10 @@ function renderApplications() {
     var noPkgBadge = (app.status==='queued'&&!app.drive_url)
       ? ' <span class="hs-set-drive" data-app-id="'+app.id+'" style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle;cursor:pointer" title="Click to paste Drive URL">NO PKG</span>'
       : '';
+    // Cover letter PDF download — direct link, no Google Docs needed
+    var clBtn = app.cover_letter_text
+      ? '<a href="/api/applications/'+app.id+'/cover-letter.pdf?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="Download cover letter PDF">Cover Letter</a>'
+      : '';
     return '<tr style="border-bottom:1px solid #F3F4F6">'
       +'<td style="padding:10px 0;font-weight:600;font-size:13px">'+app.company+noPkgBadge+'</td>'
       +'<td style="padding:10px 8px;font-size:12px;color:#6B7280">'+app.role+'</td>'
@@ -214,6 +225,7 @@ function renderApplications() {
       +'<td style="padding:10px 8px;font-size:12px;color:'+(ov?'#EF4444':'#6B7280')+'">'+(app.follow_up_date||'')+(ov?' \u26a0':'')+'</td>'
       +'<td style="padding:10px 8px">'+actHtml+'</td>'
       +'<td style="padding:10px 0;white-space:nowrap">'
+        +clBtn
         +(app.drive_url?'<a href="'+app.drive_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#16a34a;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px">Drive</a>':'')
         +(app.notion_url?'<a href="'+app.notion_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#f3f4f6;border-radius:5px;font-size:11px;color:#374151;text-decoration:none;margin-right:3px">Pkg</a>':'')
         +(app.source_url?'<a href="'+app.source_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px">Apply</a>':'')
