@@ -300,14 +300,15 @@ async function renderJobBoard() {
     return '<span style="padding:3px 10px;background:'+c+'15;color:'+c+';border-radius:10px;font-size:11px;font-weight:600;border:1px solid '+c+'30">'+n+' '+s+'</span>';
   }).join('');
 
-  // KEY FIX: use data attributes on all interactive elements to avoid inline quote escaping
+  // Lead IDs are [a-zA-Z0-9-] only so embedding directly as string literals is safe and avoids any dataset/this context issues
   function row(l) {
     var sc = srcColors[l.source]||'#6b7280';
     var fc = l.fit_score>=7?'#16a34a':l.fit_score>=5?'#d97706':'#6b7280';
+    var lid = l.id; // alphanumeric + hyphens only
     var btns = '';
     if (l.status==='new') {
-      btns = '<button data-lead-id="'+l.id+'" onclick="snagLead(this.dataset.leadId,this)" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
-           + '<button data-lead-id="'+l.id+'" onclick="updateLeadStatus(this.dataset.leadId,\'reviewed\')" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
+      btns = '<button onclick="snagLead(\'' + lid + '\',this)" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
+           + '<button onclick="updateLeadStatus(\'' + lid + '\',\'reviewed\')" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
     }
     return '<tr style="border-bottom:1px solid #f3f4f6">'
       +'<td style="padding:10px 14px"><div style="font-weight:600;font-size:13px">'+l.title+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px">'+(l.organization||'')+(l.location?' \u00b7 '+l.location:'')+'</div><span style="display:inline-block;margin-top:4px;padding:1px 6px;background:'+sc+'15;color:'+sc+';border-radius:4px;font-size:10px;font-weight:700">'+(l.source_label||l.source)+'</span></td>'
