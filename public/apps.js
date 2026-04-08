@@ -1,4 +1,4 @@
-// HopeSpot apps.js v7.4 — Dashboard, Applications, Job Board, Networking
+// HopeSpot apps.js v7.5 — Dashboard, Applications, Job Board, Networking
 
 const APP_STATUSES = {
   queued:                { label: 'Queued',       color: '#7c3aed' },
@@ -216,12 +216,33 @@ function renderApplications() {
         +'<button onclick="_deleteApp(\''+app.id+'\')" style="padding:3px 8px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#EF4444;font-size:11px;cursor:pointer">&times;</button>'
       +'</td></tr>';
   }).join('');
+  var needsPkgCount = _appsData.filter(function(a){return a.status==='queued'&&!a.drive_url;}).length;
+  var batchBtn = needsPkgCount > 0
+    ? '<button onclick="_batchBuildPackages(this)" style="padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-left:10px">Build ' + needsPkgCount + ' Package' + (needsPkgCount>1?'s':'') + '</button>'
+    : '';
   document.getElementById('main-content').innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><div><div style="font-size:22px;font-weight:700">Applications</div><div style="font-size:13px;color:#9ca3af;margin-top:2px">'+_appsData.length+' tracked &nbsp;&middot;&nbsp; '+_appsData.filter(function(a){return a.status==='queued'&&!a.drive_url;}).length+' need a package</div></div><button onclick="_showAddAppModal()" style="padding:9px 18px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Log Application</button></div>'
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><div><div style="font-size:22px;font-weight:700">Applications</div><div style="font-size:13px;color:#9ca3af;margin-top:2px">'+_appsData.length+' tracked &nbsp;&middot;&nbsp; '+needsPkgCount+' need a package</div></div><div style="display:flex;align-items:center">'+batchBtn+'<button onclick="_showAddAppModal()" style="padding:9px 18px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-left:10px">+ Log Application</button></div></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+summary+'</div>'
     +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
     +'<thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Added</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Status</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Follow-up</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Activity</th><th style="padding:8px 0"></th></tr></thead>'
     +'<tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;padding:32px;color:#9CA3AF">No applications yet.</td></tr>')+'</tbody></table></div>';
+}
+
+async function _batchBuildPackages(btn) {
+  if (!confirm('Build Drive packages for all queued applications? This will generate cover letters using AI and create Drive folders. Takes 1-2 minutes.')) return;
+  if (btn) { btn.textContent = 'Building...'; btn.disabled = true; }
+  try {
+    var r = await (await fetch('/api/applications/batch-packages', { method: 'POST', headers: _authFH() })).json();
+    if (r.ok) {
+      if (typeof toast === 'function') toast(r.message || 'Packages building in background. Refresh in 2 minutes.', 6000);
+    } else {
+      if (typeof toast === 'function') toast('Error: ' + (r.error || 'Unknown error'));
+    }
+  } catch(e) {
+    if (typeof toast === 'function') toast('Request failed');
+  }
+  if (btn) { btn.textContent = 'Build Packages'; btn.disabled = false; }
+  setTimeout(function() { loadApps(); }, 30000);
 }
 
 async function _patchApp(id, body) {
@@ -295,12 +316,15 @@ async function renderJobBoard() {
       +'</tr>';
   }
 
+  // FIX: overflow-x:auto instead of overflow:hidden for mobile scroll
+  var tableWrap = 'style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:20px"';
+
   var newHtml = newLeads.length>0
-    ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New ('+newLeads.length+') &mdash; Snag to add to Applications</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb"><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th><th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th><th style="padding:10px 14px"></th></tr></thead><tbody>'+newLeads.map(row).join('')+'</tbody></table></div>'
+    ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New ('+newLeads.length+') &mdash; Snag to add to Applications</div><div '+tableWrap+'><table style="width:100%;min-width:480px;border-collapse:collapse"><thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb"><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th><th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th><th style="padding:10px 14px"></th></tr></thead><tbody>'+newLeads.map(row).join('')+'</tbody></table></div>'
     : '<div style="color:#9ca3af;font-size:13px;margin-bottom:20px;padding:40px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:10px"><div style="margin-bottom:16px">No new leads. Run a crawl to pull from all five sources.</div><button onclick="triggerCrawl(this)" style="padding:8px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button></div>';
 
   var revHtml = reviewed.length>0
-    ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Skipped ('+reviewed.length+')</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;opacity:.5"><table style="width:100%;border-collapse:collapse"><tbody>'+reviewed.slice(0,8).map(row).join('')+'</tbody></table></div>'
+    ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Skipped ('+reviewed.length+')</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;opacity:.5"><table style="width:100%;min-width:480px;border-collapse:collapse"><tbody>'+reviewed.slice(0,8).map(row).join('')+'</tbody></table></div>'
     : '';
 
   document.getElementById('main-content').innerHTML =
@@ -354,7 +378,7 @@ function _buildEventHtml(e, today) {
   var h = '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px;margin-bottom:12px">';
   h += '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">';
   h += '<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div style="font-size:14px;font-weight:600">'+e.title+'</div>';
-  h += '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:'+c+'15;color:'+c+'">'+( TYPE_LABEL[e.type]||e.type)+'</span>';
+  h += '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:'+c+'15;color:'+c+'">'+(TYPE_LABEL[e.type]||e.type)+'</span>';
   if (future) h += '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#EFF6FF;color:#3B82F6">Upcoming</span>';
   h += '</div><div style="font-size:11px;color:#9CA3AF;margin-top:3px">'+e.start_date+(e.start_time?' at '+e.start_time:'')+(e.location?' \u00b7 '+e.location:'')+'</div></div>';
   h += '<div style="display:flex;gap:6px;align-items:center">';
@@ -482,7 +506,7 @@ async function renderNetworkingContacts() {
     +'<div style="font-size:13px;color:#9ca3af;margin-bottom:20px">'+contacts.length+' contacts from '+_netData.filter(function(e){return !e.hidden;}).length+' events</div>'
     +(contacts.length===0
       ? '<div style="text-align:center;padding:60px;color:#9CA3AF;background:#fff;border:1px solid #E5E7EB;border-radius:10px">No contacts yet.</div>'
-      : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Name</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Email</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Met</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Events</th></tr></thead><tbody>'+rows+'</tbody></table></div>');
+      : '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;min-width:520px;border-collapse:collapse"><thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Name</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Email</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Met</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Events</th></tr></thead><tbody>'+rows+'</tbody></table></div>');
 }
 
 async function saveEventNotes(id, notes) {
@@ -533,7 +557,6 @@ async function showAddEventModal() {
 
 // ================================================================
 // EXPLICIT WINDOW BINDINGS
-// Ensures all onclick handlers work regardless of execution context
 // ================================================================
 window.renderDashboard = renderDashboard;
 window.loadApps = loadApps;
@@ -543,6 +566,7 @@ window._deleteApp = _deleteApp;
 window._showAddAppModal = _showAddAppModal;
 window._closeAddAppModal = _closeAddAppModal;
 window._submitAddApp = _submitAddApp;
+window._batchBuildPackages = _batchBuildPackages;
 window.renderJobBoard = renderJobBoard;
 window.updateLeadStatus = updateLeadStatus;
 window.snagLead = snagLead;
