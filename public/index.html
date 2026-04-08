@@ -261,38 +261,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-body">
       <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num current">v3.6</span><span class="cl-ver-label">Mark Drafts Sent</span><span class="cl-ver-date">Apr 7, 2026</span></div>
+        <div class="cl-ver-header"><span class="cl-ver-num current">v4.0</span><span class="cl-ver-label">Application Tracking</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <ul class="cl-changes">
+          <li>Applications tab with status dropdowns, activity log, follow-up tracking<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Metrics tab with pipeline funnel, weekly volume chart, outreach summary<span class="cl-tag cl-tag-new">new</span></li>
+          <li>POST /api/applications/email-sync for inbound email status updates<span class="cl-tag cl-tag-infra">infra</span></li>
+          <li>10 pre-loaded applications from Notion Application Queue<span class="cl-tag cl-tag-new">new</span></li>
+        </ul>
+      </div>
+      <div class="cl-version">
+        <div class="cl-ver-header"><span class="cl-ver-num">v3.6</span><span class="cl-ver-label">Mark Drafts Sent</span><span class="cl-ver-date">Apr 7, 2026</span></div>
         <ul class="cl-changes">
           <li>Green "Mark Drafts Sent" button appears in topbar when drafts are queued<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Tapping it marks all current drafts as contacted, sets 7-day follow-up dates, reloads dashboard<span class="cl-tag cl-tag-new">new</span></li>
-          <li>POST /api/mark-drafts-sent endpoint; no Gmail access required<span class="cl-tag cl-tag-infra">infra</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v3.5</span><span class="cl-ver-label">Button Fixes</span><span class="cl-ver-date">Apr 7, 2026</span></div>
-        <ul class="cl-changes">
-          <li>Replaced prompt() with inline modal for Log follow-up — works on iOS Safari<span class="cl-tag cl-tag-fix">fix</span></li>
-          <li>SLA target restored to 10/day; cron queue size (15) decoupled from SLA metric<span class="cl-tag cl-tag-fix">fix</span></li>
-          <li>Added /api/gmail-sync webhook for Claude-triggered status updates<span class="cl-tag cl-tag-new">new</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v3.4</span><span class="cl-ver-label">Dashboard Layout</span><span class="cl-ver-date">Apr 6, 2026</span></div>
-        <ul class="cl-changes">
-          <li>Chart left column; SLA and Template A/B stacked right<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Bar chart count labels fixed; sector table simplified; headers right-aligned<span class="cl-tag cl-tag-fix">fix</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v3.3</span><span class="cl-ver-label">Analytics Layer</span><span class="cl-ver-date">Apr 6, 2026</span></div>
-        <ul class="cl-changes">
-          <li>Sector tags, template A/B, SLA compliance, CEO Outreach by Sector<span class="cl-tag cl-tag-new">new</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v3.2</span><span class="cl-ver-label">Mobile + Queue Fix</span><span class="cl-ver-date">Apr 6, 2026</span></div>
-        <ul class="cl-changes">
-          <li>Mobile responsive layout; Follow Up Today from /api/due; API key login persists<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Tapping it marks all current drafts as contacted, sets 7-day follow-up dates<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
       <div class="cl-version">
@@ -305,12 +286,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="cl-ver-header"><span class="cl-ver-num">v2.0</span><span class="cl-ver-label">Railway Deploy</span><span class="cl-ver-date">Apr 2, 2026</span></div>
         <ul class="cl-changes">
           <li>Railway, persistent volume, override system<span class="cl-tag cl-tag-infra">infra</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v1.0</span><span class="cl-ver-label">Launch</span><span class="cl-ver-date">Apr 1, 2026</span></div>
-        <ul class="cl-changes">
-          <li>Three pillars, daily cron, Morning Queue, Dashboard, pillar views<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
     </div>
@@ -367,10 +342,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         VC Firms
         <span class="nav-badge green" id="badge-vcs">0</span>
       </div>
+      <div class="nav-section-label">Jobs</div>
+      <div class="nav-item" id="nav-applications" onclick="_switchToTab('applications');closeSidebar()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        Applications
+        <span class="nav-badge" id="badge-applications">0</span>
+      </div>
+      <div class="nav-item" id="nav-metrics" onclick="_switchToTab('metrics');closeSidebar()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Metrics
+      </div>
     </div>
     <div class="sidebar-footer">
       <span>everett.steele@gmail.com</span>
-      <span class="version-badge" onclick="showChangelog()">v3.6</span>
+      <span class="version-badge" onclick="showChangelog()">v4.0</span>
     </div>
   </nav>
 
@@ -411,7 +396,6 @@ const STORAGE_KEY='hopespot_token',API_KEY_STORE='hopespot_apikey';
 let TOKEN='',API_KEY_MODE=false,DATA=[],CEOs=[],VCs=[],STATS=null,DUE=[],FILTER='all',TAB='queue',SECTOR_FILTER='all';
 const TODAY=new Date().toISOString().split('T')[0];
 const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach']};
-const SECTOR_LABELS={healthtech:'Healthtech',revenue_gtm:'Revenue/GTM',analytics:'Analytics',fintech:'FinTech',vertical_saas:'Vertical SaaS',general:'General SaaS',network:'Network'};
 
 let _logPending=null;
 function openLogModal(orgName,email,endpoint,id,isDynamic){
@@ -534,21 +518,20 @@ function updateBadges(){
   document.getElementById('badge-vcs').textContent=VCs.filter(x=>['contacted','in conversation','draft'].includes(x.status)).length;
   const mb=document.getElementById('mobile-badge');if(mb)mb.textContent=q;
   const mt=document.getElementById('mobile-title');if(mt){const t=TITLES[TAB];if(t)mt.textContent=t[0];}
-  // Show Mark Drafts Sent button only when drafts are queued
   const msBtn=document.getElementById('mark-sent-btn');
   if(msBtn)msBtn.style.display=draftCount>0?'flex':'none';
 }
 
 function switchTab(t){
   TAB=t;FILTER='all';SECTOR_FILTER='all';
-  ['queue','dashboard','recruiters','ceos','vcs'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('active',x===t));
+  ['queue','dashboard','recruiters','ceos','vcs','applications','metrics'].forEach(x=>{const el=document.getElementById('nav-'+x);if(el)el.classList.toggle('active',x===t);});
   const [title,sub]=TITLES[t]||['',''];
   document.getElementById('topbar-title').textContent=title;
   document.getElementById('topbar-sub').textContent=sub;
   const mt=document.getElementById('mobile-title');if(mt)mt.textContent=title;
   renderCurrent();
 }
-function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard')renderDashboard();else renderList();}
+function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard')renderDashboard();else if(TAB==='applications')loadApps();else if(TAB==='metrics')renderMetrics();else renderList();}
 
 function renderQueue(){
   const all=allItems();
@@ -557,7 +540,6 @@ function renderQueue(){
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const totalMin=Math.round(sendNow.length*0.4+followUp.length*1.5);
   let html='<div class="queue-date">'+dateStr+'</div><div class="queue-title">Morning Queue</div><div class="queue-sub">'+sendNow.length+' to send &nbsp;&middot;&nbsp; '+followUp.length+' follow-ups &nbsp;&middot;&nbsp; ~'+totalMin+' min</div>';
-  // Send Now section with Mark All Sent button
   const markAllBtn=sendNow.length>0?'<button class="btn-green section-action" onclick="markDraftsSent()">\u2713 Mark All Sent</button>':'';
   html+='<div class="section-header"><div class="section-title">Send Now</div><div class="section-count">'+sendNow.length+' drafts waiting</div>'+markAllBtn+'</div>';
   if(!sendNow.length)html+='<div class="empty" style="padding:20px 0">No drafts queued. Hit Run Queue to stage the next batch.</div>';
@@ -663,6 +645,7 @@ function renderList(){
   if(q)items=items.filter(x=>nameField(x).toLowerCase().includes(q)||(x.why||'').toLowerCase().includes(q)||(x.notes||'').toLowerCase().includes(q)||(x.contacts||[]).some(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)));
   const all=currentData();
   const sMap=s=>all.filter(x=>x.status===s).length;
+  const SECTOR_LABELS={healthtech:'Healthtech',revenue_gtm:'Revenue/GTM',analytics:'Analytics',fintech:'FinTech',vertical_saas:'Vertical SaaS',general:'General SaaS',network:'Network'};
   const statHtml=[['Total',all.length],['Draft',sMap('draft')],['Contacted',sMap('contacted')],['In Convo',sMap('in conversation')],['Bounced',all.filter(x=>x.status==='bounced'||(x.contacts||[]).some(c=>c.status==='bounced')).length]].map(([l,v])=>'<div class="stat"><div class="stat-label">'+l+'</div><div class="stat-val">'+v+'</div></div>').join('');
   let sectorRow='';
   if(TAB==='ceos'){
@@ -696,5 +679,6 @@ document.addEventListener('keydown',e=>{
 });
 init();
 </script>
+<script src="/apps.js"></script>
 </body>
 </html>
