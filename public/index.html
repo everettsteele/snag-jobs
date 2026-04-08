@@ -261,20 +261,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-body">
       <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num current">v7.5</span><span class="cl-ver-label">Skip fix, location filter, batch packages, mobile scroll</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <div class="cl-ver-header"><span class="cl-ver-num current">v7.6</span><span class="cl-ver-label">Tab persistence, event delegation Skip/Snag, Drive URL paste</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
-          <li>Skip and all interactive elements use data attributes &mdash; eliminates quote-escaping bugs<span class="cl-tag cl-tag-fix">fix</span></li>
-          <li>Job board location filter now blocks state names and abbreviations, not just cities<span class="cl-tag cl-tag-fix">fix</span></li>
-          <li>Job board and contacts tables scroll horizontally on mobile<span class="cl-tag cl-tag-fix">fix</span></li>
-          <li>Build Queued Packages button auto-generates cover letters and Drive folders<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Tab persists across refreshes via localStorage<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Skip and Snag use document-level event delegation &mdash; no inline onclick<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>NO PKG badge is now clickable &mdash; paste Drive URL directly per application<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
       <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v7.0</span><span class="cl-ver-label">Networking Pillar + Rich Dashboard + Morning Sync</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <div class="cl-ver-header"><span class="cl-ver-num">v7.5</span><span class="cl-ver-label">Skip fix, location filter, batch packages, mobile scroll</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
-          <li>Networking pillar: Events &amp; Meetings with notes, contacts, next steps<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Google Calendar sync via morning sync session (deduped by event ID)<span class="cl-tag cl-tag-new">new</span></li>
-          <li>Dashboard rebuilt with KPIs for all three pillars, SLA compliance, insight chips<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Job board location filter blocks state names and abbreviations<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Job board and contacts tables scroll horizontally on mobile<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Build Queued Packages button auto-generates cover letters and Drive folders<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
     </div>
@@ -310,7 +309,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         Dashboard
       </div>
       <div class="nav-section-label">Email Outreach</div>
-      <div class="nav-item active" id="nav-queue" onclick="switchTab('queue');closeSidebar()">
+      <div class="nav-item" id="nav-queue" onclick="switchTab('queue');closeSidebar()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
         Queue
         <span class="nav-badge urgent" id="badge-queue">0</span>
@@ -354,7 +353,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="sidebar-footer">
       <span>everett.steele@gmail.com</span>
-      <span class="version-badge" onclick="showChangelog()">v7.5</span>
+      <span class="version-badge" onclick="showChangelog()">v7.6</span>
     </div>
   </nav>
 
@@ -451,6 +450,8 @@ function showLogin(msg){if(msg)setStatus(msg);document.getElementById('login-vie
 function showApp(){document.getElementById('login-view').style.display='none';document.getElementById('app-view').style.display='flex';}
 
 async function init(){
+  // Restore last active tab before rendering
+  TAB=localStorage.getItem('hs_tab')||'queue';
   setStatus('Connecting...');
   const savedKey=localStorage.getItem(API_KEY_STORE);
   if(savedKey){const valid=await tryApiKey(savedKey);if(valid){TOKEN=savedKey;API_KEY_MODE=true;await loadAll();showApp();return;}localStorage.removeItem(API_KEY_STORE);}
@@ -535,6 +536,8 @@ function updateBadges(){
 
 function switchTab(t){
   TAB=t;FILTER='all';SECTOR_FILTER='all';
+  // Persist active tab across refreshes
+  localStorage.setItem('hs_tab',t);
   ['queue','dashboard','recruiters','ceos','vcs','applications','jobboard','events','netcontacts'].forEach(x=>document.getElementById('nav-'+x)?.classList.toggle('active',x===t));
   const [title,sub]=TITLES[t]||['',''];
   document.getElementById('topbar-title').textContent=title;
@@ -654,6 +657,6 @@ document.addEventListener('keydown',e=>{
 });
 init();
 </script>
-<script src="/apps.js?v=7.5"></script>
+<script src="/apps.js?v=7.6"></script>
 </body>
 </html>

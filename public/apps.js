@@ -1,4 +1,4 @@
-// HopeSpot apps.js v7.5 — Dashboard, Applications, Job Board, Networking
+// HopeSpot apps.js v7.6 — Dashboard, Applications, Job Board, Networking
 
 const APP_STATUSES = {
   queued:                { label: 'Queued',       color: '#7c3aed' },
@@ -202,8 +202,12 @@ function renderApplications() {
     var lat = (app.activity||[]).slice(-1)[0];
     var actHtml = lat ? '<span style="font-size:11px;color:#9CA3AF">'+lat.date+': '+(lat.note||lat.type)+'</span>' : '';
     var opts = Object.entries(APP_STATUSES).map(function(e){return '<option value="'+e[0]+'" '+(app.status===e[0]?'selected':'')+'>'+e[1].label+'</option>';}).join('');
+    // NO PKG badge is clickable to paste Drive URL
+    var noPkgBadge = (app.status==='queued'&&!app.drive_url)
+      ? ' <span class="hs-set-drive" data-app-id="'+app.id+'" style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle;cursor:pointer" title="Click to paste Drive URL">NO PKG</span>'
+      : '';
     return '<tr style="border-bottom:1px solid #F3F4F6">'
-      +'<td style="padding:10px 0;font-weight:600;font-size:13px">'+app.company+(app.status==='queued'&&!app.drive_url?' <span style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle">NO PKG</span>':'')+'</td>'
+      +'<td style="padding:10px 0;font-weight:600;font-size:13px">'+app.company+noPkgBadge+'</td>'
       +'<td style="padding:10px 8px;font-size:12px;color:#6B7280">'+app.role+'</td>'
       +'<td style="padding:10px 8px;font-size:12px">'+(app.applied_date||'')+'</td>'
       +'<td style="padding:10px 8px"><select onchange="_patchApp(this.dataset.id,{status:this.value})" data-id="'+app.id+'" style="font-size:11px;padding:3px 5px;color:'+st.color+';border:1px solid '+st.color+'40;border-radius:4px;background:'+st.color+'12;cursor:pointer">'+opts+'</select></td>'
@@ -226,6 +230,14 @@ function renderApplications() {
     +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
     +'<thead><tr style="border-bottom:2px solid #E5E7EB"><th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Added</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Status</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Follow-up</th><th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Activity</th><th style="padding:8px 0"></th></tr></thead>'
     +'<tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;padding:32px;color:#9CA3AF">No applications yet.</td></tr>')+'</tbody></table></div>';
+}
+
+async function _setDriveUrl(id) {
+  var url = prompt('Paste the Google Drive folder URL for this application:');
+  if (!url || !url.trim()) return;
+  try { await fetch('/api/applications/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify({ drive_url: url.trim() }) }); } catch(e) {}
+  await loadApps();
+  if (typeof toast === 'function') toast('Drive URL saved');
 }
 
 async function _batchBuildPackages(btn) {
@@ -300,15 +312,14 @@ async function renderJobBoard() {
     return '<span style="padding:3px 10px;background:'+c+'15;color:'+c+';border-radius:10px;font-size:11px;font-weight:600;border:1px solid '+c+'30">'+n+' '+s+'</span>';
   }).join('');
 
-  // Lead IDs are [a-zA-Z0-9-] only so embedding directly as string literals is safe and avoids any dataset/this context issues
+  // Buttons use data-action + data-lead-id only; event delegation handles clicks (no inline onclick)
   function row(l) {
     var sc = srcColors[l.source]||'#6b7280';
     var fc = l.fit_score>=7?'#16a34a':l.fit_score>=5?'#d97706':'#6b7280';
-    var lid = l.id; // alphanumeric + hyphens only
     var btns = '';
     if (l.status==='new') {
-      btns = '<button onclick="snagLead(\'' + lid + '\',this)" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
-           + '<button onclick="updateLeadStatus(\'' + lid + '\',\'reviewed\')" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
+      btns = '<button class="hs-snag-btn" data-lead-id="'+l.id+'" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
+           + '<button class="hs-skip-btn" data-lead-id="'+l.id+'" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
     }
     return '<tr style="border-bottom:1px solid #f3f4f6">'
       +'<td style="padding:10px 14px"><div style="font-weight:600;font-size:13px">'+l.title+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px">'+(l.organization||'')+(l.location?' \u00b7 '+l.location:'')+'</div><span style="display:inline-block;margin-top:4px;padding:1px 6px;background:'+sc+'15;color:'+sc+';border-radius:4px;font-size:10px;font-weight:700">'+(l.source_label||l.source)+'</span></td>'
@@ -565,6 +576,7 @@ window.loadApps = loadApps;
 window.renderApplications = renderApplications;
 window._patchApp = _patchApp;
 window._deleteApp = _deleteApp;
+window._setDriveUrl = _setDriveUrl;
 window._showAddAppModal = _showAddAppModal;
 window._closeAddAppModal = _closeAddAppModal;
 window._submitAddApp = _submitAddApp;
@@ -584,6 +596,36 @@ window.addNextStep = addNextStep;
 window.addContactToEvent = addContactToEvent;
 window.deleteEvent = deleteEvent;
 window.showAddEventModal = showAddEventModal;
+
+// ================================================================
+// EVENT DELEGATION: Job board Skip / Snag + NO PKG Drive URL paste
+// Handles all dynamically rendered interactive elements without inline onclick
+// ================================================================
+document.addEventListener('click', function(e) {
+  var target = e.target;
+  if (!target) return;
+
+  // Skip button on job board
+  if (target.classList.contains('hs-skip-btn')) {
+    var leadId = target.getAttribute('data-lead-id');
+    if (leadId) updateLeadStatus(leadId, 'reviewed');
+    return;
+  }
+
+  // Snag button on job board
+  if (target.classList.contains('hs-snag-btn')) {
+    var leadId = target.getAttribute('data-lead-id');
+    if (leadId) snagLead(leadId, target);
+    return;
+  }
+
+  // NO PKG badge on applications: click to paste Drive URL
+  if (target.classList.contains('hs-set-drive')) {
+    var appId = target.getAttribute('data-app-id');
+    if (appId) _setDriveUrl(appId);
+    return;
+  }
+});
 
 // ================================================================
 // MODAL + BADGE INJECTION
