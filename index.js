@@ -200,7 +200,6 @@ async function fetchJobDescription(url) {
     });
     if (!resp.ok) return '';
     const html = await resp.text();
-    // Strip HTML tags and collapse whitespace
     return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                .replace(/<[^>]+>/g, ' ')
@@ -272,49 +271,35 @@ const JOB_SOURCES = [
   },
 ];
 
-// Location allow: Atlanta, GA, Remote, Hybrid, unknown/empty
 const LOCATION_ALLOW = /\batlanta\b|\bgeorgia\b|,\s*GA\b|\bremote\b|\bhybrid\b|distributed|nationwide|flexible|anywhere|work\s*from\s*home|\bwfh\b|u\.?s\.?\s*only|us\s*only/i;
-
-// Location deny: non-Atlanta/GA US states by name or abbreviation, plus common non-Atlanta cities
-// State-level: deny if any US state other than Georgia is explicitly mentioned
 const LOCATION_DENY_STATES = /\bflorida\b|\btexas\b|\bcalifornia\b|\bnew\s*york\b|\billinois\b|\bpennsylvania\b|\bmaryland\b|\bvirginia\b|\bcolorado\b|\bwashington\b|\boregon\b|\bnevada\b|\barizona\b|\butah\b|\bminnesota\b|\bwisconsin\b|\bmissouri\b|\bmichigan\b|\bindiana\b|\bohio\b|\bkentucky\b|\btennessee\b|\bcarolina\b|\bconnecticut\b|\bmassachusetts\b|\bnew\s*jersey\b|\bnew\s*hampshire\b|\brhode\s*island\b|\bvermont\b|\bmaine\b/i;
-
-// State abbreviation deny: ,XX pattern for non-GA states
 const LOCATION_DENY_ABBR = /,\s*(?:FL|TX|CA|NY|IL|PA|MD|VA|CO|WA|OR|NV|AZ|UT|MN|WI|MO|MI|IN|OH|KY|TN|NC|SC|CT|MA|NJ|NH|RI|VT|ME|AL|AR|AK|HI|ID|IA|KS|LA|MS|MT|NE|ND|NM|OK|SD|WV|WY|DC)\b/i;
-
-// City-level deny list (existing)
 const LOCATION_DENY_CITIES = /\bphiladelphia\b|\bphilly\b|\bnew\s*york\b|\bnyc\b|\bbrooklyn\b|\bmanhattan\b|\bnew\s*jersey\b|\bchicago\b|\bboston\b|\bsan\s*francisco\b|\bseattle\b|\bdenver\b|\bmiami\b|\blos\s*angeles\b|\bportland\b|\bminneapolis\b|\bphoenix\b|\bdallas\b|\bhouston\b|\bnashville\b|\bcharlotte\b|\braleigh\b|washington[\s,]+d\.?c|\bbaltimore\b|\bpittsburgh\b|\bcleveland\b|\bdetroit\b|\bindianapolis\b|kansas\s*city|st\.?\s*louis|\bcolumbus,\s*oh\b|\bcincinnati\b|\bmemphis\b|\bomaha\b|\blas\s*vegas\b|\bsan\s*diego\b|\bsan\s*antonio\b|\bsan\s*jose\b|\btampa\b|\bjacksonville,\s*fl\b|\bmilwaukee\b|\bsacramento\b|salt\s*lake|\blouisville\b|\btucson\b|\baustin,\s*tx\b|\bfresno\b|\borlando\b|\bfort\s*lauderdale\b|\bjacksonville\b|\bboca\s*raton\b|\bst\.?\s*pete\b|\btallahassee\b/i;
 
 function passesLocationFilter(location) {
-  if (!location || location.trim().length < 2) return true;  // unknown location — let through
-  if (LOCATION_ALLOW.test(location)) return true;            // Atlanta, GA, Remote, Hybrid — keep
-  if (LOCATION_DENY_CITIES.test(location)) return false;     // known non-Atlanta city — skip
-  if (LOCATION_DENY_ABBR.test(location)) return false;       // non-GA state abbreviation — skip
-  if (LOCATION_DENY_STATES.test(location)) return false;     // non-GA state name — skip
-  return true;                                               // ambiguous — let through
+  if (!location || location.trim().length < 2) return true;
+  if (LOCATION_ALLOW.test(location)) return true;
+  if (LOCATION_DENY_CITIES.test(location)) return false;
+  if (LOCATION_DENY_ABBR.test(location)) return false;
+  if (LOCATION_DENY_STATES.test(location)) return false;
+  return true;
 }
 
-// Improved location extraction
 function extractLocation(html) {
-  // 1. JSON-LD structured data
   const jldM = html.match(/"jobLocation"\s*:\s*\{[^}]*"addressLocality"\s*:\s*"([^"]{2,60})"/i);
   if (jldM) {
     if (/"remote"\s*:\s*true/i.test(html.slice(0, 5000))) return 'Remote';
     return jldM[1].trim();
   }
-  // 2. Explicit remote keyword in prominent position
   const remoteM = html.match(/<[^>]+(?:class|id)="[^"]*(?:location|workplace|job-location)[^"]*"[^>]*>\s*([^<]{0,60}remote[^<]{0,30})<\/[^>]+>/i)
                 || html.match(/>\s*((?:Fully\s+)?Remote(?:[^<]{0,20})?)<\//i);
   if (remoteM) return remoteM[1].replace(/<[^>]+>/g,'').trim().slice(0, 60);
-  // 3. Hybrid keyword near location context
   if (/hybrid/i.test(html.slice(0, 8000))) {
     const hybM = html.match(/>([^<]{0,20}hybrid[^<]{0,20})<\//i);
     if (hybM) return hybM[1].trim().slice(0, 60);
   }
-  // 4. City, STATE pattern
   const cityM = html.match(/([A-Z][a-zA-Z\s]{1,20},\s*(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC))/);
   if (cityM) return cityM[1].trim();
-  // 5. Location field in HTML context
   const locCtxM = html.match(/(?:location|located|based)[^<]{0,20}>[^<]{0,10}([A-Z][^<]{2,50}(?:,\s*[A-Z]{2}|remote|hybrid))/i);
   if (locCtxM) return locCtxM[1].trim().slice(0, 80);
   return '';
@@ -447,7 +432,7 @@ setInterval(() => {
 
 setTimeout(bootCheck, 3000);
 setTimeout(bootSeedApplications, 4000);
-console.log(`HopeSpot v7.5 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
+console.log(`HopeSpot v7.6 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -461,6 +446,12 @@ function requireAuth(req, res, next) {
 }
 
 app.use(express.json());
+
+// Prevent Safari (and all browsers) from caching API responses
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 app.post('/api/login', (req, res) => {
   if (!PASSWORD) return res.json({ ok: true, token: 'no-auth' });
@@ -576,17 +567,14 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
   const targets = apps.filter(a => a.status === 'queued' && !a.drive_url && a.source_url);
   if (!targets.length) return res.json({ ok: true, built: 0, message: 'No queued applications need packages' });
 
-  // Respond immediately; build runs async
   res.json({ ok: true, queued: targets.length, message: `Building ${targets.length} packages in background. Check /api/applications for progress.` });
 
-  // Build packages asynchronously
   setImmediate(async () => {
     let built = 0, failed = 0;
     for (const app of targets) {
       try {
         console.log(`[batch-packages] Building package for ${app.company} — ${app.role}`);
 
-        // Fetch JD
         const jdText = await fetchJobDescription(app.source_url);
         if (!jdText || jdText.length < 50) {
           console.log(`[batch-packages] Could not fetch JD for ${app.company}`);
@@ -594,7 +582,6 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
           continue;
         }
 
-        // Generate cover letter
         const coverLetter = await generateCoverLetterForApp(app, jdText);
         if (!coverLetter || coverLetter.length < 50) {
           console.log(`[batch-packages] Cover letter generation failed for ${app.company}`);
@@ -602,7 +589,6 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
           continue;
         }
 
-        // Create Drive package
         const response = await postToAppsScript(webhookUrl, {
           folderName: `${app.company} - ${app.role}`,
           variant: 'operator',
@@ -612,7 +598,9 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
         });
         const text = await response.text();
         let result;
-        try { result = JSON.parse(text); } catch(e) { console.log(`[batch-packages] Non-JSON response for ${app.company}: ${text.slice(0,100)}`); failed++; continue; }
+        try { result = JSON.parse(text); } catch(e) { console.log(`[batch-packages] Non-JSON response for ${app.company}: ${text.slice(0,200)}`); failed++; continue; }
+
+        console.log(`[batch-packages] Apps Script response for ${app.company}:`, JSON.stringify(result));
 
         if (!result.ok) {
           console.log(`[batch-packages] Drive webhook failed for ${app.company}: ${result.error}`);
@@ -620,27 +608,31 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
           continue;
         }
 
-        // Update application record
+        const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
+        if (!folderUrl) {
+          console.log(`[batch-packages] No folder URL in response for ${app.company}. Keys: ${Object.keys(result).join(', ')}`);
+          failed++;
+          continue;
+        }
+
         const allApps = loadApplications();
         const idx = allApps.findIndex(a => a.id === app.id);
         if (idx >= 0) {
           const today = todayET();
-          allApps[idx].drive_url = result.folderUrl;
-          allApps[idx].drive_folder_id = result.folderId;
+          allApps[idx].drive_url = folderUrl;
+          allApps[idx].drive_folder_id = result.folderId || '';
           allApps[idx].cover_letter_text = coverLetter;
           allApps[idx].last_activity = today;
-          (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + result.folderUrl });
+          (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + folderUrl });
           saveApplications(allApps);
+          console.log(`[batch-packages] Saved drive_url for ${app.company}: ${folderUrl}`);
         }
 
         built++;
-        console.log(`[batch-packages] Built package for ${app.company}: ${result.folderUrl}`);
-
-        // Rate limit: pause between packages
         await new Promise(r => setTimeout(r, 3000));
 
       } catch(err) {
-        console.error(`[batch-packages] Error building package for ${app.company}: ${err.message}`);
+        console.error(`[batch-packages] Error for ${app.company}: ${err.message}`);
         failed++;
       }
     }
@@ -849,7 +841,7 @@ app.get('/api/debug', (req, res) => {
   loadDynamic().forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++; });
   const apps = loadApplications(), jb = loadJobBoardLeads(), net = loadNetworking(), calCfg = loadCalConfig();
   const overdueSteps = net.filter(e=>!e.hidden).reduce((n, e) => n + (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).length, 0);
-  res.json({ version: '7.5', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, anthropicConfigured: !!process.env.ANTHROPIC_API_KEY, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, jobBoardSources: JOB_SOURCES.map(s=>s.name), locationFilter: { allow: LOCATION_ALLOW.source, deny_states: LOCATION_DENY_STATES.source }, dueCount, cronState: loadCronState(), todayET: today });
+  res.json({ version: '7.6', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, anthropicConfigured: !!process.env.ANTHROPIC_API_KEY, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, jobBoardSources: JOB_SOURCES.map(s=>s.name), locationFilter: { allow: LOCATION_ALLOW.source, deny_states: LOCATION_DENY_STATES.source }, dueCount, cronState: loadCronState(), todayET: today });
 });
 
 const SECTOR_EXCLUDE_FROM_TABLE = new Set(['network']);
@@ -946,6 +938,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.5', cronState: loadCronState(), todayET: todayET() }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.6', cronState: loadCronState(), todayET: todayET() }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.5 listening on port ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.6 listening on port ' + PORT));
