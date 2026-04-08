@@ -1,14 +1,15 @@
-// HopeSpot — Applications, Metrics, and Job Board extension
-// Loaded after main script. Accesses globals: TOKEN, API_KEY_MODE, toast
+// HopeSpot apps.js v6.0 — Applications, Dashboard, Job Board
+// Loaded after main script in index.html.
 
 const APP_STATUSES = {
-  applied:               { label: 'Applied',       color: '#6b7280' },
-  confirmation_received: { label: 'Confirmed',     color: '#2563eb' },
-  interviewing:          { label: 'Interviewing',  color: '#d97706' },
-  offer:                 { label: 'Offer',          color: '#16a34a' },
-  rejected:              { label: 'Rejected',       color: '#dc2626' },
-  no_response:           { label: 'No Response',   color: '#9ca3af' },
-  withdrawn:             { label: 'Withdrawn',     color: '#9ca3af' }
+  queued:                { label: 'Queued',       color: '#7c3aed' },
+  applied:               { label: 'Applied',      color: '#6b7280' },
+  confirmation_received: { label: 'Confirmed',    color: '#2563eb' },
+  interviewing:          { label: 'Interviewing', color: '#d97706' },
+  offer:                 { label: 'Offer',         color: '#16a34a' },
+  rejected:              { label: 'Rejected',      color: '#dc2626' },
+  no_response:           { label: 'No Response',  color: '#9ca3af' },
+  withdrawn:             { label: 'Withdrawn',    color: '#9ca3af' }
 };
 
 let _appsData = [];
@@ -30,6 +31,8 @@ async function loadApps() {
     const r = await fetch('/api/applications', { headers: _authFH() });
     _appsData = await r.json();
   } catch(e) { _appsData = []; }
+  const ab = document.getElementById('badge-applications');
+  if (ab) ab.textContent = _appsData.filter(a => !['rejected','withdrawn','offer'].includes(a.status)).length;
   renderApplications();
 }
 
@@ -38,82 +41,75 @@ function renderApplications() {
   _appsData.forEach(a => { counts[a.status] = (counts[a.status]||0)+1; });
   const summary = Object.entries(APP_STATUSES)
     .filter(([k]) => counts[k])
-    .map(([k,v]) => `<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:${v.color}18;color:${v.color};border:1px solid ${v.color}35">${counts[k]} ${v.label}</span>`)
+    .map(([k,v]) => '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:'+v.color+'18;color:'+v.color+';border:1px solid '+v.color+'35">'+counts[k]+' '+v.label+'</span>')
     .join('');
   const today = new Date().toISOString().split('T')[0];
   const rows = _appsData.map(app => {
     const st = APP_STATUSES[app.status] || { label: app.status, color: '#333' };
     const ov = app.follow_up_date && app.follow_up_date <= today && !['rejected','offer','withdrawn'].includes(app.status);
     const latest = (app.activity||[]).slice(-1)[0];
-    const actHtml = latest ? `<span style="font-size:11px;color:#9ca3af">${latest.date}: ${latest.note||latest.type}</span>` : '';
-    return `<tr style="border-bottom:1px solid #f3f4f6">
-      <td style="padding:10px 14px;font-weight:600;font-size:13px">${app.company}</td>
-      <td style="padding:10px 14px;font-size:12px;color:#6b7280">${app.role}</td>
-      <td style="padding:10px 14px;font-size:12px;white-space:nowrap">${app.applied_date||'\u2014'}</td>
-      <td style="padding:10px 14px">
-        <select onchange="updateAppStatus('${app.id}',this.value)" style="font-size:12px;padding:3px 6px;color:${st.color};border:1px solid ${st.color}50;border-radius:5px;background:${st.color}10;cursor:pointer">
-          ${Object.entries(APP_STATUSES).map(([k,v])=>`<option value="${k}" ${app.status===k?'selected':''}>${v.label}</option>`).join('')}
-        </select>
-      </td>
-      <td style="padding:10px 14px;font-size:12px;color:${ov?'#dc2626':'#6b7280'};white-space:nowrap">${app.follow_up_date||'\u2014'}${ov?' \u26a0':''}</td>
-      <td style="padding:10px 14px">${actHtml}</td>
-      <td style="padding:10px 14px;white-space:nowrap">
-        ${app.drive_url?`<a href="${app.drive_url}" target="_blank" style="display:inline-block;padding:3px 9px;background:#16a34a;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">Drive</a>`:''}
-        ${app.notion_url?`<a href="${app.notion_url}" target="_blank" style="display:inline-block;padding:3px 9px;background:#f3f4f6;border-radius:5px;font-size:11px;color:#374151;text-decoration:none;margin-right:4px">Package</a>`:''}
-        ${app.source_url?`<a href="${app.source_url}" target="_blank" style="display:inline-block;padding:3px 9px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">Apply</a>`:''}
-        <button onclick="deleteApp('${app.id}')" style="padding:3px 7px;background:#fee2e2;border:none;border-radius:5px;font-size:11px;color:#dc2626;cursor:pointer">\u2715</button>
-      </td>
-    </tr>`;
+    const actHtml = latest ? '<span style="font-size:11px;color:#9ca3af">'+latest.date+': '+(latest.note||latest.type)+'</span>' : '';
+    return '<tr style="border-bottom:1px solid #f3f4f6">'
+      +'<td style="padding:10px 14px;font-weight:600;font-size:13px">'+app.company+'</td>'
+      +'<td style="padding:10px 14px;font-size:12px;color:#6b7280">'+app.role+'</td>'
+      +'<td style="padding:10px 14px;font-size:12px;white-space:nowrap">'+(app.applied_date||'\u2014')+'</td>'
+      +'<td style="padding:10px 14px"><select onchange="_patchApp(\''+app.id+'\',{status:this.value})" style="font-size:12px;padding:3px 6px;color:'+st.color+';border:1px solid '+st.color+'50;border-radius:5px;background:'+st.color+'10;cursor:pointer">'
+        +Object.entries(APP_STATUSES).map(([k,v])=>'<option value="'+k+'" '+(app.status===k?'selected':'')+'>'+v.label+'</option>').join('')
+      +'</select></td>'
+      +'<td style="padding:10px 14px;font-size:12px;color:'+(ov?'#dc2626':'#6b7280')+';white-space:nowrap">'+(app.follow_up_date||'\u2014')+(ov?' \u26a0':'')+'</td>'
+      +'<td style="padding:10px 14px">'+actHtml+'</td>'
+      +'<td style="padding:10px 14px;white-space:nowrap">'
+        +(app.drive_url?'<a href="'+app.drive_url+'" target="_blank" style="display:inline-block;padding:3px 9px;background:#16a34a;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">Drive</a>':'')
+        +(app.notion_url?'<a href="'+app.notion_url+'" target="_blank" style="display:inline-block;padding:3px 9px;background:#f3f4f6;border-radius:5px;font-size:11px;color:#374151;text-decoration:none;margin-right:4px">Package</a>':'')
+        +(app.source_url?'<a href="'+app.source_url+'" target="_blank" style="display:inline-block;padding:3px 9px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">Apply</a>':'')
+        +'<button onclick="_deleteApp(\''+app.id+'\')" style="padding:3px 7px;background:#fee2e2;border:none;border-radius:5px;font-size:11px;color:#dc2626;cursor:pointer">\u2715</button>'
+      +'</td>'
+      +'</tr>';
   }).join('');
 
-  document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:22px;font-weight:700">Job Applications</div>
-        <div style="font-size:13px;color:#9ca3af;margin-top:2px">${_appsData.length} application${_appsData.length!==1?'s':''} tracked</div>
-      </div>
-      <button onclick="showAddAppModal()" style="padding:9px 18px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Log Application</button>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${summary}</div>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
-      <table style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb">
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Company</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Role</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Applied</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Status</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Follow-up</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Latest</th>
-            <th style="padding:10px 14px"></th>
-          </tr>
-        </thead>
-        <tbody>${rows||'<tr><td colspan="7" style="padding:48px;text-align:center;color:#9ca3af">No applications logged yet.</td></tr>'}</tbody>
-      </table>
-    </div>`;
+  document.getElementById('main-content').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div><div style="font-size:22px;font-weight:700">Job Applications</div>'
+    +'<div style="font-size:13px;color:#9ca3af;margin-top:2px">'+_appsData.length+' application'+(_appsData.length!==1?'s':'')+' tracked</div></div>'
+    +'<button onclick="_showAddAppModal()" style="padding:9px 18px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Log Application</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+summary+'</div>'
+    +'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb">'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Company</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Role</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Date</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Status</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Follow-up</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Latest</th>'
+    +'<th style="padding:10px 14px"></th>'
+    +'</tr></thead>'
+    +'<tbody>'+(rows||'<tr><td colspan="7" style="padding:48px;text-align:center;color:#9ca3af">No applications logged yet.</td></tr>')+'</tbody>'
+    +'</table></div>';
 }
 
-async function updateAppStatus(id, status) {
-  await fetch('/api/applications/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify({ status }) });
+async function _patchApp(id, body) {
+  await fetch('/api/applications/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify(body) });
   await loadApps();
-  if (typeof toast === 'function') toast('Status updated');
+  if (typeof toast === 'function') toast('Updated');
 }
 
-async function deleteApp(id) {
+async function _deleteApp(id) {
   if (!confirm('Remove this application?')) return;
   await fetch('/api/applications/'+id, { method:'DELETE', headers:_authFH() });
   await loadApps();
 }
 
-function showAddAppModal() {
+function _showAddAppModal() {
   const m = document.getElementById('add-app-modal');
   if (m) { m.style.display = 'flex'; document.getElementById('nac-date').value = new Date().toISOString().split('T')[0]; }
 }
-function closeAddAppModal() {
+function _closeAddAppModal() {
   const m = document.getElementById('add-app-modal');
   if (m) { m.style.display = 'none'; ['nac-company','nac-role','nac-url','nac-notion','nac-notes'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; }); }
 }
-async function submitAddApp() {
+async function _submitAddApp() {
   const company = document.getElementById('nac-company').value.trim();
   const role = document.getElementById('nac-role').value.trim();
   if (!company||!role) { alert('Company and role required.'); return; }
@@ -124,52 +120,9 @@ async function submitAddApp() {
     applied_date: document.getElementById('nac-date').value,
     notes: document.getElementById('nac-notes').value.trim()
   })});
-  closeAddAppModal();
+  _closeAddAppModal();
   await loadApps();
   if (typeof toast === 'function') toast('Application logged');
-}
-
-async function renderMetrics() {
-  let apps = [], stats = null;
-  try { apps = await (await fetch('/api/applications', { headers:_authFH() })).json(); } catch(e) {}
-  try { stats = await (await fetch('/api/stats', { headers:_authFH() })).json(); } catch(e) {}
-  const total = apps.length;
-  const confirmed = apps.filter(a=>['confirmation_received','interviewing','offer'].includes(a.status)).length;
-  const interviewing = apps.filter(a=>['interviewing','offer'].includes(a.status)).length;
-  const offers = apps.filter(a=>a.status==='offer').length;
-  const rejected = apps.filter(a=>a.status==='rejected').length;
-  const pending = apps.filter(a=>a.status==='applied').length;
-  const pct = (n,d) => d>0 ? Math.round((n/d)*100) : 0;
-  const byWeek = {};
-  apps.forEach(a => {
-    if (!a.applied_date) return;
-    const d = new Date(a.applied_date+'T12:00:00Z'), day = d.getDay();
-    const mon = new Date(d); mon.setDate(d.getDate()-(day===0?6:day-1));
-    const wk = mon.toISOString().split('T')[0];
-    byWeek[wk] = (byWeek[wk]||0)+1;
-  });
-  const weeks = Object.entries(byWeek).sort(([a],[b])=>a.localeCompare(b));
-  const maxW = weeks.length ? Math.max(...weeks.map(([,v])=>v)) : 1;
-  const mc = (label,val,color,sub) =>
-    `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center">
-      <div style="font-size:30px;font-weight:700;color:${color}">${val}</div>
-      <div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:3px;text-transform:uppercase;letter-spacing:.05em">${label}</div>
-      ${sub?`<div style="font-size:11px;color:${color};margin-top:2px">${sub}</div>`:''}
-    </div>`;
-  const fr = (label,n,tot) => { const p = pct(n,tot); return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#374151;font-weight:500">${label}</span><span style="color:#9ca3af">${n} (${p}%)</span></div><div style="height:8px;background:#e5e7eb;border-radius:4px"><div style="height:100%;background:#f97316;border-radius:4px;width:${p}%"></div></div></div>`; };
-  const weekBars = weeks.map(([wk,n])=>{ const h = Math.round((n/maxW)*80); return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:30px"><span style="font-size:11px;font-weight:600;color:#374151">${n}</span><div style="width:100%;background:#f97316;height:${h}px;border-radius:3px 3px 0 0;min-height:4px"></div><span style="font-size:10px;color:#9ca3af;white-space:nowrap">${wk.slice(5)}</span></div>`; }).join('');
-  const outreach = stats ? stats.segments.map(s=>`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">${s.label}</div><div style="font-size:24px;font-weight:700">${s.contacted}</div><div style="font-size:11px;color:#9ca3af">contacted of ${s.total}</div>${s.conv>0?`<div style="font-size:11px;color:#10b981;margin-top:4px">${s.conv} in conversation</div>`:''}</div>`).join('') : '';
-  document.getElementById('main-content').innerHTML = `
-    <div style="font-size:22px;font-weight:700;margin-bottom:4px">Metrics</div>
-    <div style="font-size:13px;color:#9ca3af;margin-bottom:20px">Pipeline and response tracking</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px">
-      ${mc('Applied',total,'#f97316')} ${mc('Confirmed',confirmed,'#2563eb',pct(confirmed,total)+'%')} ${mc('Interviewing',interviewing,'#d97706',pct(interviewing,total)+'%')} ${mc('Offers',offers,'#16a34a',pct(offers,total)+'%')} ${mc('Rejected',rejected,'#dc2626')} ${mc('Pending',pending,'#9ca3af')}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:14px">Pipeline Funnel</div>${fr('Submitted',total,total)}${fr('Confirmation',confirmed,total)}${fr('Interview',interviewing,total)}${fr('Offer',offers,total)}</div>
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:14px">Weekly Volume</div><div style="display:flex;align-items:flex-end;gap:6px;height:96px">${weekBars||'<div style="color:#9ca3af;font-size:12px;padding-top:12px">No data yet.</div>'}</div></div>
-    </div>
-    ${outreach?`<div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#374151">Outreach Summary</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${outreach}</div>`:''}`;  
 }
 
 // --- JOB BOARD ---
@@ -179,50 +132,66 @@ async function renderJobBoard() {
   try { leads = await (await fetch('/api/job-board', { headers: _authFH() })).json(); } catch(e) {}
   const newLeads = leads.filter(l => l.status === 'new');
   const reviewedLeads = leads.filter(l => l.status === 'reviewed');
-  const renderRow = (lead) => `<tr style="border-bottom:1px solid #f3f4f6">
-    <td style="padding:10px 14px">
-      <div style="font-weight:600;font-size:13px">${lead.title}</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px">${lead.organization}${lead.location?' \u00b7 '+lead.location:''}</div>
-    </td>
-    <td style="padding:10px 14px;text-align:center">
-      <span style="font-size:13px;font-weight:700;color:${lead.fit_score>=7?'#16a34a':lead.fit_score>=5?'#d97706':'#6b7280'}">${lead.fit_score}/10</span>
-    </td>
-    <td style="padding:10px 14px;font-size:11px;color:#6b7280">${lead.fit_reason}</td>
-    <td style="padding:10px 14px;font-size:11px;color:#9ca3af;white-space:nowrap">${lead.date_found}</td>
-    <td style="padding:10px 14px;white-space:nowrap">
-      <a href="${lead.url}" target="_blank" style="display:inline-block;padding:3px 9px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">View</a>
-      <button onclick="updateLeadStatus('${lead.id}','reviewed')" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer;margin-right:4px">Reviewed</button>
-      <button onclick="updateLeadStatus('${lead.id}','skipped')" style="padding:3px 7px;background:#fee2e2;border:none;border-radius:5px;font-size:11px;color:#dc2626;cursor:pointer">\u2715</button>
-    </td>
-  </tr>`;
 
-  document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:22px;font-weight:700">Job Board</div>
-        <div style="font-size:13px;color:#9ca3af;margin-top:2px">JewishJobs.com \u00b7 Senior operator roles \u00b7 Crawled daily at 6 AM ET</div>
-      </div>
-      <button onclick="triggerCrawl(this)" style="padding:9px 18px;background:#1f2d3d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button>
-    </div>
-    ${newLeads.length > 0 ? `
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New (${newLeads.length})</div>
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px">
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb">
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th>
-            <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th>
-            <th style="padding:10px 14px"></th>
-          </tr></thead>
-          <tbody>${newLeads.map(renderRow).join('')}</tbody>
-        </table>
-      </div>` : `<div style="color:#9ca3af;font-size:13px;margin-bottom:20px;padding:40px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:10px">No new leads. Hit Crawl Now to check JewishJobs.</div>`}
-    ${reviewedLeads.length > 0 ? `
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Previously Reviewed (${reviewedLeads.length})</div>
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;opacity:.65">
-        <table style="width:100%;border-collapse:collapse"><tbody>${reviewedLeads.slice(0,5).map(renderRow).join('')}</tbody></table>
-      </div>` : ''}`;
+  const srcColors = { jewishjobs:'#2563eb', execthread:'#7c3aed', csnetwork:'#d97706', idealist:'#16a34a', builtinatlanta:'#0891b2' };
+
+  const renderRow = (lead) => {
+    const srcColor = srcColors[lead.source] || '#6b7280';
+    const srcLabel = lead.source_label || lead.source;
+    return '<tr style="border-bottom:1px solid #f3f4f6">'
+      +'<td style="padding:10px 14px">'
+        +'<div style="font-weight:600;font-size:13px">'+lead.title+'</div>'
+        +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'
+          +(lead.organization?lead.organization:'')+(lead.location?' \u00b7 '+lead.location:'')
+        +'</div>'
+        +'<span style="display:inline-block;margin-top:4px;padding:1px 6px;background:'+srcColor+'15;color:'+srcColor+';border-radius:4px;font-size:10px;font-weight:700">'+srcLabel+'</span>'
+      +'</td>'
+      +'<td style="padding:10px 14px;text-align:center"><span style="font-size:13px;font-weight:700;color:'+(lead.fit_score>=7?'#16a34a':lead.fit_score>=5?'#d97706':'#6b7280')+'">'+lead.fit_score+'/10</span></td>'
+      +'<td style="padding:10px 14px;font-size:11px;color:#6b7280">'+lead.fit_reason+'</td>'
+      +'<td style="padding:10px 14px;font-size:11px;color:#9ca3af;white-space:nowrap">'+lead.date_found+'</td>'
+      +'<td style="padding:10px 14px;white-space:nowrap">'
+        +'<a href="'+lead.url+'" target="_blank" style="display:inline-block;padding:3px 9px;background:#1f2d3d;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:4px">View</a>'
+        +(lead.status==='new'?'<button onclick="snagLead(\''+lead.id+'\',this)" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>':'')
+        +(lead.status==='new'?'<button onclick="updateLeadStatus(\''+lead.id+'\',\'reviewed\')" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer;margin-right:4px">Skip</button>':'')
+      +'</td>'
+      +'</tr>';
+  };
+
+  const sourceSummary = {};
+  leads.filter(l=>l.status==='new').forEach(l=>{ const s=l.source_label||l.source; sourceSummary[s]=(sourceSummary[s]||0)+1; });
+  const sourceBadges = Object.entries(sourceSummary).map(([s,n])=>{
+    const c = Object.entries(srcColors).find(([k])=>s.toLowerCase().includes(k.replace('atlanta','')))?.[1]||'#6b7280';
+    return '<span style="padding:3px 10px;background:'+c+'15;color:'+c+';border-radius:10px;font-size:11px;font-weight:600;border:1px solid '+c+'30">'+n+' '+s+'</span>';
+  }).join('');
+
+  document.getElementById('main-content').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div><div style="font-size:22px;font-weight:700">Job Board</div>'
+    +'<div style="font-size:13px;color:#9ca3af;margin-top:2px">JewishJobs \u00b7 ExecThread \u00b7 CoS Network \u00b7 Idealist \u00b7 Built In ATL \u00b7 Daily 6 AM</div></div>'
+    +'<button onclick="triggerCrawl(this)" style="padding:9px 18px;background:#1f2d3d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button>'
+    +'</div>'
+    +(sourceBadges?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+sourceBadges+'</div>':'')
+    +(newLeads.length > 0
+      ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New ('+newLeads.length+') \u2014 Snag to add to Applications queue</div>'
+        +'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px">'
+        +'<table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb">'
+        +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th>'
+        +'<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th>'
+        +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th>'
+        +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th>'
+        +'<th style="padding:10px 14px"></th>'
+        +'</tr></thead>'
+        +'<tbody>'+newLeads.map(renderRow).join('')+'</tbody>'
+        +'</table></div>'
+      : '<div style="color:#9ca3af;font-size:13px;margin-bottom:20px;padding:40px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:10px">No new leads. Hit Crawl Now to run all sources.</div>')
+    +(reviewedLeads.length > 0
+      ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Reviewed / Skipped ('+reviewedLeads.length+')</div>'
+        +'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;opacity:.55">'
+        +'<table style="width:100%;border-collapse:collapse"><tbody>'+reviewedLeads.slice(0,8).map(renderRow).join('')+'</tbody></table>'
+        +'</div>'
+      : '');
+
   updateJobBoardBadge(newLeads.length);
 }
 
@@ -231,11 +200,32 @@ async function updateLeadStatus(id, status) {
   await renderJobBoard();
 }
 
+async function snagLead(leadId, btn) {
+  if (btn) { btn.textContent = 'Snagging...'; btn.disabled = true; }
+  try {
+    const r = await (await fetch('/api/job-board/snag', {
+      method: 'POST',
+      headers: _authH(),
+      body: JSON.stringify({ lead_id: leadId })
+    })).json();
+    if (r.ok) {
+      if (typeof toast === 'function') toast('Snagged \u2014 added to Applications queue');
+      await renderJobBoard();
+    } else {
+      if (typeof toast === 'function') toast('Snag failed: ' + (r.error || 'unknown'));
+      if (btn) { btn.textContent = 'Snag'; btn.disabled = false; }
+    }
+  } catch(e) {
+    if (typeof toast === 'function') toast('Snag failed');
+    if (btn) { btn.textContent = 'Snag'; btn.disabled = false; }
+  }
+}
+
 async function triggerCrawl(btn) {
   if (btn) { btn.textContent = 'Crawling...'; btn.disabled = true; }
   try {
     const r = await (await fetch('/api/job-board/crawl', { method:'POST', headers:_authFH() })).json();
-    if (typeof toast === 'function') toast(r.newLeads + ' new lead' + (r.newLeads!==1?'s':'') + ' found');
+    if (typeof toast === 'function') toast(r.newLeads + ' new lead' + (r.newLeads!==1?'s':'') + ' found across all sources');
     await renderJobBoard();
   } catch(e) { if (typeof toast === 'function') toast('Crawl failed'); }
   if (btn) { btn.textContent = 'Crawl Now'; btn.disabled = false; }
@@ -258,48 +248,38 @@ async function updateJobBoardBadge(count) {
     if (!nav || document.getElementById('nav-applications')) return;
 
     const section = document.createElement('div');
-    section.innerHTML = `
-      <div class="nav-section-label">Jobs</div>
-      <div class="nav-item" id="nav-applications" onclick="_switchToTab('applications');closeSidebar()">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
-        Applications
-        <span class="nav-badge" id="badge-applications">0</span>
-      </div>
-      <div class="nav-item" id="nav-metrics" onclick="_switchToTab('metrics');closeSidebar()">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        Metrics
-      </div>
-      <div class="nav-item" id="nav-jobboard" onclick="_switchToTab('jobboard');closeSidebar()">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Job Board
-        <span class="nav-badge urgent" id="badge-jobboard">0</span>
-      </div>`;
+    section.innerHTML =
+      '<div class="nav-section-label">Jobs</div>'
+      +'<div class="nav-item" id="nav-applications" onclick="_switchToTab(\'applications\');closeSidebar()">'
+        +'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>'
+        +'Applications<span class="nav-badge blue" id="badge-applications">0</span>'
+      +'</div>'
+      +'<div class="nav-item" id="nav-jobboard" onclick="_switchToTab(\'jobboard\');closeSidebar()">'
+        +'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+        +'Job Board<span class="nav-badge urgent" id="badge-jobboard">0</span>'
+      +'</div>';
     Array.from(section.children).forEach(c => nav.appendChild(c));
 
-    // Add-app modal
     const modal = document.createElement('div');
     modal.id = 'add-app-modal';
     modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1001;align-items:center;justify-content:center';
-    modal.onclick = e => { if (e.target === modal) closeAddAppModal(); };
-    modal.innerHTML = `
-      <div style="background:#fff;border-radius:12px;width:480px;max-width:90%;padding:24px;box-shadow:0 24px 64px rgba(0,0,0,.22)">
-        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">Log Application</h3>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <input type="text" id="nac-company" placeholder="Company *" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">
-          <input type="text" id="nac-role" placeholder="Role *" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">
-          <input type="text" id="nac-url" placeholder="Apply URL" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">
-          <input type="text" id="nac-notion" placeholder="Notion package URL" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">
-          <input type="date" id="nac-date" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">
-          <textarea id="nac-notes" placeholder="Notes" rows="2" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;resize:vertical"></textarea>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-            <button onclick="submitAddApp()" style="padding:8px 18px;background:#f97316;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
-            <button onclick="closeAddAppModal()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:7px;font-size:13px;cursor:pointer">Cancel</button>
-          </div>
-        </div>
-      </div>`;
+    modal.onclick = e => { if (e.target === modal) _closeAddAppModal(); };
+    modal.innerHTML =
+      '<div style="background:#fff;border-radius:12px;width:480px;max-width:90%;padding:24px;box-shadow:0 24px 64px rgba(0,0,0,.22)">'
+      +'<h3 style="font-size:15px;font-weight:700;margin-bottom:16px">Log Application</h3>'
+      +'<div style="display:flex;flex-direction:column;gap:10px">'
+      +'<input type="text" id="nac-company" placeholder="Company *" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">'
+      +'<input type="text" id="nac-role" placeholder="Role *" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">'
+      +'<input type="text" id="nac-url" placeholder="Apply URL" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">'
+      +'<input type="text" id="nac-notion" placeholder="Notion package URL" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">'
+      +'<input type="date" id="nac-date" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none">'
+      +'<textarea id="nac-notes" placeholder="Notes" rows="2" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;resize:vertical"></textarea>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">'
+      +'<button onclick="_submitAddApp()" style="padding:8px 18px;background:#f97316;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Save</button>'
+      +'<button onclick="_closeAddAppModal()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:7px;font-size:13px;cursor:pointer">Cancel</button>'
+      +'</div></div></div>';
     document.body.appendChild(modal);
 
-    // Load badge counts after inject
     updateJobBoardBadge();
   }
 
@@ -310,15 +290,14 @@ async function updateJobBoardBadge(count) {
   }
 })();
 
-// Tab switching for apps/metrics/jobboard
+// _switchToTab handles Applications and Job Board tabs from this file
 function _switchToTab(tab) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const el = document.getElementById('nav-'+tab);
   if (el) el.classList.add('active');
   const titles = {
-    applications: ['Applications','Job applications and tracking'],
-    metrics:      ['Metrics','Pipeline funnel and response rates'],
-    jobboard:     ['Job Board','JewishJobs.com \u00b7 Senior operator roles']
+    applications: ['Applications', 'Job application pipeline'],
+    jobboard:     ['Job Board', 'JewishJobs \u00b7 ExecThread \u00b7 CoS Network \u00b7 Idealist \u00b7 Built In ATL']
   };
   const t = titles[tab];
   if (t) {
@@ -327,6 +306,5 @@ function _switchToTab(tab) {
     const mt = document.getElementById('mobile-title'); if (mt) mt.textContent = t[0];
   }
   if (tab === 'applications') loadApps();
-  if (tab === 'metrics') renderMetrics();
   if (tab === 'jobboard') renderJobBoard();
 }

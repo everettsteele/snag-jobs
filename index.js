@@ -76,7 +76,7 @@ function saveJobBoardLeads(leads) {
 }
 
 const SENT_STATUSES = new Set(['contacted', 'in conversation', 'bounced', 'passed', 'linkedin']);
-const VALID_APP_STATUSES = ['applied','confirmation_received','interviewing','offer','rejected','no_response','withdrawn'];
+const VALID_APP_STATUSES = ['queued','applied','confirmation_received','interviewing','offer','rejected','no_response','withdrawn'];
 
 function orgName(track, item) {
   if (track === 'ceos') return item.company || item.name || '';
@@ -131,7 +131,6 @@ function saveCronState(state) {
 async function postToAppsScript(url, body) {
   const payload = JSON.stringify(body);
   const headers = { 'Content-Type': 'application/json' };
-  // First request: manual redirect so we can re-POST to the actual execution URL
   const init = await fetch(url, {
     method: 'POST', headers, body: payload,
     redirect: 'manual',
@@ -230,101 +229,180 @@ function bootSeedApplications() {
   fd.setDate(fd.getDate() + 7);
   const followup = fd.toISOString().split('T')[0];
   const seed = [
-    { id: 'app-001', company: 'Machinify', role: 'Chief of Staff to the CTO', applied_date: today, status: 'applied', source_url: 'https://job-boards.greenhouse.io/machinifyinc/jobs/4173382009', notion_url: 'https://www.notion.so/33c4cf9804bf813a9b05c2eb5115d096', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-002', company: 'BluZinc', role: 'Chief of Staff Strategic Operations Director', applied_date: today, status: 'applied', source_url: 'https://www.chiefofstaff.network/jobs/chief-of-staff-bluzinc-xs4', notion_url: 'https://www.notion.so/33c4cf9804bf810e83a8d7fb56da60af', follow_up_date: followup, last_activity: today, notes: '$170K-$250K', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-003', company: 'Array', role: 'Chief of Staff', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4398405485', notion_url: 'https://www.notion.so/33c4cf9804bf81f58c33e0b5b58614e1', follow_up_date: followup, last_activity: today, notes: 'General Catalyst-backed', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-004', company: 'Total AI Systems Inc.', role: 'Chief of Staff', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4384353199', notion_url: 'https://www.notion.so/33c4cf9804bf8139be1af2fe89e500ff', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-005', company: 'GameChanger', role: 'Director, Strategic Operations', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4398949728', notion_url: 'https://www.notion.so/33c4cf9804bf8121b1cfff300487e089', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-006', company: 'DSD Recruitment', role: 'Chief Operating Officer', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4394752593', notion_url: 'https://www.notion.so/33c4cf9804bf8170b8e3f381e354b553', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-007', company: '24 Seven Talent', role: 'Chief Operating Officer', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4395463335', notion_url: 'https://www.notion.so/33c4cf9804bf8189a2cefb99c8a5a6db', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-008', company: 'TalentRemedy', role: 'Vice President Operations', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4395463335', notion_url: 'https://www.notion.so/33c4cf9804bf81c4b0baf20c279a0a07', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-009', company: 'The Humane League', role: 'Vice President Operations', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4398598541', notion_url: 'https://www.notion.so/33c4cf9804bf81d6a047ff71e6d5d68e', follow_up_date: followup, last_activity: today, notes: 'Nonprofit', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
-    { id: 'app-010', company: 'Operation Homefront', role: 'Chief Impact Officer', applied_date: today, status: 'applied', source_url: 'https://www.linkedin.com/jobs/view/4372722978', notion_url: 'https://www.notion.so/33c4cf9804bf81fa9956df7f74825583', follow_up_date: followup, last_activity: today, notes: 'Nonprofit; veteran angle', activity: [{ date: today, type: 'applied', note: 'Package ready in Notion' }] },
+    { id: 'app-001', company: 'Machinify', role: 'Chief of Staff to the CTO', applied_date: today, status: 'queued', source_url: 'https://job-boards.greenhouse.io/machinifyinc/jobs/4173382009', notion_url: 'https://www.notion.so/33c4cf9804bf813a9b05c2eb5115d096', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-002', company: 'BluZinc', role: 'Chief of Staff Strategic Operations Director', applied_date: today, status: 'queued', source_url: 'https://www.chiefofstaff.network/jobs/chief-of-staff-bluzinc-xs4', notion_url: 'https://www.notion.so/33c4cf9804bf810e83a8d7fb56da60af', follow_up_date: followup, last_activity: today, notes: '$170K-$250K', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-003', company: 'Array', role: 'Chief of Staff', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4398405485', notion_url: 'https://www.notion.so/33c4cf9804bf81f58c33e0b5b58614e1', follow_up_date: followup, last_activity: today, notes: 'General Catalyst-backed', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-004', company: 'Total AI Systems Inc.', role: 'Chief of Staff', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4384353199', notion_url: 'https://www.notion.so/33c4cf9804bf8139be1af2fe89e500ff', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-005', company: 'GameChanger', role: 'Director, Strategic Operations', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4398949728', notion_url: 'https://www.notion.so/33c4cf9804bf8121b1cfff300487e089', follow_up_date: followup, last_activity: today, notes: '', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-006', company: 'DSD Recruitment', role: 'Chief Operating Officer', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4394752593', notion_url: 'https://www.notion.so/33c4cf9804bf8170b8e3f381e354b553', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-007', company: '24 Seven Talent', role: 'Chief Operating Officer', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4395463335', notion_url: 'https://www.notion.so/33c4cf9804bf8189a2cefb99c8a5a6db', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-008', company: 'TalentRemedy', role: 'Vice President Operations', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4395463335', notion_url: 'https://www.notion.so/33c4cf9804bf81c4b0baf20c279a0a07', follow_up_date: followup, last_activity: today, notes: 'Blind agency posting', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-009', company: 'The Humane League', role: 'Vice President Operations', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4398598541', notion_url: 'https://www.notion.so/33c4cf9804bf81d6a047ff71e6d5d68e', follow_up_date: followup, last_activity: today, notes: 'Nonprofit', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
+    { id: 'app-010', company: 'Operation Homefront', role: 'Chief Impact Officer', applied_date: today, status: 'queued', source_url: 'https://www.linkedin.com/jobs/view/4372722978', notion_url: 'https://www.notion.so/33c4cf9804bf81fa9956df7f74825583', follow_up_date: followup, last_activity: today, notes: 'Nonprofit; veteran angle', activity: [{ date: today, type: 'queued', note: 'Package ready in Notion' }] },
   ];
   saveApplications(seed);
   console.log('[BOOT] Seeded 10 applications to data store.');
 }
 
-async function crawlJewishJobs() {
-  const searchUrls = [
-    'https://www.jewishjobs.com/search/operations/-/-/true',
-    'https://www.jewishjobs.com/search/director/-/-/true',
-    'https://www.jewishjobs.com/search/executive-director/-/-/true',
-    'https://www.jewishjobs.com/search/chief-operating-officer/-/-/true',
-  ];
+// Job board source definitions
+const JOB_SOURCES = [
+  {
+    name: 'jewishjobs',
+    label: 'JewishJobs',
+    searches: [
+      'https://www.jewishjobs.com/search/operations/-/-/true',
+      'https://www.jewishjobs.com/search/chief-operating-officer/-/-/true',
+      'https://www.jewishjobs.com/search/director/-/-/true',
+    ],
+    linkPattern: /href="(https?:\/\/(?:www\.)?jewishjobs\.com\/job\/[^"#?]+)"/gi,
+    maxPerSearch: 8,
+  },
+  {
+    name: 'execthread',
+    label: 'ExecThread',
+    searches: [
+      'https://execthread.com/search?q=chief+operating+officer',
+      'https://execthread.com/search?q=vp+operations',
+      'https://execthread.com/search?q=chief+of+staff',
+    ],
+    linkPattern: /href="(https?:\/\/execthread\.com\/jobs\/[^"#?]+)"/gi,
+    maxPerSearch: 6,
+  },
+  {
+    name: 'csnetwork',
+    label: 'CoS Network',
+    searches: [
+      'https://www.chiefofstaff.network/jobs',
+    ],
+    linkPattern: /href="(\/jobs\/[^"#?]+)".*?(?:title|aria-label)/gi,
+    baseUrl: 'https://www.chiefofstaff.network',
+    maxPerSearch: 10,
+  },
+  {
+    name: 'idealist',
+    label: 'Idealist',
+    searches: [
+      'https://www.idealist.org/en/jobs?q=vice+president+operations&type=JOB',
+      'https://www.idealist.org/en/jobs?q=chief+operating+officer&type=JOB',
+    ],
+    linkPattern: /href="(https?:\/\/(?:www\.)?idealist\.org\/en\/job\/[^"#?]+)"/gi,
+    maxPerSearch: 6,
+  },
+  {
+    name: 'builtinatlanta',
+    label: 'Built In ATL',
+    searches: [
+      'https://builtinatlanta.com/jobs?title=operations&seniority=Senior%20Leadership',
+      'https://builtinatlanta.com/jobs?title=chief+of+staff',
+    ],
+    linkPattern: /href="(https?:\/\/builtinatlanta\.com\/job\/[^"#?]+)"/gi,
+    maxPerSearch: 6,
+  },
+];
 
+function scoreTitle(title) {
+  const tl = title.toLowerCase();
+  let score = 0;
+  if (/chief operating|\bcoo\b/.test(tl)) score += 4;
+  else if (/vp oper|vice president oper|managing director|director of oper|director of strategic/.test(tl)) score += 3;
+  else if (/\bdirector\b/.test(tl)) score += 2;
+  else if (/\bvp\b|vice president/.test(tl)) score += 2;
+  if (/executive director/.test(tl)) score += 2;
+  if (/chief of staff/.test(tl)) score += 3;
+  if (/rabbi|cantor|teacher|social work|therapist|counsel|development officer|philanthrop|chaplain|educator|bookkeeper|accountant|financial/.test(tl)) score -= 4;
+  const reasons = [];
+  if (/chief operating|\bcoo\b/.test(tl)) reasons.push('COO');
+  if (/chief of staff/.test(tl)) reasons.push('CoS');
+  if (/director/.test(tl)) reasons.push('Director');
+  if (/vp|vice president/.test(tl)) reasons.push('VP');
+  if (/executive director/.test(tl)) reasons.push('ED');
+  if (/oper/.test(tl)) reasons.push('Ops');
+  return { score: Math.min(score, 10), reasons };
+}
+
+async function crawlJobBoards() {
   const existing = loadJobBoardLeads();
   const existingUrls = new Set(existing.map(l => l.url));
-  const newLeads = [];
+  const allNewLeads = [];
 
-  for (const searchUrl of searchUrls) {
-    try {
-      const resp = await fetch(searchUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot-bot/1.0)', 'Accept': 'text/html' },
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!resp.ok) continue;
-      const html = await resp.text();
-      const urls = [];
-      const jobLinkRegex = /href="(https?:\/\/(?:www\.)?jewishjobs\.com\/job\/[^"#?]+)"/gi;
-      let m;
-      while ((m = jobLinkRegex.exec(html)) !== null) {
-        const u = m[1];
-        if (!urls.includes(u) && !existingUrls.has(u)) urls.push(u);
-      }
-      for (const jobUrl of urls.slice(0, 8)) {
-        try {
-          const jr = await fetch(jobUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot-bot/1.0)', 'Accept': 'text/html' },
-            signal: AbortSignal.timeout(10000)
-          });
-          if (!jr.ok) continue;
-          const jhtml = await jr.text();
-          const titleM = jhtml.match(/<h1[^>]*>([^<]+)<\/h1>/) || jhtml.match(/<title>([^|<-]+)/);
-          const title = titleM ? titleM[1].replace(/&amp;/g,'&').replace(/&#039;/g,"'").trim() : 'Unknown Role';
-          const orgM = jhtml.match(/(?:class="[^"]*(?:employer|organization|company)[^"]*"[^>]*>|(?:Employer|Organization):\s*)[^<]*<[^>]*>([^<]{3,80})/) ||
-                        jhtml.match(/<h2[^>]*class="[^"]*subtitle[^"]*"[^>]*>([^<]+)<\/h2>/);
-          const organization = orgM ? orgM[1].replace(/<[^>]+>/g,'').trim() : '';
-          const locM = jhtml.match(/(?:class="[^"]*location[^"]*"[^>]*>|Location:\s*)[^<]*<[^>]*>([^<]{3,60})/);
-          const location = locM ? locM[1].trim() : '';
-          const tl = title.toLowerCase();
-          let score = 0;
-          if (/chief operating|\bcoo\b/.test(tl)) score += 4;
-          else if (/vp oper|vice president oper|managing director|director of oper|director of strategic/.test(tl)) score += 3;
-          else if (/\bdirector\b/.test(tl)) score += 2;
-          else if (/\bvp\b|vice president/.test(tl)) score += 2;
-          if (/executive director/.test(tl)) score += 2;
-          if (/rabbi|cantor|teacher|social work|therapist|counsel|development officer|philanthrop|chaplain|educator/.test(tl)) score -= 4;
-          if (score < 3) continue;
-          const fitReasons = [];
-          if (/chief operating|\bcoo\b/.test(tl)) fitReasons.push('COO title');
-          if (/director/.test(tl)) fitReasons.push('Director level');
-          if (/vp|vice president/.test(tl)) fitReasons.push('VP level');
-          if (/executive director/.test(tl)) fitReasons.push('Executive Director');
-          if (/oper/.test(tl)) fitReasons.push('Operations focus');
-          newLeads.push({
-            id: 'jj-' + Buffer.from(jobUrl).toString('base64').replace(/[^a-zA-Z0-9]/g,'').slice(0,14),
-            source: 'jewishjobs', title: title.slice(0, 200), organization: organization.slice(0, 200),
-            location: location.slice(0, 100), url: jobUrl, fit_score: Math.min(score, 10),
-            fit_reason: fitReasons.join(', ') || 'Senior role', date_found: todayET(), status: 'new', snoozed: false
-          });
-          existingUrls.add(jobUrl);
-          await new Promise(r => setTimeout(r, 600));
-        } catch(e) { continue; }
-      }
-      await new Promise(r => setTimeout(r, 1200));
-    } catch(e) { console.error('[jewishjobs]', e.message); continue; }
+  for (const source of JOB_SOURCES) {
+    const sourceLeads = [];
+    for (const searchUrl of source.searches) {
+      try {
+        const resp = await fetch(searchUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html,application/xhtml+xml' },
+          signal: AbortSignal.timeout(12000)
+        });
+        if (!resp.ok) { console.log(`[${source.name}] HTTP ${resp.status} for ${searchUrl}`); continue; }
+        const html = await resp.text();
+
+        const urls = [];
+        let m;
+        const regex = new RegExp(source.linkPattern.source, source.linkPattern.flags);
+        while ((m = regex.exec(html)) !== null) {
+          let u = m[1];
+          if (source.baseUrl && u.startsWith('/')) u = source.baseUrl + u;
+          if (!u.startsWith('http')) continue;
+          if (!urls.includes(u) && !existingUrls.has(u)) urls.push(u);
+        }
+        console.log(`[${source.name}] Found ${urls.length} candidate URLs from ${searchUrl}`);
+
+        for (const jobUrl of urls.slice(0, source.maxPerSearch || 8)) {
+          try {
+            const jr = await fetch(jobUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html' },
+              signal: AbortSignal.timeout(10000)
+            });
+            if (!jr.ok) continue;
+            const jhtml = await jr.text();
+
+            const titleM = jhtml.match(/<h1[^>]*>([^<]+)<\/h1>/) || jhtml.match(/<title>([^|<\-\u2014]+)/);
+            const title = titleM ? titleM[1].replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&ndash;/g,'-').replace(/&mdash;/g,'-').trim() : 'Unknown Role';
+
+            const orgM = jhtml.match(/(?:class="[^"]*(?:employer|organization|company|org)[^"]*"[^>]*>)[^<]{1,5}<\/[^>]+>([^<]{3,80})/) ||
+                          jhtml.match(/(?:Employer|Organization|Company):\s*([^<\n]{3,80})/);
+            const organization = orgM ? orgM[1].replace(/<[^>]+>/g,'').trim() : '';
+
+            const locM = jhtml.match(/(?:class="[^"]*location[^"]*"[^>]*>|Location:\s*)[^<]{0,10}<[^>]*>([^<]{3,60})/) ||
+                          jhtml.match(/([A-Z][a-z]+,\s*[A-Z]{2}(?:,\s*(?:United States|Remote))?)/);
+            const location = locM ? locM[1].replace(/<[^>]+>/g,'').trim() : '';
+
+            const { score, reasons } = scoreTitle(title);
+            if (score < 3) { await new Promise(r => setTimeout(r, 300)); continue; }
+
+            const lead = {
+              id: source.name.slice(0,2) + '-' + Buffer.from(jobUrl).toString('base64').replace(/[^a-zA-Z0-9]/g,'').slice(0,14),
+              source: source.name,
+              source_label: source.label,
+              title: title.slice(0, 200),
+              organization: organization.slice(0, 200),
+              location: location.slice(0, 100),
+              url: jobUrl,
+              fit_score: score,
+              fit_reason: reasons.join(', ') || 'Senior role',
+              date_found: todayET(),
+              status: 'new',
+              snoozed: false
+            };
+            sourceLeads.push(lead);
+            existingUrls.add(jobUrl);
+            await new Promise(r => setTimeout(r, 500));
+          } catch(e) { continue; }
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      } catch(e) { console.error(`[${source.name}] search error:`, e.message); continue; }
+    }
+    console.log(`[${source.name}] ${sourceLeads.length} new leads`);
+    allNewLeads.push(...sourceLeads);
   }
 
-  if (newLeads.length > 0) {
+  if (allNewLeads.length > 0) {
     const all = loadJobBoardLeads();
-    all.push(...newLeads);
+    all.push(...allNewLeads);
     saveJobBoardLeads(all);
-    console.log(`[jewishjobs] ${newLeads.length} new leads found`);
-  } else {
-    console.log('[jewishjobs] No new leads');
+    console.log(`[crawl] Total new leads: ${allNewLeads.length}`);
   }
-  return newLeads;
+  return allNewLeads;
 }
 
 setInterval(() => {
@@ -337,7 +415,7 @@ setInterval(() => {
       if (state.lastRunDate !== todayET()) {
         console.log('[CRON] 6 AM ET — running daily queue + job board crawl...');
         runDailyCron();
-        crawlJewishJobs().catch(e => console.error('[jewishjobs cron]', e.message));
+        crawlJobBoards().catch(e => console.error('[crawl cron]', e.message));
       }
     }
   } catch(e) { console.error('[CRON interval error]', e.message); }
@@ -346,7 +424,7 @@ setInterval(() => {
 setTimeout(bootCheck, 3000);
 setTimeout(bootSeedApplications, 4000);
 
-console.log(`HopeSpot ready — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
+console.log(`HopeSpot v6.0 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -456,18 +534,18 @@ app.get('/api/applications', requireAuth, (req, res) => {
 });
 
 app.post('/api/applications', requireAuth, (req, res) => {
-  const { company, role, source_url, notion_url, notes, applied_date } = req.body;
+  const { company, role, source_url, notion_url, notes, applied_date, status } = req.body;
   if (!company || !role) return res.status(400).json({ error: 'company and role required' });
   const today = applied_date || todayET();
   const fd = new Date(today + 'T12:00:00Z');
   fd.setDate(fd.getDate() + 7);
   const rec = {
     id: randomUUID(), company, role,
-    applied_date: today, status: 'applied',
+    applied_date: today, status: status || 'queued',
     source_url: source_url || '', notion_url: notion_url || '',
     follow_up_date: fd.toISOString().split('T')[0],
     last_activity: today, notes: notes || '',
-    activity: [{ date: today, type: 'applied', note: 'Application submitted' }]
+    activity: [{ date: today, type: status || 'queued', note: 'Added to queue' }]
   };
   const apps = loadApplications();
   apps.push(rec);
@@ -569,7 +647,7 @@ app.post('/api/create-drive-package', requireAuth, async (req, res) => {
 app.get('/api/job-board', requireAuth, (req, res) => {
   const leads = loadJobBoardLeads();
   const { status } = req.query;
-  const filtered = status ? leads.filter(l => l.status === status) : leads;
+  const filtered = status ? leads.filter(l => l.status === status) : leads.filter(l => l.status !== 'snogged');
   res.json(filtered.sort((a,b) => (b.fit_score - a.fit_score) || b.date_found.localeCompare(a.date_found)));
 });
 
@@ -582,9 +660,43 @@ app.patch('/api/job-board/:id', requireAuth, (req, res) => {
   res.json(leads[idx]);
 });
 
+// Snag a job board lead — moves it into the Applications queue as 'queued'
+app.post('/api/job-board/snag', requireAuth, (req, res) => {
+  const { lead_id } = req.body;
+  if (!lead_id) return res.status(400).json({ error: 'lead_id required' });
+  const leads = loadJobBoardLeads();
+  const leadIdx = leads.findIndex(l => l.id === lead_id);
+  if (leadIdx < 0) return res.status(404).json({ error: 'Lead not found' });
+  const lead = leads[leadIdx];
+  const today = todayET();
+  const fd = new Date(today + 'T12:00:00Z');
+  fd.setDate(fd.getDate() + 7);
+  const newApp = {
+    id: randomUUID(),
+    company: lead.organization || 'Unknown',
+    role: lead.title,
+    applied_date: today,
+    status: 'queued',
+    source_url: lead.url,
+    notion_url: '',
+    drive_url: '',
+    follow_up_date: fd.toISOString().split('T')[0],
+    last_activity: today,
+    notes: 'Snagged from ' + (lead.source_label || lead.source) + (lead.location ? ' \u00b7 ' + lead.location : ''),
+    activity: [{ date: today, type: 'queued', note: 'Snagged from ' + (lead.source_label || lead.source) }]
+  };
+  const apps = loadApplications();
+  apps.push(newApp);
+  saveApplications(apps);
+  leads[leadIdx].status = 'snagged';
+  leads[leadIdx].snagged_app_id = newApp.id;
+  saveJobBoardLeads(leads);
+  res.json({ ok: true, application: newApp });
+});
+
 app.post('/api/job-board/crawl', requireAuth, async (req, res) => {
   try {
-    const newLeads = await crawlJewishJobs();
+    const newLeads = await crawlJobBoards();
     res.json({ ok: true, newLeads: newLeads.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -651,7 +763,7 @@ app.get('/api/debug', (req, res) => {
   const appsByStatus = loadApplications().reduce((acc,a)=>{ acc[a.status]=(acc[a.status]||0)+1; return acc; }, {});
   const jbLeads = loadJobBoardLeads();
   res.json({
-    version: '5.2',
+    version: '6.0',
     seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length },
     dynamicCount: loadDynamic().length,
     applicationCount: loadApplications().length,
@@ -659,10 +771,12 @@ app.get('/api/debug', (req, res) => {
     applicationsWithDrive: loadApplications().filter(a => a.drive_url).length,
     jobBoardLeads: jbLeads.length,
     jobBoardNew: jbLeads.filter(l => l.status === 'new').length,
+    jobBoardSnagged: jbLeads.filter(l => l.status === 'snagged').length,
     driveConfigured: !!process.env.DRIVE_WEBHOOK_URL,
     overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length },
     contactedCounts: { firms: getDB('firms').filter(x => SENT_STATUSES.has(x.status)).length, ceos: getDB('ceos').filter(x => SENT_STATUSES.has(x.status)).length, vcs: getDB('vcs').filter(x => SENT_STATUSES.has(x.status)).length },
     draftCounts: { firms: getDB('firms').filter(x => x.status === 'draft').length, ceos: getDB('ceos').filter(x => x.status === 'draft').length, vcs: getDB('vcs').filter(x => x.status === 'draft').length },
+    jobSources: JOB_SOURCES.map(s => s.name),
     dueCount, cronState: loadCronState(), todayET: today,
   });
 });
@@ -790,6 +904,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, cronState: loadCronState(), todayET: todayET() }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '6.0', cronState: loadCronState(), todayET: todayET() }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, '0.0.0.0', () => console.log('Listening on port ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v6.0 listening on port ' + PORT));
