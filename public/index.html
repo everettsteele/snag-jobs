@@ -261,25 +261,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-body">
       <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num current">v4.0</span><span class="cl-ver-label">Application Tracking + Metrics</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <div class="cl-ver-header"><span class="cl-ver-num current">v5.2</span><span class="cl-ver-label">Drive Integration + Job Board</span><span class="cl-ver-date">Apr 8, 2026</span></div>
+        <ul class="cl-changes">
+          <li>Google Drive package creation from application record<span class="cl-tag cl-tag-new">new</span></li>
+          <li>JewishJobs.com crawl with fit scoring, daily at 6 AM ET<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Job Board tab with Crawl Now button<span class="cl-tag cl-tag-new">new</span></li>
+          <li>Fixed login SyntaxError (invalid escape sequence)<span class="cl-tag cl-tag-fix">fix</span></li>
+          <li>Boot seed for 10 applications on fresh deploy<span class="cl-tag cl-tag-infra">infra</span></li>
+        </ul>
+      </div>
+      <div class="cl-version">
+        <div class="cl-ver-header"><span class="cl-ver-num">v4.0</span><span class="cl-ver-label">Application Tracking + Metrics</span><span class="cl-ver-date">Apr 8, 2026</span></div>
         <ul class="cl-changes">
           <li>Applications tab: full CRUD, status dropdown, activity log, follow-up tracking<span class="cl-tag cl-tag-new">new</span></li>
           <li>Metrics tab: pipeline funnel, weekly volume chart, outreach summary<span class="cl-tag cl-tag-new">new</span></li>
-          <li>POST /api/applications/email-sync for inbound email matching<span class="cl-tag cl-tag-infra">infra</span></li>
-          <li>10 pre-loaded applications from Notion queue<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
       <div class="cl-version">
         <div class="cl-ver-header"><span class="cl-ver-num">v3.6</span><span class="cl-ver-label">Mark Drafts Sent</span><span class="cl-ver-date">Apr 7, 2026</span></div>
         <ul class="cl-changes">
           <li>Green Mark Drafts Sent button in topbar when drafts are queued<span class="cl-tag cl-tag-new">new</span></li>
-          <li>POST /api/mark-drafts-sent; no Gmail access required<span class="cl-tag cl-tag-infra">infra</span></li>
-        </ul>
-      </div>
-      <div class="cl-version">
-        <div class="cl-ver-header"><span class="cl-ver-num">v3.0</span><span class="cl-ver-label">Auth + Due Queue</span><span class="cl-ver-date">Apr 4, 2026</span></div>
-        <ul class="cl-changes">
-          <li>x-api-key auth, /api/due endpoint, cadence tracking<span class="cl-tag cl-tag-new">new</span></li>
         </ul>
       </div>
     </div>
@@ -346,10 +347,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Metrics
       </div>
+      <div class="nav-item" id="nav-jobboard" onclick="switchTab('jobboard');closeSidebar()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Job Board
+        <span class="nav-badge urgent" id="badge-jobboard">0</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       <span>everett.steele@gmail.com</span>
-      <span class="version-badge" onclick="showChangelog()">v4.0</span>
+      <span class="version-badge" onclick="showChangelog()">v5.2</span>
     </div>
   </nav>
 
@@ -389,7 +395,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const STORAGE_KEY='hopespot_token',API_KEY_STORE='hopespot_apikey';
 let TOKEN='',API_KEY_MODE=false,DATA=[],CEOs=[],VCs=[],STATS=null,DUE=[],FILTER='all',TAB='queue',SECTOR_FILTER='all';
 const TODAY=new Date().toISOString().split('T')[0];
-const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach'],applications:['Applications','Job application pipeline and tracking'],metrics:['Metrics','Funnel, response rates, and pipeline analytics']};
+const TITLES={queue:['Morning Queue',"Today's outreach and follow-ups"],dashboard:['Dashboard','Outreach performance and activity'],recruiters:['Recruiters','Executive search firms'],ceos:['Direct CEO / Network','Referral asks and warm network contacts'],vcs:['VC Firms','Portfolio COO and operating partner outreach'],applications:['Applications','Job application pipeline and tracking'],metrics:['Metrics','Funnel, response rates, and pipeline analytics'],jobboard:['Job Board','JewishJobs.com \u00b7 Senior operator roles']};
 const SECTOR_LABELS={healthtech:'Healthtech',revenue_gtm:'Revenue/GTM',analytics:'Analytics',fintech:'FinTech',vertical_saas:'Vertical SaaS',general:'General SaaS',network:'Network'};
 
 let _logPending=null;
@@ -520,14 +526,14 @@ function updateBadges(){
 
 function switchTab(t){
   TAB=t;FILTER='all';SECTOR_FILTER='all';
-  ['queue','dashboard','recruiters','ceos','vcs','applications','metrics'].forEach(x=>document.getElementById('nav-'+x)?.classList.toggle('active',x===t));
+  ['queue','dashboard','recruiters','ceos','vcs','applications','metrics','jobboard'].forEach(x=>document.getElementById('nav-'+x)?.classList.toggle('active',x===t));
   const [title,sub]=TITLES[t]||['',''];
   document.getElementById('topbar-title').textContent=title;
   document.getElementById('topbar-sub').textContent=sub;
   const mt=document.getElementById('mobile-title');if(mt)mt.textContent=title;
   renderCurrent();
 }
-function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard')renderDashboard();else if(TAB==='applications')loadApps();else if(TAB==='metrics')renderMetrics();else renderList();}
+function renderCurrent(){if(TAB==='queue')renderQueue();else if(TAB==='dashboard')renderDashboard();else if(TAB==='applications')loadApps();else if(TAB==='metrics')renderMetrics();else if(TAB==='jobboard'){if(typeof renderJobBoard==='function')renderJobBoard();else document.getElementById('main-content').innerHTML='<div class="empty">Loading Job Board...</div>';}else renderList();}
 
 function renderQueue(){
   const all=allItems();
@@ -594,7 +600,7 @@ function renderDashboard(){
   const tmplStats=STATS.templateStats||[];
   let slaHtml='<div class="dash-card"><div class="dash-card-title">SLA Compliance</div>';
   slaHtml+='<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:6px"><div class="sla-big '+(sla.onTrack?'sla-ok':'sla-miss')+'">'+sla.dailyAvg7+'</div><div style="font-size:13px;color:#9CA3AF;padding-bottom:5px">/ '+sla.target+' target</div></div>';
-  slaHtml+='<div style="font-size:11px;color:'+(sla.onTrack?'#10B981':'#EF4444')+'">'+(sla.onTrack?'On track':'Below target')+'&nbsp;&#8212;&nbsp;7-day rolling avg</div></div>';
+  slaHtml+='<div style="font-size:11px;color:'+(sla.onTrack?'#10B981':'#EF4444')+'">'+( sla.onTrack?'On track':'Below target')+'&nbsp;&#8212;&nbsp;7-day rolling avg</div></div>';
   let tmplHtml='<div class="dash-card"><div class="dash-card-title">Template A/B</div>';
   if(!tmplStats.length){tmplHtml+='<div style="color:#9CA3AF;font-size:12px">No data yet.</div>';}
   else{tmplHtml+='<table class="perf-table"><tr><th>Version</th><th>Sent</th><th>Replies</th><th>Rate</th></tr>'+tmplStats.map(t=>'<tr><td><span class="tv-badge tv-'+t.version+'">'+t.version+'</span></td><td>'+t.sent+'</td><td class="hl">'+t.replies+'</td><td>'+t.replyRate+'%</td></tr>').join('')+'</table>';}
@@ -613,7 +619,6 @@ function renderDashboard(){
 }
 
 // --- APPLICATIONS ---
-const APP_STATUSES={applied:{label:'Applied',color:'#6b7280'},confirmation_received:{label:'Confirmed',color:'#2563eb'},interviewing:{label:'Interviewing',color:'#d97706'},offer:{label:'Offer',color:'#16a34a'},rejected:{label:'Rejected',color:'#dc2626'},no_response:{label:'No Response',color:'#9ca3af'},withdrawn:{label:'Withdrawn',color:'#9ca3af'}};
 let appsData=[];
 
 async function loadApps(){
@@ -626,67 +631,59 @@ function renderApplications(){
   const today=new Date().toISOString().split('T')[0];
   const counts={};
   appsData.forEach(a=>{counts[a.status]=(counts[a.status]||0)+1;});
-  const summary=Object.entries(APP_STATUSES).filter(([k])=>counts[k]).map(([k,v])=>`<span style="padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${v.color}18;color:${v.color};border:1px solid ${v.color}30">${counts[k]} ${v.label}</span>`).join('');
+  const APP_ST={applied:{label:'Applied',color:'#6b7280'},confirmation_received:{label:'Confirmed',color:'#2563eb'},interviewing:{label:'Interviewing',color:'#d97706'},offer:{label:'Offer',color:'#16a34a'},rejected:{label:'Rejected',color:'#dc2626'},no_response:{label:'No Response',color:'#9ca3af'},withdrawn:{label:'Withdrawn',color:'#9ca3af'}};
+  const summary=Object.entries(APP_ST).filter(([k])=>counts[k]).map(([k,v])=>'<span style="padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;background:'+v.color+'18;color:'+v.color+';border:1px solid '+v.color+'30">'+counts[k]+' '+v.label+'</span>').join('');
   const rows=appsData.map(app=>{
-    const st=APP_STATUSES[app.status]||{label:app.status,color:'#6b7280'};
+    const st=APP_ST[app.status]||{label:app.status,color:'#6b7280'};
     const overdue=app.follow_up_date&&app.follow_up_date<=today&&!['rejected','offer','withdrawn'].includes(app.status);
     const latestAct=(app.activity||[]).slice(-1)[0];
-    const actHtml=latestAct?`<span style="font-size:11px;color:#9CA3AF">${latestAct.date}: ${latestAct.note||latestAct.type}</span>`:\'\'
-    return `<tr style="border-bottom:1px solid #F3F4F6">
-      <td style="padding:10px 0;font-weight:600;font-size:13px">${app.company}</td>
-      <td style="padding:10px 8px;font-size:12px;color:#6B7280">${app.role}</td>
-      <td style="padding:10px 8px;font-size:12px">${app.applied_date||''}</td>
-      <td style="padding:10px 8px">
-        <select onchange="patchApp('${app.id}',{status:this.value})" style="font-size:11px;padding:3px 5px;color:${st.color};border:1px solid ${st.color}40;border-radius:4px;background:${st.color}12;cursor:pointer">
-          ${Object.entries(APP_STATUSES).map(([k,v])=>`<option value="${k}" ${app.status===k?'selected':''}>${v.label}</option>`).join('')}
-        </select>
-      </td>
-      <td style="padding:10px 8px;font-size:12px;color:${overdue?'#EF4444':'#6B7280'}">${app.follow_up_date||''}${overdue?' ⚠':''}</td>
-      <td style="padding:10px 8px">${actHtml}</td>
-      <td style="padding:10px 0;white-space:nowrap">
-        ${app.notion_url?`<a href="${app.notion_url}" target="_blank" class="btn btn-followup" style="font-size:11px;padding:3px 8px;margin-right:3px;text-decoration:none">Notion</a>`:''}
-        ${app.source_url?`<a href="${app.source_url}" target="_blank" class="btn btn-followup" style="font-size:11px;padding:3px 8px;margin-right:3px;text-decoration:none">Apply</a>`:''}
-        <button onclick="deleteApp('${app.id}')" style="padding:3px 8px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#EF4444;font-size:11px;cursor:pointer">\u2715</button>
-      </td>
-    </tr>`;
+    const actHtml=latestAct?'<span style="font-size:11px;color:#9CA3AF">'+latestAct.date+': '+(latestAct.note||latestAct.type)+'</span>':'';
+    return '<tr style="border-bottom:1px solid #F3F4F6">'
+      +'<td style="padding:10px 0;font-weight:600;font-size:13px">'+app.company+'</td>'
+      +'<td style="padding:10px 8px;font-size:12px;color:#6B7280">'+app.role+'</td>'
+      +'<td style="padding:10px 8px;font-size:12px">'+(app.applied_date||'')+'</td>'
+      +'<td style="padding:10px 8px"><select onchange="patchApp(\''+app.id+'\',{status:this.value})" style="font-size:11px;padding:3px 5px;color:'+st.color+';border:1px solid '+st.color+'40;border-radius:4px;background:'+st.color+'12;cursor:pointer">'+Object.entries(APP_ST).map(([k,v])=>'<option value="'+k+'" '+(app.status===k?'selected':'')+'>'+v.label+'</option>').join('')+'</select></td>'
+      +'<td style="padding:10px 8px;font-size:12px;color:'+(overdue?'#EF4444':'#6B7280')+'">'+(app.follow_up_date||'')+(overdue?' \u26a0':'')+'</td>'
+      +'<td style="padding:10px 8px">'+actHtml+'</td>'
+      +'<td style="padding:10px 0;white-space:nowrap">'
+        +(app.drive_url?'<a href="'+app.drive_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#16a34a;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px">Drive</a>':'')
+        +(app.notion_url?'<a href="'+app.notion_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#f3f4f6;border-radius:5px;font-size:11px;color:#374151;text-decoration:none;margin-right:3px">Package</a>':'')
+        +(app.source_url?'<a href="'+app.source_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px">Apply</a>':'')
+        +'<button onclick="deleteApp(\''+app.id+'\')" style="padding:3px 8px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#EF4444;font-size:11px;cursor:pointer">\u2715</button>'
+      +'</td>'
+      +'</tr>';
   }).join('');
-  document.getElementById('main-content').innerHTML=`
-    <div class="queue-title" style="margin-bottom:4px">Applications</div>
-    <div class="queue-sub" style="margin-bottom:16px">${appsData.length} application${appsData.length!==1?'s':''} tracked</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${summary}</div>
-    <button onclick="showAddAppModal()" style="margin-bottom:16px;padding:6px 14px;background:#F97316;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">+ Log Application</button>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="border-bottom:2px solid #E5E7EB">
-          <th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th>
-          <th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th>
-          <th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Applied</th>
-          <th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Status</th>
-          <th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Follow-up</th>
-          <th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Activity</th>
-          <th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Links</th>
-        </tr></thead>
-        <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:32px;color:#9CA3AF">No applications yet. Click + Log Application to add one.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div id="add-app-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
-      <div style="background:#fff;padding:24px;border-radius:12px;width:440px;max-width:92%;box-shadow:0 24px 64px rgba(0,0,0,.2)">
-        <h3 style="margin:0 0 16px;font-size:15px;font-weight:700">Log Application</h3>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <input type="text" id="nac-company" placeholder="Company *" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">
-          <input type="text" id="nac-role" placeholder="Role *" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">
-          <input type="text" id="nac-url" placeholder="Apply URL" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">
-          <input type="text" id="nac-notion" placeholder="Notion URL" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">
-          <input type="date" id="nac-date" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">
-          <textarea id="nac-notes" placeholder="Notes" rows="2" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-            <button onclick="submitAddApp()" style="padding:8px 20px;background:#F97316;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
-            <button onclick="document.getElementById('add-app-modal').style.display='none'" style="padding:8px 16px;background:#F3F4F6;color:#6B7280;border:none;border-radius:7px;font-size:13px;cursor:pointer">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  document.getElementById('main-content').innerHTML=
+    '<div class="queue-title" style="margin-bottom:4px">Applications</div>'
+    +'<div class="queue-sub" style="margin-bottom:16px">'+appsData.length+' application'+(appsData.length!==1?'s':'')+' tracked</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">'+summary+'</div>'
+    +'<button onclick="showAddAppModal()" style="margin-bottom:16px;padding:6px 14px;background:#F97316;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">+ Log Application</button>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="border-bottom:2px solid #E5E7EB">'
+    +'<th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Company</th>'
+    +'<th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Role</th>'
+    +'<th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Applied</th>'
+    +'<th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Status</th>'
+    +'<th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Follow-up</th>'
+    +'<th style="text-align:left;padding:8px;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Activity</th>'
+    +'<th style="text-align:left;padding:8px 0;font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Links</th>'
+    +'</tr></thead>'
+    +'<tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;padding:32px;color:#9CA3AF">No applications yet.</td></tr>')+'</tbody>'
+    +'</table></div>'
+    +'<div id="add-app-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display=\'none\'">'
+    +'<div style="background:#fff;padding:24px;border-radius:12px;width:440px;max-width:92%;box-shadow:0 24px 64px rgba(0,0,0,.2)">'
+    +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700">Log Application</h3>'
+    +'<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<input type="text" id="nac-company" placeholder="Company *" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">'
+    +'<input type="text" id="nac-role" placeholder="Role *" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">'
+    +'<input type="text" id="nac-url" placeholder="Apply URL" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">'
+    +'<input type="text" id="nac-notion" placeholder="Notion URL" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">'
+    +'<input type="date" id="nac-date" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;outline:none">'
+    +'<textarea id="nac-notes" placeholder="Notes" rows="2" style="padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"></textarea>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">'
+    +'<button onclick="submitAddApp()" style="padding:8px 20px;background:#F97316;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Save</button>'
+    +'<button onclick="document.getElementById(\'add-app-modal\').style.display=\'none\'" style="padding:8px 16px;background:#F3F4F6;color:#6B7280;border:none;border-radius:7px;font-size:13px;cursor:pointer">Cancel</button>'
+    +'</div></div></div></div>';
 }
 
 async function patchApp(id,body){
@@ -746,32 +743,20 @@ async function renderMetrics(){
   });
   const weeks=Object.entries(byWeek).sort(([a],[b])=>a.localeCompare(b));
   const maxWk=weeks.length?Math.max(...weeks.map(([,v])=>v)):1;
-  const mc=(v,label,color,sub)=>`<div class="stat"><div class="stat-label">${label}</div><div class="stat-val" style="color:${color}">${v}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`;
-  const fb=(label,val,tot)=>{const pct=tot>0?Math.round((val/tot)*100):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#6B7280;font-weight:500">${label}</span><span style="color:#9CA3AF">${val} (${pct}%)</span></div><div style="height:8px;background:#E5E7EB;border-radius:4px"><div style="height:100%;background:#3B82F6;border-radius:4px;width:${pct}%"></div></div></div>`;}
-  const weekBars=weeks.map(([wk,n])=>{const h=Math.max(4,Math.round((n/maxWk)*72));return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:28px"><span style="font-size:10px;font-weight:600;color:#1F2D3D">${n}</span><div style="width:100%;background:#3B82F6;height:${h}px;border-radius:3px 3px 0 0"></div><span style="font-size:9px;color:#9CA3AF;white-space:nowrap">${wk.slice(5)}</span></div>`;}).join('');
-  const outreachHtml=stats?stats.segments.map(s=>`<div class="stat"><div class="stat-label">${s.label}</div><div class="stat-val">${s.contacted}</div><div class="stat-sub">${s.conv} replies</div></div>`).join(''):'';
-  document.getElementById('main-content').innerHTML=`
-    <div class="queue-title" style="margin-bottom:4px">Metrics</div>
-    <div class="queue-sub" style="margin-bottom:20px">Application pipeline and outreach performance</div>
-    <div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF">Applications</div>
-    <div class="stats" style="margin-bottom:24px">
-      ${mc(total,'Total','#1F2D3D')}
-      ${mc(confirmed,'Confirmed','#2563eb',cr+'%')}
-      ${mc(interviewing,'Interviewing','#d97706',ir+'%')}
-      ${mc(offers,'Offers','#16a34a',or_+'%')}
-      ${mc(rejected,'Rejected','#EF4444')}
-      ${mc(pending,'Pending','#6B7280')}
-    </div>
-    <div class="dash-main-row" style="margin-bottom:24px">
-      <div class="dash-card"><div class="dash-card-title">Pipeline Funnel</div>
-        ${fb('Submitted',total,total)}${fb('Confirmed',confirmed,total)}${fb('Interviewing',interviewing,total)}${fb('Offer',offers,total)}
-      </div>
-      <div class="dash-card"><div class="dash-card-title">Weekly Applications</div>
-        ${weeks.length?`<div style="display:flex;align-items:flex-end;gap:5px;height:92px;padding-top:20px">${weekBars}</div>`:'<div style="color:#9CA3AF;font-size:12px">No data yet.</div>'}
-      </div>
-    </div>
-    ${stats?`<div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF">Outreach</div><div class="stats">${outreachHtml}</div>`:''}
-  `;
+  const mc=(v,label,color,sub)=>'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+color+'">'+v+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>';
+  const fb=(label,val,tot)=>{const pct=tot>0?Math.round((val/tot)*100):0;return'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#6B7280;font-weight:500">'+label+'</span><span style="color:#9CA3AF">'+val+' ('+pct+'%)</span></div><div style="height:8px;background:#E5E7EB;border-radius:4px"><div style="height:100%;background:#3B82F6;border-radius:4px;width:'+pct+'%"></div></div></div>';}
+  const weekBars=weeks.map(([wk,n])=>{const h=Math.max(4,Math.round((n/maxWk)*72));return'<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:28px"><span style="font-size:10px;font-weight:600;color:#1F2D3D">'+n+'</span><div style="width:100%;background:#3B82F6;height:'+h+'px;border-radius:3px 3px 0 0"></div><span style="font-size:9px;color:#9CA3AF;white-space:nowrap">'+wk.slice(5)+'</span></div>';}).join('');
+  const outreachHtml=stats?stats.segments.map(s=>'<div class="stat"><div class="stat-label">'+s.label+'</div><div class="stat-val">'+s.contacted+'</div><div class="stat-sub">'+s.conv+' replies</div></div>').join(''):'';
+  document.getElementById('main-content').innerHTML=
+    '<div class="queue-title" style="margin-bottom:4px">Metrics</div>'
+    +'<div class="queue-sub" style="margin-bottom:20px">Application pipeline and outreach performance</div>'
+    +'<div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF">Applications</div>'
+    +'<div class="stats" style="margin-bottom:24px">'+mc(total,'Total','#1F2D3D')+mc(confirmed,'Confirmed','#2563eb',cr+'%')+mc(interviewing,'Interviewing','#d97706',ir+'%')+mc(offers,'Offers','#16a34a',or_+'%')+mc(rejected,'Rejected','#EF4444')+mc(pending,'Pending','#6B7280')+'</div>'
+    +'<div class="dash-main-row" style="margin-bottom:24px">'
+    +'<div class="dash-card"><div class="dash-card-title">Pipeline Funnel</div>'+fb('Submitted',total,total)+fb('Confirmed',confirmed,total)+fb('Interviewing',interviewing,total)+fb('Offer',offers,total)+'</div>'
+    +'<div class="dash-card"><div class="dash-card-title">Weekly Applications</div>'+(weeks.length?'<div style="display:flex;align-items:flex-end;gap:5px;height:92px;padding-top:20px">'+weekBars+'</div>':'<div style="color:#9CA3AF;font-size:12px">No data yet.</div>')+'</div>'
+    +'</div>'
+    +(stats?'<div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF">Outreach</div><div class="stats">'+outreachHtml+'</div>':'');
 }
 // --- END METRICS ---
 
@@ -812,7 +797,7 @@ function renderList(){
     const sectorBadge=TAB==='ceos'&&item.sector?'<span class="sector-badge sector-'+item.sector+'">'+(SECTOR_LABELS[item.sector]||item.sector)+'</span>':'';
     const tvBadge=TAB==='ceos'&&item.template_version?'<span class="tv-badge tv-'+item.template_version+'">'+item.template_version+'</span>':'';
     const contacts=(item.contacts||[]).map(c=>{const cs='cs-'+(c.status||'not-contacted').replace(/ /g,'-');return'<div class="contact-row"><div class="contact-info"><div class="contact-name">'+c.name+'</div>'+(c.title?'<div class="contact-title">'+c.title+'</div>':'')+(c.email?'<div class="contact-email">'+c.email+'</div>':'')+(c.notes?'<div class="contact-notes">'+c.notes+'</div>':'')+'</div><span class="cs-tag '+cs+'">'+(c.status||'not contacted')+'</span></div>';}).join('');
-    return '<div class="card"><div class="card-header" onclick="toggle(\''+TAB+'\','+id+')">'+tier+sectorBadge+'<div class="card-name">'+name+'</div>'+tvBadge+'<span class="status-lbl">'+(item.status||'not contacted')+'</span><span class="sdot '+dotCls+'"></span></div><div class="card-body" id="body-'+TAB+'-'+id+'" ><div class="why">'+(item.why||'')+'</div>'+(contacts?'<div class="sec-lbl">Contacts</div>'+contacts:'')+'<div class="sec-lbl" style="margin-top:12px">Notes & Status</div><div class="field-row"><textarea class="notes-input" id="notes-'+TAB+'-'+id+'">'+(item.notes||'')+'</textarea><div style="display:flex;flex-direction:column;gap:6px"><select class="status-select" id="status-'+TAB+'-'+id+'">'+['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>'<option value="'+s+'"'+(item.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select><input class="date-input" type="date" id="followup-'+TAB+'-'+id+'" value="'+(item.followup_date||'')+'"><button class="save-btn" onclick="save(\''+TAB+'\','+id+')">Save</button></div></div></div></div>';
+    return '<div class="card"><div class="card-header" onclick="toggle(\''+TAB+'\','+id+')">'+tier+sectorBadge+'<div class="card-name">'+name+'</div>'+tvBadge+'<span class="status-lbl">'+(item.status||'not contacted')+'</span><span class="sdot '+dotCls+'"></span></div><div class="card-body" id="body-'+TAB+'-'+id+'" ><div class="why">'+(item.why||'')+'</div>'+(contacts?'<div class="sec-lbl">Contacts</div>'+contacts:'')+'<div class="sec-lbl" style="margin-top:12px">Notes &amp; Status</div><div class="field-row"><textarea class="notes-input" id="notes-'+TAB+'-'+id+'">'+(item.notes||'')+'</textarea><div style="display:flex;flex-direction:column;gap:6px"><select class="status-select" id="status-'+TAB+'-'+id+'">'+['not contacted','draft','linkedin','contacted','in conversation','bounced','passed'].map(s=>'<option value="'+s+'"'+(item.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select><input class="date-input" type="date" id="followup-'+TAB+'-'+id+'" value="'+(item.followup_date||'')+'"><button class="save-btn" onclick="save(\''+TAB+'\','+id+')">Save</button></div></div></div></div>';
   }).join(''):'<div class="empty">No results.</div>';
   document.getElementById('main-content').innerHTML='<div class="controls"><input class="search-box" type="text" id="search-input" placeholder="Search..." oninput="renderList()" value="'+q+'"><button class="filter-btn'+(FILTER==='all'?' active':'')+' " onclick="setFilter(\'all\',this)">All</button><button class="filter-btn'+(FILTER==='active'?' active':'')+' " onclick="setFilter(\'active\',this)">Active</button><button class="filter-btn'+(FILTER==='contacted'?' active':'')+' " onclick="setFilter(\'contacted\',this)">Contacted</button><button class="filter-btn'+(FILTER==='in conversation'?' active':'')+' " onclick="setFilter(\'in conversation\',this)">In Convo</button><button class="filter-btn'+(FILTER==='not contacted'?' active':'')+' " onclick="setFilter(\'not contacted\',this)">Not Started</button><button class="filter-btn'+(FILTER==='bounced'?' active':'')+' " onclick="setFilter(\'bounced\',this)">Bounced</button>'+sectorRow+'</div><div class="stats">'+statHtml+'</div><div class="cards">'+cardsHtml+'</div>';
 }
@@ -831,5 +816,6 @@ document.addEventListener('keydown',e=>{
 });
 init();
 </script>
+<script src="/apps.js"></script>
 </body>
 </html>
