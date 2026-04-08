@@ -16,6 +16,7 @@ const DYNAMIC_CONTACTS_PATH = path.join(DATA_DIR, 'dynamic_contacts.json');
 const APPLICATIONS_PATH = path.join(DATA_DIR, 'applications.json');
 const JOB_BOARD_PATH = path.join(DATA_DIR, 'job_board_leads.json');
 const NETWORKING_PATH = path.join(DATA_DIR, 'networking.json');
+const CAL_CONFIG_PATH = path.join(DATA_DIR, 'cal_config.json');
 
 const SEED_PATHS = {
   firms: path.join(SEEDS_DIR, 'seed_firms.json'),
@@ -53,6 +54,11 @@ function loadNetworking() {
   return [];
 }
 function saveNetworking(e) { try { fs.writeFileSync(NETWORKING_PATH, JSON.stringify(e, null, 2)); } catch(e) {} }
+function loadCalConfig() {
+  try { if (fs.existsSync(CAL_CONFIG_PATH)) return JSON.parse(fs.readFileSync(CAL_CONFIG_PATH, 'utf8')); } catch(e) {}
+  return { setup_complete: false, whitelisted_calendar_ids: [], whitelisted_calendar_names: {} };
+}
+function saveCalConfig(c) { try { fs.writeFileSync(CAL_CONFIG_PATH, JSON.stringify(c, null, 2)); } catch(e) {} }
 
 const SENT_STATUSES = new Set(['contacted', 'in conversation', 'bounced', 'passed', 'linkedin']);
 const VALID_APP_STATUSES = ['queued','applied','confirmation_received','interviewing','offer','rejected','no_response','withdrawn'];
@@ -246,7 +252,7 @@ setInterval(() => {
 
 setTimeout(bootCheck, 3000);
 setTimeout(bootSeedApplications, 4000);
-console.log(`HopeSpot v7.0 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
+console.log(`HopeSpot v7.1 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -416,19 +422,23 @@ app.post('/api/job-board/crawl', requireAuth, async (req, res) => {
 });
 
 // --- NETWORKING ---
+// GET /api/networking/events
+// Default: returns only visible (non-hidden) events.
+// ?include_hidden=true: returns all events including hidden.
 app.get('/api/networking/events', requireAuth, (req, res) => {
   const events = loadNetworking();
-  const { days } = req.query;
+  const { days, include_hidden } = req.query;
+  const pool = include_hidden === 'true' ? events : events.filter(e => !e.hidden);
   if (days) {
     const cutoff = daysAgoStr(parseInt(days));
-    return res.json(events.filter(e => e.start_date >= cutoff).sort((a,b) => b.start_date.localeCompare(a.start_date)));
+    return res.json(pool.filter(e => e.start_date >= cutoff).sort((a,b) => b.start_date.localeCompare(a.start_date)));
   }
-  res.json(events.sort((a,b) => b.start_date.localeCompare(a.start_date)));
+  res.json(pool.sort((a,b) => b.start_date.localeCompare(a.start_date)));
 });
 app.post('/api/networking/events', requireAuth, (req, res) => {
   const { title, start_date, start_time, end_time, location, type, notes, contacts, next_steps } = req.body;
   if (!title || !start_date) return res.status(400).json({ error: 'title and start_date required' });
-  const event = { id: randomUUID(), source: 'manual', external_id: null, title, start_date, start_time: start_time||'', end_time: end_time||'', location: location||'', attendees: [], notes: notes||'', contacts: contacts||[], next_steps: next_steps||[], type: type||'other', follow_up_sent: false, created_at: todayET() };
+  const event = { id: randomUUID(), source: 'manual', external_id: null, title, start_date, start_time: start_time||'', end_time: end_time||'', location: location||'', attendees: [], notes: notes||'', contacts: contacts||[], next_steps: next_steps||[], type: type||'other', hidden: false, follow_up_sent: false, created_at: todayET() };
   const events = loadNetworking(); events.push(event); saveNetworking(events);
   res.json(event);
 });
@@ -444,9 +454,19 @@ app.delete('/api/networking/events/:id', requireAuth, (req, res) => {
   events.splice(idx, 1); saveNetworking(events);
   res.json({ ok: true });
 });
+
+// Calendar sync: filters by whitelist if configured.
+// Each incoming event should include calendar_id and calendar_name fields.
 app.post('/api/networking/calendar-sync', requireAuth, (req, res) => {
-  const incoming = req.body.events||[];
-  if (!incoming.length) return res.json({ ok: true, added: 0, updated: 0 });
+  let incoming = req.body.events || [];
+  if (!incoming.length) return res.json({ ok: true, added: 0, updated: 0, filtered: 0 });
+  const calCfg = loadCalConfig();
+  let filtered = 0;
+  if (calCfg.setup_complete && calCfg.whitelisted_calendar_ids.length > 0) {
+    const before = incoming.length;
+    incoming = incoming.filter(ev => !ev.calendar_id || calCfg.whitelisted_calendar_ids.includes(ev.calendar_id));
+    filtered = before - incoming.length;
+  }
   const events = loadNetworking();
   const extIds = new Set(events.filter(e => e.external_id).map(e => e.external_id));
   let added = 0, updated = 0;
@@ -456,13 +476,27 @@ app.post('/api/networking/calendar-sync', requireAuth, (req, res) => {
       const idx = events.findIndex(e => e.external_id === ev.external_id);
       if (idx >= 0) { events[idx] = { ...events[idx], title: ev.title, start_date: ev.start_date, start_time: ev.start_time||events[idx].start_time||'', end_time: ev.end_time||events[idx].end_time||'', location: ev.location||events[idx].location||'', attendees: ev.attendees||events[idx].attendees||[] }; updated++; }
     } else {
-      events.push({ id: randomUUID(), source: 'google_calendar', external_id: ev.external_id||null, title: ev.title, start_date: ev.start_date, start_time: ev.start_time||'', end_time: ev.end_time||'', location: ev.location||'', attendees: ev.attendees||[], notes: '', contacts: [], next_steps: [], type: 'other', follow_up_sent: false, created_at: todayET() });
+      events.push({ id: randomUUID(), source: 'google_calendar', external_id: ev.external_id||null, calendar_id: ev.calendar_id||null, calendar_name: ev.calendar_name||null, title: ev.title, start_date: ev.start_date, start_time: ev.start_time||'', end_time: ev.end_time||'', location: ev.location||'', attendees: ev.attendees||[], notes: '', contacts: [], next_steps: [], type: 'other', hidden: false, follow_up_sent: false, created_at: todayET() });
       if (ev.external_id) extIds.add(ev.external_id);
       added++;
     }
   });
   saveNetworking(events);
-  res.json({ ok: true, added, updated });
+  res.json({ ok: true, added, updated, filtered });
+});
+
+// Calendar whitelist config
+app.get('/api/networking/calendar-config', requireAuth, (req, res) => {
+  res.json(loadCalConfig());
+});
+app.post('/api/networking/calendar-config', requireAuth, (req, res) => {
+  const config = loadCalConfig();
+  const { whitelisted_calendar_ids, whitelisted_calendar_names, setup_complete } = req.body;
+  if (whitelisted_calendar_ids !== undefined) config.whitelisted_calendar_ids = whitelisted_calendar_ids;
+  if (whitelisted_calendar_names !== undefined) config.whitelisted_calendar_names = whitelisted_calendar_names;
+  if (setup_complete !== undefined) config.setup_complete = setup_complete;
+  saveCalConfig(config);
+  res.json({ ok: true, config });
 });
 
 // --- MORNING SYNC STATUS ---
@@ -475,8 +509,8 @@ app.get('/api/morning-sync/status', requireAuth, (req, res) => {
   const newLeads = leads.filter(l => l.status === 'new');
   const events = loadNetworking();
   const cutoff14 = daysAgoStr(14);
-  const overdueNextSteps = events.flatMap(e => (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).map(ns => ({ eventId: e.id, eventTitle: e.title, step: ns.text, due: ns.due_date })));
-  const eventsNoNotes = events.filter(e => e.start_date >= cutoff14 && e.start_date <= today && !(e.notes||'').trim()).map(e => ({ id: e.id, title: e.title, start_date: e.start_date }));
+  const overdueNextSteps = events.filter(e => !e.hidden).flatMap(e => (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).map(ns => ({ eventId: e.id, eventTitle: e.title, step: ns.text, due: ns.due_date })));
+  const eventsNoNotes = events.filter(e => !e.hidden && e.start_date >= cutoff14 && e.start_date <= today && !(e.notes||'').trim()).map(e => ({ id: e.id, title: e.title, start_date: e.start_date }));
   const allItems = PILLARS.flatMap(k => getDB(k));
   const draftsQueued = allItems.filter(x => x.status === 'draft').length;
   const dueCount = (() => {
@@ -485,7 +519,18 @@ app.get('/api/morning-sync/status', requireAuth, (req, res) => {
     loadDynamic().forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) n++; });
     return n;
   })();
-  res.json({ today, needsPackage, appFollowUps, newJobLeads: newLeads.length, topLeads: newLeads.slice(0,3).map(l => ({ id: l.id, title: l.title, organization: l.organization, fit_score: l.fit_score, source_label: l.source_label, url: l.url })), networking: { overdueNextSteps: overdueNextSteps.length, overdueItems: overdueNextSteps.slice(0,5), eventsNoNotes }, outreach: { draftsQueued, dueFollowUps: dueCount }, cronState: loadCronState() });
+  const calConfig = loadCalConfig();
+  res.json({
+    today,
+    needsPackage,
+    appFollowUps,
+    newJobLeads: newLeads.length,
+    topLeads: newLeads.slice(0,3).map(l => ({ id: l.id, title: l.title, organization: l.organization, fit_score: l.fit_score, source_label: l.source_label, url: l.url })),
+    networking: { overdueNextSteps: overdueNextSteps.length, overdueItems: overdueNextSteps.slice(0,5), eventsNoNotes },
+    outreach: { draftsQueued, dueFollowUps: dueCount },
+    calendarConfig: { setup_complete: calConfig.setup_complete, whitelisted_count: calConfig.whitelisted_calendar_ids.length, whitelisted_names: calConfig.whitelisted_calendar_names },
+    cronState: loadCronState()
+  });
 });
 
 // --- OUTREACH ---
@@ -542,9 +587,9 @@ app.get('/api/debug', (req, res) => {
   let dueCount = 0;
   PILLARS.forEach(track => { getDB(track).forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++; }); });
   loadDynamic().forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++; });
-  const apps = loadApplications(), jb = loadJobBoardLeads(), net = loadNetworking();
-  const overdueSteps = net.reduce((n, e) => n + (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).length, 0);
-  res.json({ version: '7.0', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingOverdueSteps: overdueSteps, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, dueCount, cronState: loadCronState(), todayET: today });
+  const apps = loadApplications(), jb = loadJobBoardLeads(), net = loadNetworking(), calCfg = loadCalConfig();
+  const overdueSteps = net.filter(e=>!e.hidden).reduce((n, e) => n + (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).length, 0);
+  res.json({ version: '7.1', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, dueCount, cronState: loadCronState(), todayET: today });
 });
 
 const SECTOR_EXCLUDE_FROM_TABLE = new Set(['network']);
@@ -641,6 +686,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.0', cronState: loadCronState(), todayET: todayET() }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.1', cronState: loadCronState(), todayET: todayET() }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.0 listening on port ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.1 listening on port ' + PORT));
