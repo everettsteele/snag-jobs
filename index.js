@@ -35,27 +35,27 @@ function loadOverrides() {
 }
 function saveOverrides(o) { try { fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(o, null, 2)); } catch(e) {} }
 function loadDynamic() {
-  try { if (fs.existsSync(DYNAMIC_CONTACTS_PATH)) return JSON.parse(fs.readFileSync(DYNAMIC_CONTACTS_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(DYNAMIC_CONTACTS_PATH)) return JSON.parse(fs.readFileSync(DYNAMIC_CONTACTS_PATH, 'utf8')); } catch(e) {}  
   return [];
 }
 function saveDynamic(c) { try { fs.writeFileSync(DYNAMIC_CONTACTS_PATH, JSON.stringify(c, null, 2)); } catch(e) {} }
 function loadApplications() {
-  try { if (fs.existsSync(APPLICATIONS_PATH)) return JSON.parse(fs.readFileSync(APPLICATIONS_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(APPLICATIONS_PATH)) return JSON.parse(fs.readFileSync(APPLICATIONS_PATH, 'utf8')); } catch(e) {}  
   return [];
 }
 function saveApplications(a) { try { fs.writeFileSync(APPLICATIONS_PATH, JSON.stringify(a, null, 2)); } catch(e) {} }
 function loadJobBoardLeads() {
-  try { if (fs.existsSync(JOB_BOARD_PATH)) return JSON.parse(fs.readFileSync(JOB_BOARD_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(JOB_BOARD_PATH)) return JSON.parse(fs.readFileSync(JOB_BOARD_PATH, 'utf8')); } catch(e) {}  
   return [];
 }
 function saveJobBoardLeads(l) { try { fs.writeFileSync(JOB_BOARD_PATH, JSON.stringify(l, null, 2)); } catch(e) {} }
 function loadNetworking() {
-  try { if (fs.existsSync(NETWORKING_PATH)) return JSON.parse(fs.readFileSync(NETWORKING_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(NETWORKING_PATH)) return JSON.parse(fs.readFileSync(NETWORKING_PATH, 'utf8')); } catch(e) {}  
   return [];
 }
 function saveNetworking(e) { try { fs.writeFileSync(NETWORKING_PATH, JSON.stringify(e, null, 2)); } catch(e) {} }
 function loadCalConfig() {
-  try { if (fs.existsSync(CAL_CONFIG_PATH)) return JSON.parse(fs.readFileSync(CAL_CONFIG_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(CAL_CONFIG_PATH)) return JSON.parse(fs.readFileSync(CAL_CONFIG_PATH, 'utf8')); } catch(e) {}  
   return { setup_complete: false, whitelisted_calendar_ids: [], whitelisted_calendar_names: {} };
 }
 function saveCalConfig(c) { try { fs.writeFileSync(CAL_CONFIG_PATH, JSON.stringify(c, null, 2)); } catch(e) {} }
@@ -90,7 +90,7 @@ function daysBetween(dateStr) {
   try { return Math.floor((new Date() - new Date(dateStr + 'T00:00:00-05:00')) / 864e5); } catch(e) { return null; }
 }
 function loadCronState() {
-  try { if (fs.existsSync(CRON_STATE_PATH)) return JSON.parse(fs.readFileSync(CRON_STATE_PATH, 'utf8')); } catch(e) {}
+  try { if (fs.existsSync(CRON_STATE_PATH)) return JSON.parse(fs.readFileSync(CRON_STATE_PATH, 'utf8')); } catch(e) {}  
   return { lastRunDate: null };
 }
 function saveCronState(s) { try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(s, null, 2)); } catch(e) {} }
@@ -167,13 +167,111 @@ function bootSeedApplications() {
   ]);
 }
 
+// ================================================================
+// JOB BOARD — Sources, location filter, crawl
+// ================================================================
+
+// Sources: link patterns match both relative (/jobs/...) and absolute URLs.
+// baseUrl is prepended to relative paths.
 const JOB_SOURCES = [
-  { name:'jewishjobs', label:'JewishJobs', searches:['https://www.jewishjobs.com/search/operations/-/-/true','https://www.jewishjobs.com/search/chief-operating-officer/-/-/true'], linkPattern:/href="(https?:\/\/(?:www\.)?jewishjobs\.com\/job\/[^"#?]+)"/gi, maxPerSearch:8 },
-  { name:'execthread', label:'ExecThread', searches:['https://execthread.com/search?q=chief+operating+officer','https://execthread.com/search?q=vp+operations','https://execthread.com/search?q=chief+of+staff'], linkPattern:/href="(https?:\/\/execthread\.com\/jobs\/[^"#?]+)"/gi, maxPerSearch:6 },
-  { name:'csnetwork', label:'CoS Network', searches:['https://www.chiefofstaff.network/jobs'], linkPattern:/href="(\/jobs\/[^"#?]+)".*?(?:title|aria-label)/gi, baseUrl:'https://www.chiefofstaff.network', maxPerSearch:10 },
-  { name:'idealist', label:'Idealist', searches:['https://www.idealist.org/en/jobs?q=vice+president+operations&type=JOB','https://www.idealist.org/en/jobs?q=chief+operating+officer&type=JOB'], linkPattern:/href="(https?:\/\/(?:www\.)?idealist\.org\/en\/job\/[^"#?]+)"/gi, maxPerSearch:6 },
-  { name:'builtinatlanta', label:'Built In ATL', searches:['https://builtinatlanta.com/jobs?title=operations&seniority=Senior%20Leadership','https://builtinatlanta.com/jobs?title=chief+of+staff'], linkPattern:/href="(https?:\/\/builtinatlanta\.com\/job\/[^"#?]+)"/gi, maxPerSearch:6 },
+  {
+    name: 'jewishjobs',
+    label: 'JewishJobs',
+    searches: [
+      'https://www.jewishjobs.com/search/operations/-/-/true',
+      'https://www.jewishjobs.com/search/chief-operating-officer/-/-/true',
+      'https://www.jewishjobs.com/search/director-of-operations/-/-/true',
+    ],
+    // Match relative /job/... or /listing/... OR absolute jewishjobs.com paths
+    linkPattern: /href="((?:https?:\/\/(?:www\.)?jewishjobs\.com)?\/(?:job|listing|jobs|position)s?\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.jewishjobs.com',
+    maxPerSearch: 10,
+  },
+  {
+    name: 'execthread',
+    label: 'ExecThread',
+    searches: [
+      'https://execthread.com/search?q=chief+operating+officer',
+      'https://execthread.com/search?q=vp+operations',
+      'https://execthread.com/search?q=chief+of+staff',
+    ],
+    linkPattern: /href="((?:https?:\/\/execthread\.com)?\/jobs\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://execthread.com',
+    maxPerSearch: 6,
+  },
+  {
+    name: 'csnetwork',
+    label: 'CoS Network',
+    searches: ['https://www.chiefofstaff.network/jobs'],
+    // Relative /jobs/... paths (known working pattern)
+    linkPattern: /href="(\/jobs\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.chiefofstaff.network',
+    maxPerSearch: 12,
+  },
+  {
+    name: 'idealist',
+    label: 'Idealist',
+    searches: [
+      'https://www.idealist.org/en/jobs?q=vice+president+operations&type=JOB',
+      'https://www.idealist.org/en/jobs?q=chief+operating+officer&type=JOB',
+      'https://www.idealist.org/en/jobs?q=director+operations&type=JOB',
+    ],
+    linkPattern: /href="((?:https?:\/\/(?:www\.)?idealist\.org)?\/en\/jobs?\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.idealist.org',
+    maxPerSearch: 6,
+  },
+  {
+    name: 'builtinatlanta',
+    label: 'Built In ATL',
+    searches: [
+      'https://builtinatlanta.com/jobs?title=operations&seniority=Senior%20Leadership',
+      'https://builtinatlanta.com/jobs?title=chief+of+staff',
+      'https://builtinatlanta.com/jobs?title=vice+president+operations',
+    ],
+    linkPattern: /href="((?:https?:\/\/builtinatlanta\.com)?\/jobs?\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://builtinatlanta.com',
+    maxPerSearch: 8,
+  },
 ];
+
+// Location allow: Atlanta, GA, Remote, Hybrid, unknown/empty
+const LOCATION_ALLOW = /\batlanta\b|\bgeorgia\b|,\s*GA\b|\bremote\b|\bhybrid\b|distributed|nationwide|flexible|anywhere|work\s*from\s*home|\bwfh\b|u\.?s\.?\s*only|us\s*only/i;
+// Location deny: clearly non-Atlanta metro cities
+const LOCATION_DENY = /\bphiladelphia\b|\bphilly\b|\bnew\s*york\b|\bnyc\b|\bbrooklyn\b|\bmanhattan\b|\bnew\s*jersey\b|\bchicago\b|\bboston\b|\bsan\s*francisco\b|\bseattle\b|\bdenver\b|\bmiami\b|\blos\s*angeles\b|\bportland\b|\bminneapolis\b|\bphoenix\b|\bdallas\b|\bhouston\b|\bnashville\b|\bcharlotte\b|\braleigh\b|washington[\s,]+d\.?c|\bbaltimore\b|\bpittsburgh\b|\bcleveland\b|\bdetroit\b|\bindianapolis\b|kansas\s*city|st\.?\s*louis|\bcolumbus,\s*oh\b|\bcincinnati\b|\bmemphis\b|\bomaha\b|\blas\s*vegas\b|\bsan\s*diego\b|\bsan\s*antonio\b|\bsan\s*jose\b|\btampa\b|\bjacksonville,\s*fl\b|\bmilwaukee\b|\bsacramento\b|salt\s*lake|\blouisville\b|\btucson\b|\baustin,\s*tx\b|\bfresno\b/i;
+
+function passesLocationFilter(location) {
+  if (!location || location.trim().length < 2) return true; // unknown location — let through
+  if (LOCATION_ALLOW.test(location)) return true;           // Atlanta or remote — keep
+  if (LOCATION_DENY.test(location)) return false;           // clearly non-Atlanta — skip
+  return true;                                              // ambiguous — let through
+}
+
+// Improved location extraction: tries multiple strategies
+function extractLocation(html) {
+  // 1. JSON-LD structured data (most reliable when present)
+  const jldM = html.match(/"jobLocation"\s*:\s*\{[^}]*"addressLocality"\s*:\s*"([^"]{2,60})"/i);
+  if (jldM) {
+    // Check for remote flag in same JSON-LD block
+    if (/"remote"\s*:\s*true/i.test(html.slice(0, 5000))) return 'Remote';
+    return jldM[1].trim();
+  }
+  // 2. Explicit remote keyword in prominent position
+  const remoteM = html.match(/<[^>]+(?:class|id)="[^"]*(?:location|workplace|job-location)[^"]*"[^>]*>\s*([^<]{0,60}remote[^<]{0,30})<\/[^>]+>/i)
+                || html.match(/>\s*((?:Fully\s+)?Remote(?:[^<]{0,20})?)<\//i);
+  if (remoteM) return remoteM[1].replace(/<[^>]+>/g,'').trim().slice(0, 60);
+  // 3. Hybrid keyword near location context
+  if (/hybrid/i.test(html.slice(0, 8000))) {
+    const hybM = html.match(/>([^<]{0,20}hybrid[^<]{0,20})<\//i);
+    if (hybM) return hybM[1].trim().slice(0, 60);
+  }
+  // 4. City, STATE pattern (most common)
+  const cityM = html.match(/([A-Z][a-zA-Z\s]{1,20},\s*(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC))/);
+  if (cityM) return cityM[1].trim();
+  // 5. Location field in HTML
+  const locCtxM = html.match(/(?:location|located|based)[^<]{0,20}>[^<]{0,10}([A-Z][^<]{2,50}(?:,\s*[A-Z]{2}|remote|hybrid))/i);
+  if (locCtxM) return locCtxM[1].trim().slice(0, 80);
+  return '';
+}
 
 function scoreTitle(title) {
   const tl = title.toLowerCase();
@@ -196,48 +294,106 @@ function scoreTitle(title) {
 }
 
 async function crawlJobBoards() {
-  const existing = loadJobBoardLeads(), existingUrls = new Set(existing.map(l => l.url)), allNew = [];
+  const existing = loadJobBoardLeads();
+  const existingUrls = new Set(existing.map(l => l.url));
+  const allNew = [];
+  const sourceStats = {};
+
   for (const source of JOB_SOURCES) {
     const srcLeads = [];
+    let urlsFound = 0, urlsAttempted = 0, filteredByLocation = 0, filteredByScore = 0;
+
     for (const searchUrl of source.searches) {
       try {
-        const resp = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html' }, signal: AbortSignal.timeout(12000) });
-        if (!resp.ok) continue;
+        const resp = await fetch(searchUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html,application/xhtml+xml' },
+          signal: AbortSignal.timeout(12000)
+        });
+        if (!resp.ok) { console.log(`[${source.name}] HTTP ${resp.status} for ${searchUrl}`); continue; }
         const html = await resp.text();
+
         const urls = [];
         let m;
         const rx = new RegExp(source.linkPattern.source, source.linkPattern.flags);
         while ((m = rx.exec(html)) !== null) {
           let u = m[1];
-          if (source.baseUrl && u.startsWith('/')) u = source.baseUrl + u;
-          if (!u.startsWith('http') || urls.includes(u) || existingUrls.has(u)) continue;
-          urls.push(u);
+          // Prepend baseUrl for relative paths
+          if (source.baseUrl && (u.startsWith('/') || !u.startsWith('http'))) u = source.baseUrl + (u.startsWith('/') ? '' : '/') + u;
+          if (!u.startsWith('http')) continue;
+          // Deduplicate and skip already-known URLs
+          if (!urls.includes(u) && !existingUrls.has(u)) urls.push(u);
         }
+        urlsFound += urls.length;
+        console.log(`[${source.name}] ${urls.length} new URLs from ${searchUrl}`);
+
         for (const jobUrl of urls.slice(0, source.maxPerSearch || 8)) {
+          urlsAttempted++;
           try {
-            const jr = await fetch(jobUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html' }, signal: AbortSignal.timeout(10000) });
+            const jr = await fetch(jobUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', 'Accept': 'text/html' },
+              signal: AbortSignal.timeout(10000)
+            });
             if (!jr.ok) continue;
             const jhtml = await jr.text();
+
+            // Title extraction
             const titleM = jhtml.match(/<h1[^>]*>([^<]+)<\/h1>/) || jhtml.match(/<title>([^|<\-\u2014]+)/);
-            const title = titleM ? titleM[1].replace(/&amp;/g,'&').replace(/&#039;/g,"'").trim() : 'Unknown Role';
-            const orgM = jhtml.match(/(?:Employer|Organization|Company):\s*([^<\n]{3,80})/);
-            const organization = orgM ? orgM[1].trim() : '';
-            const locM = jhtml.match(/([A-Z][a-z]+,\s*[A-Z]{2}(?:,\s*(?:United States|Remote))?)/);
-            const location = locM ? locM[1].trim() : '';
+            const title = titleM ? titleM[1].replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&ndash;/g,'-').trim() : 'Unknown Role';
+
+            // Organization extraction
+            const orgM = jhtml.match(/(?:Employer|Organization|Company|Posted by):\s*([^<\n]{3,80})/)
+                       || jhtml.match(/class="[^"]*(?:company|employer|org)[^"]*"[^>]*>([^<]{3,60})/i);
+            const organization = orgM ? orgM[1].replace(/<[^>]+>/g,'').trim() : '';
+
+            // Location extraction (improved)
+            const location = extractLocation(jhtml);
+
+            // Score the title
             const { score, reasons } = scoreTitle(title);
-            if (score < 3) { await new Promise(r => setTimeout(r, 300)); continue; }
-            srcLeads.push({ id: source.name.slice(0,2)+'-'+Buffer.from(jobUrl).toString('base64').replace(/[^a-zA-Z0-9]/g,'').slice(0,14), source: source.name, source_label: source.label, title: title.slice(0,200), organization: organization.slice(0,200), location: location.slice(0,100), url: jobUrl, fit_score: score, fit_reason: reasons.join(', ')||'Senior role', date_found: todayET(), status: 'new', snoozed: false });
+            if (score < 3) { filteredByScore++; await new Promise(r => setTimeout(r, 300)); continue; }
+
+            // Location filter — skip if clearly non-Atlanta and not remote
+            if (!passesLocationFilter(location)) {
+              filteredByLocation++;
+              console.log(`[${source.name}] Filtered by location: "${location}" — ${title}`);
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+
+            const lead = {
+              id: source.name.slice(0,2) + '-' + Buffer.from(jobUrl).toString('base64').replace(/[^a-zA-Z0-9]/g,'').slice(0,14),
+              source: source.name,
+              source_label: source.label,
+              title: title.slice(0, 200),
+              organization: organization.slice(0, 200),
+              location: location.slice(0, 100),
+              url: jobUrl,
+              fit_score: score,
+              fit_reason: reasons.join(', ') || 'Senior role',
+              date_found: todayET(),
+              status: 'new',
+              snoozed: false,
+            };
+            srcLeads.push(lead);
             existingUrls.add(jobUrl);
             await new Promise(r => setTimeout(r, 500));
           } catch(e) { continue; }
         }
         await new Promise(r => setTimeout(r, 1000));
-      } catch(e) { continue; }
+      } catch(e) { console.error(`[${source.name}] search error: ${e.message}`); continue; }
     }
+
+    sourceStats[source.name] = { urlsFound, urlsAttempted, added: srcLeads.length, filteredByLocation, filteredByScore };
+    console.log(`[${source.name}] done — added: ${srcLeads.length}, locationFiltered: ${filteredByLocation}, scoredOut: ${filteredByScore}`);
     allNew.push(...srcLeads);
   }
-  if (allNew.length > 0) { const all = loadJobBoardLeads(); all.push(...allNew); saveJobBoardLeads(all); }
-  return allNew;
+
+  if (allNew.length > 0) {
+    const all = loadJobBoardLeads();
+    all.push(...allNew);
+    saveJobBoardLeads(all);
+  }
+  return { leads: allNew, sourceStats };
 }
 
 setInterval(() => {
@@ -252,7 +408,7 @@ setInterval(() => {
 
 setTimeout(bootCheck, 3000);
 setTimeout(bootSeedApplications, 4000);
-console.log(`HopeSpot v7.1 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
+console.log(`HopeSpot v7.2 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -417,14 +573,13 @@ app.post('/api/job-board/snag', requireAuth, (req, res) => {
   res.json({ ok: true, application: newApp });
 });
 app.post('/api/job-board/crawl', requireAuth, async (req, res) => {
-  try { const n = await crawlJobBoards(); res.json({ ok: true, newLeads: n.length }); }
-  catch(e) { res.status(500).json({ error: e.message }); }
+  try {
+    const result = await crawlJobBoards();
+    res.json({ ok: true, newLeads: result.leads.length, sourceStats: result.sourceStats });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- NETWORKING ---
-// GET /api/networking/events
-// Default: returns only visible (non-hidden) events.
-// ?include_hidden=true: returns all events including hidden.
 app.get('/api/networking/events', requireAuth, (req, res) => {
   const events = loadNetworking();
   const { days, include_hidden } = req.query;
@@ -454,9 +609,6 @@ app.delete('/api/networking/events/:id', requireAuth, (req, res) => {
   events.splice(idx, 1); saveNetworking(events);
   res.json({ ok: true });
 });
-
-// Calendar sync: filters by whitelist if configured.
-// Each incoming event should include calendar_id and calendar_name fields.
 app.post('/api/networking/calendar-sync', requireAuth, (req, res) => {
   let incoming = req.body.events || [];
   if (!incoming.length) return res.json({ ok: true, added: 0, updated: 0, filtered: 0 });
@@ -484,11 +636,7 @@ app.post('/api/networking/calendar-sync', requireAuth, (req, res) => {
   saveNetworking(events);
   res.json({ ok: true, added, updated, filtered });
 });
-
-// Calendar whitelist config
-app.get('/api/networking/calendar-config', requireAuth, (req, res) => {
-  res.json(loadCalConfig());
-});
+app.get('/api/networking/calendar-config', requireAuth, (req, res) => res.json(loadCalConfig()));
 app.post('/api/networking/calendar-config', requireAuth, (req, res) => {
   const config = loadCalConfig();
   const { whitelisted_calendar_ids, whitelisted_calendar_names, setup_complete } = req.body;
@@ -520,17 +668,7 @@ app.get('/api/morning-sync/status', requireAuth, (req, res) => {
     return n;
   })();
   const calConfig = loadCalConfig();
-  res.json({
-    today,
-    needsPackage,
-    appFollowUps,
-    newJobLeads: newLeads.length,
-    topLeads: newLeads.slice(0,3).map(l => ({ id: l.id, title: l.title, organization: l.organization, fit_score: l.fit_score, source_label: l.source_label, url: l.url })),
-    networking: { overdueNextSteps: overdueNextSteps.length, overdueItems: overdueNextSteps.slice(0,5), eventsNoNotes },
-    outreach: { draftsQueued, dueFollowUps: dueCount },
-    calendarConfig: { setup_complete: calConfig.setup_complete, whitelisted_count: calConfig.whitelisted_calendar_ids.length, whitelisted_names: calConfig.whitelisted_calendar_names },
-    cronState: loadCronState()
-  });
+  res.json({ today, needsPackage, appFollowUps, newJobLeads: newLeads.length, topLeads: newLeads.slice(0,3).map(l => ({ id: l.id, title: l.title, organization: l.organization, fit_score: l.fit_score, source_label: l.source_label, url: l.url })), networking: { overdueNextSteps: overdueNextSteps.length, overdueItems: overdueNextSteps.slice(0,5), eventsNoNotes }, outreach: { draftsQueued, dueFollowUps: dueCount }, calendarConfig: { setup_complete: calConfig.setup_complete, whitelisted_count: calConfig.whitelisted_calendar_ids.length, whitelisted_names: calConfig.whitelisted_calendar_names }, cronState: loadCronState() });
 });
 
 // --- OUTREACH ---
@@ -589,7 +727,7 @@ app.get('/api/debug', (req, res) => {
   loadDynamic().forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++; });
   const apps = loadApplications(), jb = loadJobBoardLeads(), net = loadNetworking(), calCfg = loadCalConfig();
   const overdueSteps = net.filter(e=>!e.hidden).reduce((n, e) => n + (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).length, 0);
-  res.json({ version: '7.1', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, dueCount, cronState: loadCronState(), todayET: today });
+  res.json({ version: '7.2', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, jobBoardSources: JOB_SOURCES.map(s=>s.name), locationFilter: { allow: LOCATION_ALLOW.source, deny: LOCATION_DENY.source }, dueCount, cronState: loadCronState(), todayET: today });
 });
 
 const SECTOR_EXCLUDE_FROM_TABLE = new Set(['network']);
@@ -686,6 +824,6 @@ app.post('/api/sync', requireAuth, (req, res) => {
   res.json({ ok: true, changed });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.1', cronState: loadCronState(), todayET: todayET() }));
+app.get('/health', (req, res) => res.json({ ok: true, port: PORT, version: '7.2', cronState: loadCronState(), todayET: todayET() }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.1 listening on port ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('HopeSpot v7.2 listening on port ' + PORT));
