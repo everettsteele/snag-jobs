@@ -1010,6 +1010,14 @@ app.get('/api/diag/logs', (req, res) => {
   res.json({ count: _diagLogs.length, logs: _diagLogs });
 });
 
+// Diagnostic: search leads by title substring
+app.get('/api/diag/job-board-search', (req, res) => {
+  const q = (req.query.q || '').toLowerCase();
+  const leads = loadJobBoardLeads();
+  const matches = leads.filter(l => (l.title||'').toLowerCase().includes(q) || (l.organization||'').toLowerCase().includes(q));
+  res.json({ query: q, matches: matches.map(l => ({ id: l.id, title: l.title, organization: l.organization, status: l.status, source: l.source, url: l.url })) });
+});
+
 // Diagnostic: test job board read-modify-write cycle
 app.get('/api/diag/job-board-rwtest', (req, res) => {
   try {
