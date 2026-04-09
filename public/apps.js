@@ -211,7 +211,6 @@ function renderApplications() {
     var noPkgBadge = (app.status==='queued'&&!app.drive_url)
       ? ' <span class="hs-set-drive" data-app-id="'+app.id+'" style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle;cursor:pointer" title="Click to paste Drive URL">NO PKG</span>'
       : '';
-    // Cover letter button — opens a printable HTML page in a new tab
     var clBtn = app.cover_letter_text
       ? '<a href="/api/applications/'+app.id+'/cover-letter?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="View and print cover letter">Cover Letter</a>'
       : '';
@@ -304,13 +303,13 @@ async function _submitAddApp() {
 async function renderJobBoard() {
   var leads = [];
   try {
-    var r = await fetch('/api/job-board', { headers: _authFH() });
+    // Timestamp cache-busts the URL so Safari can't serve a stale response.
+    var r = await fetch('/api/job-board?_=' + Date.now(), { headers: _authFH() });
     if (r.status === 401) { document.getElementById('main-content').innerHTML = '<div class="empty">Auth error. Refresh the page.</div>'; return; }
     leads = await r.json();
     if (!Array.isArray(leads)) leads = [];
   } catch(e) { leads = []; }
 
-  // Only show new leads. Skipped (reviewed) leads are hidden entirely — they just disappear.
   var newLeads = leads.filter(function(l){return l.status==='new';});
   var srcColors = { jewishjobs:'#2563eb', execthread:'#7c3aed', csnetwork:'#d97706', idealist:'#16a34a', builtinatlanta:'#0891b2' };
   var srcSummary = {};
@@ -327,7 +326,7 @@ async function renderJobBoard() {
     var fc = l.fit_score>=7?'#16a34a':l.fit_score>=5?'#d97706':'#6b7280';
     var btns = '<button class="hs-snag-btn" data-lead-id="'+l.id+'" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
              + '<button class="hs-skip-btn" data-lead-id="'+l.id+'" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
-    return '<tr style="border-bottom:1px solid #f3f4f6">'
+    return '<tr data-lead-id="'+l.id+'" style="border-bottom:1px solid #f3f4f6">'
       +'<td style="padding:10px 14px"><div style="font-weight:600;font-size:13px">'+l.title+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px">'+(l.organization||'')+(l.location?' \u00b7 '+l.location:'')+'</div><span style="display:inline-block;margin-top:4px;padding:1px 6px;background:'+sc+'15;color:'+sc+';border-radius:4px;font-size:10px;font-weight:700">'+(l.source_label||l.source)+'</span></td>'
       +'<td style="padding:10px 14px;text-align:center"><span style="font-size:13px;font-weight:700;color:'+fc+'">'+l.fit_score+'/10</span></td>'
       +'<td style="padding:10px 14px;font-size:11px;color:#6b7280">'+l.fit_reason+'</td>'
@@ -351,14 +350,24 @@ async function renderJobBoard() {
   if (badge) badge.textContent = newLeads.length;
 }
 
-// CHANGE 1: Skip now shows a toast and the lead disappears immediately.
-// updateLeadStatus patches the server, toasts "Skipped", then re-renders.
-// Because reviewed leads are filtered out of renderJobBoard, the lead vanishes.
+// updateLeadStatus: checks resp.ok before toasting.
+// If the PATCH fails (404, 401, etc), shows the status code so we can diagnose.
 async function updateLeadStatus(id, status) {
-  try { await fetch('/api/job-board/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify({ status:status }) }); } catch(e) { if(typeof toast==='function') toast('Update failed'); return; }
+  var resp;
+  try {
+    resp = await fetch('/api/job-board/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify({ status:status }) });
+  } catch(e) {
+    if (typeof toast === 'function') toast('Skip failed (network error)');
+    return;
+  }
+  if (!resp || !resp.ok) {
+    if (typeof toast === 'function') toast('Skip failed (HTTP ' + (resp ? resp.status : '?') + ') \u2014 refresh and try again');
+    return;
+  }
   if (typeof toast === 'function') toast('Skipped');
   await renderJobBoard();
 }
+
 async function snagLead(leadId, btn) {
   if (btn) { btn.textContent = 'Snagging...'; btn.disabled = true; }
   try {
@@ -368,9 +377,6 @@ async function snagLead(leadId, btn) {
   } catch(e) { if (typeof toast === 'function') toast('Snag failed'); if (btn) { btn.textContent='Snag'; btn.disabled=false; } }
 }
 
-// CHANGE 2: Crawl is now async on the server side. The button resets immediately
-// after the server acknowledges the request. New leads appear when you navigate
-// away and back to Job Board (or refresh) in 2-3 minutes.
 async function triggerCrawl(btn) {
   if (btn) { btn.textContent='Crawling...'; btn.disabled=true; }
   try {
@@ -603,6 +609,8 @@ window.showAddEventModal = showAddEventModal;
 
 // ================================================================
 // EVENT DELEGATION: Job board Skip / Snag + NO PKG Drive URL paste
+// On Skip: immediately hide the row from the DOM (instant feedback),
+// then fire the PATCH. If PATCH fails, re-render restores the row.
 // ================================================================
 document.addEventListener('click', function(e) {
   var target = e.target;
@@ -610,7 +618,12 @@ document.addEventListener('click', function(e) {
 
   if (target.classList.contains('hs-skip-btn')) {
     var leadId = target.getAttribute('data-lead-id');
-    if (leadId) updateLeadStatus(leadId, 'reviewed');
+    if (leadId) {
+      // Optimistic: hide the row immediately so the user sees instant feedback.
+      var row = target.closest('tr');
+      if (row) row.style.display = 'none';
+      updateLeadStatus(leadId, 'reviewed');
+    }
     return;
   }
 
