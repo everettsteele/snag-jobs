@@ -13,6 +13,11 @@ const APP_STATUSES = {
 
 var _appsData = [], _netData = [], _showHiddenNet = false;
 
+// Tracks lead IDs that have been skipped client-side but whose server PATCH
+// may not have completed yet. Consulted after every renderJobBoard() to ensure
+// a concurrent snag/re-render can't restore a lead the user already dismissed.
+var _skippedLeadIds = new Set();
+
 function _authH() {
   var k = localStorage.getItem('hopespot_apikey');
   if (k) return { 'x-api-key': k, 'Content-Type': 'application/json' };
@@ -300,6 +305,17 @@ async function _submitAddApp() {
 // ================================================================
 // JOB BOARD
 // ================================================================
+
+// After rendering, remove any rows belonging to IDs in _skippedLeadIds.
+// This prevents a concurrent snag/re-render from restoring a lead whose
+// skip PATCH hasn't persisted to the server yet.
+function _purgeSkippedRows() {
+  _skippedLeadIds.forEach(function(id) {
+    var row = document.querySelector('tr[data-lead-id="'+id+'"]');
+    if (row) row.remove();
+  });
+}
+
 async function renderJobBoard() {
   var leads = [];
   try {
@@ -347,10 +363,14 @@ async function renderJobBoard() {
 
   var badge = document.getElementById('badge-jobboard');
   if (badge) badge.textContent = newLeads.length;
+
+  // After rendering, immediately remove any rows whose skip PATCH is still pending.
+  _purgeSkippedRows();
 }
 
-// Skip: fire PATCH to server, then decrement badge. No full re-render.
-// The row is already removed from the DOM by the event delegation handler below.
+// Skip fires PATCH in background. No full re-render.
+// _skippedLeadIds ensures the lead stays gone even if snag triggers a re-render
+// before the PATCH completes.
 async function updateLeadStatus(id, status) {
   var resp;
   try {
@@ -363,7 +383,8 @@ async function updateLeadStatus(id, status) {
     if (typeof toast === 'function') toast('Skip failed (HTTP ' + (resp ? resp.status : '?') + ')');
     return;
   }
-  // PATCH succeeded. Decrement the badge count.
+  // PATCH persisted. Remove from pending set and decrement badge.
+  _skippedLeadIds.delete(id);
   var badge = document.getElementById('badge-jobboard');
   if (badge) {
     var n = parseInt(badge.textContent) || 0;
@@ -613,9 +634,6 @@ window.showAddEventModal = showAddEventModal;
 
 // ================================================================
 // EVENT DELEGATION
-// Skip: stopPropagation prevents the click from bubbling to the tab
-// system and triggering a re-render that puts the lead back.
-// Row is removed from the DOM immediately. PATCH fires in background.
 // ================================================================
 document.addEventListener('click', function(e) {
   var target = e.target;
@@ -625,6 +643,9 @@ document.addEventListener('click', function(e) {
     e.stopPropagation();
     var leadId = target.getAttribute('data-lead-id');
     if (leadId) {
+      // Add to pending-skip set BEFORE removing the row.
+      // This way _purgeSkippedRows() can re-remove it if snag triggers a re-render.
+      _skippedLeadIds.add(leadId);
       var row = target.closest('tr');
       if (row) row.remove();
       updateLeadStatus(leadId, 'reviewed');
