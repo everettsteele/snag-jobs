@@ -245,14 +245,15 @@ function renderApplications() {
     var opts = Object.entries(APP_STATUSES).map(function(e){return '<option value="'+e[0]+'" '+(app.status===e[0]?'selected':'')+'>'+e[1].label+'</option>';}).join('');
 
     // Package links — always show both, disabled style when missing
+    var clUrl = '/api/applications/'+app.id+'/cover-letter?'+_authToken();
     var clBtn = app.cover_letter_text
-      ? '<a href="/api/applications/'+app.id+'/cover-letter?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="View and print cover letter">Cover Letter</a>'
-      : '<span style="display:inline-block;padding:3px 8px;background:#F3F4F6;border-radius:5px;font-size:11px;color:#D1D5DB;margin-right:3px;cursor:default" title="No cover letter yet">Cover Letter</span>';
+      ? '<button onclick="window.open(\''+clUrl.replace(/'/g,"\\'")+'\',\'_blank\')" style="padding:3px 8px;background:#2563eb;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:3px">Cover Letter</button>'
+      : '<span style="display:inline-block;padding:3px 8px;background:#F3F4F6;border-radius:5px;font-size:11px;color:#D1D5DB;margin-right:3px" title="Run Build Queued Packages to generate">Cover Letter</span>';
     var driveBtn = app.drive_url
-      ? '<a href="'+app.drive_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#16a34a;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="Open Drive folder with resume">Resume</a>'
-      : '<span class="hs-set-drive" data-app-id="'+app.id+'" style="display:inline-block;padding:3px 8px;background:#F3F4F6;border-radius:5px;font-size:11px;color:#D1D5DB;margin-right:3px;cursor:pointer" title="Click to paste Drive URL">Resume</span>';
+      ? '<button onclick="window.open(\''+app.drive_url.replace(/'/g,"\\'")+'\',\'_blank\')" style="padding:3px 8px;background:#16a34a;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:3px">Resume</button>'
+      : '<span style="display:inline-block;padding:3px 8px;background:#F3F4F6;border-radius:5px;font-size:11px;color:#D1D5DB;margin-right:3px" title="Run Build Queued Packages to create">Resume</span>';
     var applyBtn = app.source_url
-      ? '<a href="'+app.source_url+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#f97316;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px">Apply</a>'
+      ? '<button onclick="window.open(\''+app.source_url.replace(/'/g,"\\'")+'\',\'_blank\')" style="padding:3px 8px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:3px">Apply</button>'
       : '';
 
     return '<tr style="border-bottom:1px solid #F3F4F6">'
