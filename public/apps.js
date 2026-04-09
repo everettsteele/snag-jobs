@@ -211,7 +211,7 @@ function renderApplications() {
     var noPkgBadge = (app.status==='queued'&&!app.drive_url)
       ? ' <span class="hs-set-drive" data-app-id="'+app.id+'" style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle;cursor:pointer" title="Click to paste Drive URL">NO PKG</span>'
       : '';
-    // Cover letter button — opens a printable HTML page in a new tab (no dependencies)
+    // Cover letter button — opens a printable HTML page in a new tab
     var clBtn = app.cover_letter_text
       ? '<a href="/api/applications/'+app.id+'/cover-letter?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="View and print cover letter">Cover Letter</a>'
       : '';
@@ -230,7 +230,7 @@ function renderApplications() {
         +'<button data-id="'+app.id+'" onclick="_deleteApp(this.dataset.id)" style="padding:3px 8px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#EF4444;font-size:11px;cursor:pointer">&times;</button>'
       +'</td></tr>';
   }).join('');
-  var needsPkgCount = _appsData.filter(function(a){return a.status==='queued'&&!a.drive_url;}).length;
+  var needsPkgCount = _appsData.filter(function(a){return a.status==='queued'&&!a.cover_letter_text;}).length;
   var batchBtn = needsPkgCount > 0
     ? '<button onclick="_batchBuildPackages(this)" style="padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-left:10px">Build Queued Packages</button>'
     : '';
@@ -251,13 +251,13 @@ async function _setDriveUrl(id) {
 }
 
 async function _batchBuildPackages(btn) {
-  var needsCount = _appsData.filter(function(a){return a.status==='queued'&&!a.drive_url;}).length;
-  if (!confirm('Build Drive packages for ' + needsCount + ' queued application' + (needsCount!==1?'s':'') + '? AI will generate cover letters and create Drive folders. Takes 1-2 minutes.')) return;
+  var needsCount = _appsData.filter(function(a){return a.status==='queued'&&!a.cover_letter_text;}).length;
+  if (!confirm('Generate cover letters for ' + needsCount + ' queued application' + (needsCount!==1?'s':'') + '? Takes 2-3 minutes. Cover Letter buttons will appear when done.')) return;
   if (btn) { btn.textContent = 'Building...'; btn.disabled = true; }
   try {
     var r = await (await fetch('/api/applications/batch-packages', { method: 'POST', headers: _authFH() })).json();
     if (r.ok) {
-      if (typeof toast === 'function') toast(r.message || 'Packages building in background. Check back in 2 minutes.', 6000);
+      if (typeof toast === 'function') toast(r.message || 'Cover letters generating in background. Refresh Applications in 3 minutes.', 6000);
     } else {
       if (typeof toast === 'function') toast('Error: ' + (r.error || 'Unknown error'));
     }
@@ -265,7 +265,7 @@ async function _batchBuildPackages(btn) {
     if (typeof toast === 'function') toast('Request failed');
   }
   if (btn) { btn.textContent = 'Build Queued Packages'; btn.disabled = false; }
-  setTimeout(function() { loadApps(); }, 30000);
+  setTimeout(function() { loadApps(); }, 60000);
 }
 
 async function _patchApp(id, body) {
@@ -310,8 +310,8 @@ async function renderJobBoard() {
     if (!Array.isArray(leads)) leads = [];
   } catch(e) { leads = []; }
 
+  // Only show new leads. Skipped (reviewed) leads are hidden entirely — they just disappear.
   var newLeads = leads.filter(function(l){return l.status==='new';});
-  var reviewed = leads.filter(function(l){return l.status==='reviewed';});
   var srcColors = { jewishjobs:'#2563eb', execthread:'#7c3aed', csnetwork:'#d97706', idealist:'#16a34a', builtinatlanta:'#0891b2' };
   var srcSummary = {};
   newLeads.forEach(function(l) { var s = l.source_label||l.source; srcSummary[s] = (srcSummary[s]||0)+1; });
@@ -325,11 +325,8 @@ async function renderJobBoard() {
   function row(l) {
     var sc = srcColors[l.source]||'#6b7280';
     var fc = l.fit_score>=7?'#16a34a':l.fit_score>=5?'#d97706':'#6b7280';
-    var btns = '';
-    if (l.status==='new') {
-      btns = '<button class="hs-snag-btn" data-lead-id="'+l.id+'" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
-           + '<button class="hs-skip-btn" data-lead-id="'+l.id+'" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
-    }
+    var btns = '<button class="hs-snag-btn" data-lead-id="'+l.id+'" style="padding:3px 9px;background:#f97316;border:none;border-radius:5px;font-size:11px;color:#fff;cursor:pointer;margin-right:4px;font-weight:600">Snag</button>'
+             + '<button class="hs-skip-btn" data-lead-id="'+l.id+'" style="padding:3px 7px;background:#f3f4f6;border:none;border-radius:5px;font-size:11px;color:#374151;cursor:pointer">Skip</button>';
     return '<tr style="border-bottom:1px solid #f3f4f6">'
       +'<td style="padding:10px 14px"><div style="font-weight:600;font-size:13px">'+l.title+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px">'+(l.organization||'')+(l.location?' \u00b7 '+l.location:'')+'</div><span style="display:inline-block;margin-top:4px;padding:1px 6px;background:'+sc+'15;color:'+sc+';border-radius:4px;font-size:10px;font-weight:700">'+(l.source_label||l.source)+'</span></td>'
       +'<td style="padding:10px 14px;text-align:center"><span style="font-size:13px;font-weight:700;color:'+fc+'">'+l.fit_score+'/10</span></td>'
@@ -345,21 +342,21 @@ async function renderJobBoard() {
     ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151;margin-bottom:8px">New ('+newLeads.length+') &mdash; Snag to add to Applications</div><div '+tableWrap+'><table style="width:100%;min-width:480px;border-collapse:collapse"><thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb"><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Role</th><th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Fit</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Why</th><th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Found</th><th style="padding:10px 14px"></th></tr></thead><tbody>'+newLeads.map(row).join('')+'</tbody></table></div>'
     : '<div style="color:#9ca3af;font-size:13px;margin-bottom:20px;padding:40px;text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:10px"><div style="margin-bottom:16px">No new leads. Run a crawl to pull from all five sources.</div><button onclick="triggerCrawl(this)" style="padding:8px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button></div>';
 
-  var revHtml = reviewed.length>0
-    ? '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:8px">Skipped ('+reviewed.length+')</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;opacity:.5"><table style="width:100%;min-width:480px;border-collapse:collapse"><tbody>'+reviewed.slice(0,8).map(row).join('')+'</tbody></table></div>'
-    : '';
-
   document.getElementById('main-content').innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-size:22px;font-weight:700">Job Board</div><div style="font-size:13px;color:#9ca3af;margin-top:2px">JewishJobs &middot; ExecThread &middot; CoS Network &middot; Idealist &middot; Built In ATL &middot; Daily 6 AM</div></div><button onclick="triggerCrawl(this)" style="padding:9px 18px;background:#1f2d3d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Crawl Now</button></div>'
     +(srcBadges?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+srcBadges+'</div>':'')
-    +newHtml+revHtml;
+    +newHtml;
 
   var badge = document.getElementById('badge-jobboard');
   if (badge) badge.textContent = newLeads.length;
 }
 
+// CHANGE 1: Skip now shows a toast and the lead disappears immediately.
+// updateLeadStatus patches the server, toasts "Skipped", then re-renders.
+// Because reviewed leads are filtered out of renderJobBoard, the lead vanishes.
 async function updateLeadStatus(id, status) {
   try { await fetch('/api/job-board/'+id, { method:'PATCH', headers:_authH(), body:JSON.stringify({ status:status }) }); } catch(e) { if(typeof toast==='function') toast('Update failed'); return; }
+  if (typeof toast === 'function') toast('Skipped');
   await renderJobBoard();
 }
 async function snagLead(leadId, btn) {
@@ -370,19 +367,17 @@ async function snagLead(leadId, btn) {
     else { if (typeof toast === 'function') toast('Snag failed: '+(r.error||'unknown')); if (btn) { btn.textContent='Snag'; btn.disabled=false; } }
   } catch(e) { if (typeof toast === 'function') toast('Snag failed'); if (btn) { btn.textContent='Snag'; btn.disabled=false; } }
 }
+
+// CHANGE 2: Crawl is now async on the server side. The button resets immediately
+// after the server acknowledges the request. New leads appear when you navigate
+// away and back to Job Board (or refresh) in 2-3 minutes.
 async function triggerCrawl(btn) {
   if (btn) { btn.textContent='Crawling...'; btn.disabled=true; }
   try {
     var r = await (await fetch('/api/job-board/crawl', { method:'POST', headers:_authFH() })).json();
-    var newCount = r.newLeads || 0;
-    var stats = r.sourceStats || {};
-    var statSummary = Object.entries(stats).map(function(e){
-      var src=e[0],s=e[1];
-      return src+': '+s.added+' added'+(s.filteredByLocation?' ('+s.filteredByLocation+' filtered)':'');
-    }).join(' | ');
-    if (typeof toast === 'function') toast(newCount+' new lead'+(newCount!==1?'s':'')+' found' + (statSummary ? ' \u2014 '+statSummary : ''), 6000);
+    if (typeof toast === 'function') toast(r.message || 'Crawl started. Check back in 2-3 minutes for new leads.', 5000);
     await renderJobBoard();
-  } catch(e) { if (typeof toast === 'function') toast('Crawl failed \u2014 check Railway logs'); console.error('[crawl]', e); }
+  } catch(e) { if (typeof toast === 'function') toast('Crawl failed \u2014 check Railway logs'); }
   if (btn) { btn.textContent='Crawl Now'; btn.disabled=false; }
 }
 
