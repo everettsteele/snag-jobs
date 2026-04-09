@@ -597,8 +597,6 @@ app.post('/api/applications/email-sync', requireAuth, (req, res) => {
 });
 
 // --- COVER LETTER HTML PRINT PAGE ---
-// No external dependencies. Opens a formatted page in a new tab.
-// User prints to PDF with Ctrl+P. The print dialog auto-opens.
 app.get('/api/applications/:id/cover-letter', requireAuth, (req, res) => {
   const apps = loadApplications();
   const appRecord = apps.find(a => a.id === req.params.id);
@@ -663,22 +661,22 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   const apps = loadApplications();
-  const targets = apps.filter(a => a.status === 'queued' && !a.drive_url && a.source_url);
-  if (!targets.length) return res.json({ ok: true, built: 0, message: 'No queued applications need packages' });
+  const targets = apps.filter(a => a.status === 'queued' && !a.cover_letter_text);
+  if (!targets.length) return res.json({ ok: true, built: 0, message: 'No queued applications need cover letters' });
 
-  res.json({ ok: true, queued: targets.length, message: `Building ${targets.length} packages in background. Check /api/applications for progress.` });
+  res.json({ ok: true, queued: targets.length, message: `Generating ${targets.length} cover letters in background. Check back in 2-3 minutes.` });
 
   setImmediate(async () => {
     let built = 0, failed = 0;
     for (const appRec of targets) {
       try {
-        console.log(`[batch-packages] Building package for ${appRec.company} \u2014 ${appRec.role}`);
+        console.log(`[batch-packages] Generating cover letter for ${appRec.company} \u2014 ${appRec.role}`);
 
-        const jdText = await fetchJobDescription(appRec.source_url);
+        // Try to fetch the JD. If it fails (e.g. LinkedIn blocks scraping), fall back to role/company info.
+        let jdText = await fetchJobDescription(appRec.source_url);
         if (!jdText || jdText.length < 50) {
-          console.log(`[batch-packages] Could not fetch JD for ${appRec.company}`);
-          failed++;
-          continue;
+          console.log(`[batch-packages] JD unavailable for ${appRec.company} (likely LinkedIn/blocked) \u2014 using role info only`);
+          jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
         }
 
         const coverLetter = await generateCoverLetterForApp(appRec, jdText);
@@ -688,47 +686,50 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
           continue;
         }
 
-        const response = await postToAppsScript(webhookUrl, {
-          folderName: `${appRec.company} - ${appRec.role}`,
-          variant: 'operator',
-          coverLetterText: coverLetter,
-          company: appRec.company,
-          role: appRec.role
-        });
-        const text = await response.text();
-        let result;
-        try { result = JSON.parse(text); } catch(e) { console.log(`[batch-packages] Non-JSON response for ${appRec.company}: ${text.slice(0,200)}`); failed++; continue; }
-
-        console.log(`[batch-packages] Apps Script response for ${appRec.company}:`, JSON.stringify(result));
-
-        if (!result.ok) {
-          console.log(`[batch-packages] Drive webhook failed for ${appRec.company}: ${result.error}`);
-          failed++;
-          continue;
-        }
-
-        const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
-        if (!folderUrl) {
-          console.log(`[batch-packages] No folder URL in response for ${appRec.company}. Keys: ${Object.keys(result).join(', ')}`);
-          failed++;
-          continue;
-        }
-
+        // Save the cover letter text to the application record.
+        // Drive package creation is separate (only if DRIVE_WEBHOOK_URL is set and source_url is fetchable).
         const allApps = loadApplications();
         const idx = allApps.findIndex(a => a.id === appRec.id);
         if (idx >= 0) {
           const today = todayET();
-          allApps[idx].drive_url = folderUrl;
-          allApps[idx].drive_folder_id = result.folderId || '';
           allApps[idx].cover_letter_text = coverLetter;
           allApps[idx].last_activity = today;
-          (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + folderUrl });
+
+          // Attempt Drive package only if we have a real JD (non-LinkedIn sources)
+          if (webhookUrl && appRec.source_url && !appRec.drive_url) {
+            try {
+              const response = await postToAppsScript(webhookUrl, {
+                folderName: `${appRec.company} - ${appRec.role}`,
+                variant: 'operator',
+                coverLetterText: coverLetter,
+                company: appRec.company,
+                role: appRec.role
+              });
+              const text = await response.text();
+              let result;
+              try { result = JSON.parse(text); } catch(e) { result = null; }
+              if (result && result.ok) {
+                const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
+                if (folderUrl) {
+                  allApps[idx].drive_url = folderUrl;
+                  allApps[idx].drive_folder_id = result.folderId || '';
+                  (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + folderUrl });
+                  console.log(`[batch-packages] Drive package created for ${appRec.company}: ${folderUrl}`);
+                }
+              } else {
+                console.log(`[batch-packages] Drive package skipped for ${appRec.company}: ${result ? result.error : 'parse error'}`);
+              }
+            } catch(driveErr) {
+              console.log(`[batch-packages] Drive package error for ${appRec.company}: ${driveErr.message}`);
+            }
+          }
+
           saveApplications(allApps);
-          console.log(`[batch-packages] Saved drive_url for ${appRec.company}: ${folderUrl}`);
+          console.log(`[batch-packages] Cover letter saved for ${appRec.company}`);
         }
 
         built++;
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 2000));
 
       } catch(err) {
         console.error(`[batch-packages] Error for ${appRec.company}: ${err.message}`);
@@ -785,11 +786,14 @@ app.post('/api/job-board/snag', requireAuth, (req, res) => {
   leads[li].status = 'snagged'; leads[li].snagged_app_id = newApp.id; saveJobBoardLeads(leads);
   res.json({ ok: true, application: newApp });
 });
-app.post('/api/job-board/crawl', requireAuth, async (req, res) => {
-  try {
-    const result = await crawlJobBoards();
-    res.json({ ok: true, newLeads: result.leads.length, sourceStats: result.sourceStats });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+
+// CHANGE 3: Crawl is now async — responds immediately so the button doesn't freeze.
+// Results appear when user navigates away and back to Job Board.
+app.post('/api/job-board/crawl', requireAuth, (req, res) => {
+  res.json({ ok: true, newLeads: null, message: 'Crawl running in background. Come back in 2-3 minutes and the Job Board will have new leads.' });
+  crawlJobBoards().then(result => {
+    console.log(`[crawl] Done. Added ${result.leads.length} new leads.`);
+  }).catch(e => console.error('[crawl error]', e.message));
 });
 
 // --- NETWORKING ---
@@ -940,7 +944,7 @@ app.get('/api/debug', (req, res) => {
   loadDynamic().forEach(item => { if (item.status === 'contacted' && item.followup_date && item.followup_date <= today && item.is_job_search !== false) dueCount++; });
   const apps = loadApplications(), jb = loadJobBoardLeads(), net = loadNetworking(), calCfg = loadCalConfig();
   const overdueSteps = net.filter(e=>!e.hidden).reduce((n, e) => n + (e.next_steps||[]).filter(ns => !ns.done && ns.due_date && ns.due_date <= today).length, 0);
-  res.json({ version: '7.6', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, anthropicConfigured: !!process.env.ANTHROPIC_API_KEY, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, jobBoardSources: JOB_SOURCES.map(s=>s.name), locationFilter: { allow: LOCATION_ALLOW.source, deny_states: LOCATION_DENY_STATES.source }, dueCount, cronState: loadCronState(), todayET: today });
+  res.json({ version: '7.6', seedCounts: { firms: readSeed('firms').length, ceos: readSeed('ceos').length, vcs: readSeed('vcs').length }, dynamicCount: loadDynamic().length, applicationCount: apps.length, applicationsByStatus: apps.reduce((acc,a) => { acc[a.status]=(acc[a.status]||0)+1; return acc; }, {}), applicationsWithDrive: apps.filter(a => a.drive_url).length, applicationsNeedPackage: apps.filter(a => a.status==='queued' && !a.drive_url).length, applicationsWithCoverLetter: apps.filter(a => a.cover_letter_text).length, jobBoardLeads: jb.length, jobBoardNew: jb.filter(l => l.status==='new').length, jobBoardSnagged: jb.filter(l => l.status==='snagged').length, networkingEvents: net.length, networkingVisible: net.filter(e=>!e.hidden).length, networkingHidden: net.filter(e=>e.hidden).length, networkingOverdueSteps: overdueSteps, calendarConfig: { setup_complete: calCfg.setup_complete, whitelisted_count: calCfg.whitelisted_calendar_ids.length }, driveConfigured: !!process.env.DRIVE_WEBHOOK_URL, anthropicConfigured: !!process.env.ANTHROPIC_API_KEY, overrideCounts: { firms: Object.keys(ov.firms||{}).length, ceos: Object.keys(ov.ceos||{}).length, vcs: Object.keys(ov.vcs||{}).length }, draftCounts: { firms: getDB('firms').filter(x=>x.status==='draft').length, ceos: getDB('ceos').filter(x=>x.status==='draft').length, vcs: getDB('vcs').filter(x=>x.status==='draft').length }, jobBoardSources: JOB_SOURCES.map(s=>s.name), locationFilter: { allow: LOCATION_ALLOW.source, deny_states: LOCATION_DENY_STATES.source }, dueCount, cronState: loadCronState(), todayET: today });
 });
 
 const SECTOR_EXCLUDE_FROM_TABLE = new Set(['network']);
