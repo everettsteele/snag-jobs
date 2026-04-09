@@ -698,36 +698,40 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
   if (!webhookUrl) return res.status(503).json({ error: 'DRIVE_WEBHOOK_URL not configured' });
   if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
   const apps = loadApplications();
-  const targets = apps.filter(a => a.status === 'queued' && !a.cover_letter_text);
-  if (!targets.length) return res.json({ ok: true, built: 0, message: 'No queued applications need cover letters' });
-  res.json({ ok: true, queued: targets.length, message: `Generating ${targets.length} cover letters in background. Check back in 2-3 minutes.` });
+  const targets = apps.filter(a => a.status === 'queued' && (!a.cover_letter_text || !a.drive_url));
+  if (!targets.length) return res.json({ ok: true, built: 0, message: 'All queued applications already have complete packages' });
+  res.json({ ok: true, queued: targets.length, message: `Building packages for ${targets.length} applications in background. Check back in 2-3 minutes.` });
   setImmediate(async () => {
     let built = 0, failed = 0;
     for (const appRec of targets) {
       try {
-        let jdText = await fetchJobDescription(appRec.source_url);
-        if (!jdText || jdText.length < 50) jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
-        const coverLetter = await generateCoverLetterForApp(appRec, jdText);
-        if (!coverLetter || coverLetter.length < 50) { failed++; continue; }
         const allApps = loadApplications();
         const idx = allApps.findIndex(a => a.id === appRec.id);
-        if (idx >= 0) {
-          const today = todayET();
+        if (idx < 0) continue;
+        const today = todayET();
+        let coverLetter = allApps[idx].cover_letter_text;
+        // Phase 1: Generate cover letter if missing
+        if (!coverLetter) {
+          let jdText = await fetchJobDescription(appRec.source_url);
+          if (!jdText || jdText.length < 50) jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
+          coverLetter = await generateCoverLetterForApp(appRec, jdText);
+          if (!coverLetter || coverLetter.length < 50) { failed++; continue; }
           allApps[idx].cover_letter_text = coverLetter;
           allApps[idx].last_activity = today;
-          if (webhookUrl && appRec.source_url && !appRec.drive_url) {
-            try {
-              const response = await postToAppsScript(webhookUrl, { folderName: `${appRec.company} - ${appRec.role}`, variant: 'operator', coverLetterText: coverLetter, company: appRec.company, role: appRec.role });
-              const text = await response.text();
-              let result; try { result = JSON.parse(text); } catch(e) { result = null; }
-              if (result && result.ok) {
-                const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
-                if (folderUrl) { allApps[idx].drive_url = folderUrl; allApps[idx].drive_folder_id = result.folderId || ''; (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + folderUrl }); }
-              }
-            } catch(driveErr) { console.log(`[batch-packages] Drive error for ${appRec.company}: ${driveErr.message}`); }
-          }
-          saveApplications(allApps);
         }
+        // Phase 2: Create Drive folder if missing
+        if (webhookUrl && !allApps[idx].drive_url) {
+          try {
+            const response = await postToAppsScript(webhookUrl, { folderName: `${appRec.company} - ${appRec.role}`, variant: 'operator', coverLetterText: coverLetter, company: appRec.company, role: appRec.role });
+            const text = await response.text();
+            let result; try { result = JSON.parse(text); } catch(e) { result = null; }
+            if (result && result.ok) {
+              const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
+              if (folderUrl) { allApps[idx].drive_url = folderUrl; allApps[idx].drive_folder_id = result.folderId || ''; (allApps[idx].activity = allApps[idx].activity||[]).push({ date: today, type: 'package_created', note: 'Auto-built: ' + folderUrl }); }
+            }
+          } catch(driveErr) { console.log(`[batch-packages] Drive error for ${appRec.company}: ${driveErr.message}`); }
+        }
+        saveApplications(allApps);
         built++;
         await new Promise(r => setTimeout(r, 2000));
       } catch(err) { console.error(`[batch-packages] Error for ${appRec.company}: ${err.message}`); failed++; }

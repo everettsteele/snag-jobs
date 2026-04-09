@@ -252,7 +252,7 @@ function renderApplications() {
         +'<button data-id="'+app.id+'" onclick="_deleteApp(this.dataset.id)" style="padding:3px 8px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#EF4444;font-size:11px;cursor:pointer">&times;</button>'
       +'</td></tr>';
   }).join('');
-  var needsPkgCount = _appsData.filter(function(a){return a.status==='queued'&&!a.cover_letter_text;}).length;
+  var needsPkgCount = _appsData.filter(function(a){return a.status==='queued'&&(!a.cover_letter_text||!a.drive_url);}).length;
   var batchBtn = needsPkgCount > 0
     ? '<button onclick="_batchBuildPackages(this)" style="padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-left:10px">Build Queued Packages</button>'
     : '';
@@ -273,8 +273,8 @@ async function _setDriveUrl(id) {
 }
 
 async function _batchBuildPackages(btn) {
-  var needsCount = _appsData.filter(function(a){return a.status==='queued'&&!a.cover_letter_text;}).length;
-  if (!confirm('Generate cover letters for ' + needsCount + ' queued application' + (needsCount!==1?'s':'') + '? Takes 2-3 minutes. Cover Letter buttons will appear when done.')) return;
+  var needsCount = _appsData.filter(function(a){return a.status==='queued'&&(!a.cover_letter_text||!a.drive_url);}).length;
+  if (!confirm('Build packages for ' + needsCount + ' queued application' + (needsCount!==1?'s':'') + '? Generates cover letters and Drive folders. Takes 2-3 minutes.')) return;
   if (btn) { btn.textContent = 'Building...'; btn.disabled = true; }
   try {
     var r = await (await fetch('/api/applications/batch-packages', { method: 'POST', headers: _authFH() })).json();
