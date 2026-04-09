@@ -171,18 +171,14 @@ function bootSeedApplications() {
 // COVER LETTER GENERATION
 // ================================================================
 
-// Strip any preamble/meta-commentary that Claude may have added before the actual letter.
-// Handles "--- " separators and lines that start with meta phrases.
 function cleanCoverLetterText(raw) {
   if (!raw) return '';
   let text = raw.trim();
-  // Strip everything before a --- separator if present
   const sepIdx = text.indexOf('---');
   if (sepIdx > -1) {
     const afterSep = text.slice(sepIdx + 3).trim();
     if (afterSep.length > 100) text = afterSep;
   }
-  // Strip leading lines that look like meta-commentary (not part of the letter)
   const metaPatterns = [
     /^the job description/i,
     /^i(?:'m| am) working with/i,
@@ -196,12 +192,10 @@ function cleanCoverLetterText(raw) {
   let startIdx = 0;
   while (startIdx < lines.length && metaPatterns.some(p => p.test(lines[startIdx].trim()))) startIdx++;
   text = lines.slice(startIdx).join('\n').trim();
-  // Remove markdown bold/italic markers
   text = text.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
   return text;
 }
 
-// Cover letter system prompt — explicit: no preamble, no notes, start with the letter
 const COVER_LETTER_SYSTEM = `You are writing a cover letter for Everett Steele, a senior executive and veteran.
 
 CRITICAL OUTPUT RULES:
@@ -424,7 +418,7 @@ async function crawlJobBoards() {
 
             if (!passesLocationFilter(location)) {
               filteredByLocation++;
-              console.log(`[${source.name}] Filtered by location: "${location}" — ${title}`);
+              console.log(`[${source.name}] Filtered by location: "${location}" \u2014 ${title}`);
               await new Promise(r => setTimeout(r, 300));
               continue;
             }
@@ -453,7 +447,7 @@ async function crawlJobBoards() {
     }
 
     sourceStats[source.name] = { urlsFound, urlsAttempted, added: srcLeads.length, filteredByLocation, filteredByScore };
-    console.log(`[${source.name}] done — added: ${srcLeads.length}, locationFiltered: ${filteredByLocation}, scoredOut: ${filteredByScore}`);
+    console.log(`[${source.name}] done \u2014 added: ${srcLeads.length}, locationFiltered: ${filteredByLocation}, scoredOut: ${filteredByScore}`);
     allNew.push(...srcLeads);
   }
 
@@ -477,7 +471,7 @@ setInterval(() => {
 
 setTimeout(bootCheck, 3000);
 setTimeout(bootSeedApplications, 4000);
-console.log(`HopeSpot v7.6 — seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
+console.log(`HopeSpot v7.6 \u2014 seeds:${readSeed('firms').length}f/${readSeed('ceos').length}c/${readSeed('vcs').length}v`);
 
 const sessions = new Set();
 function requireAuth(req, res, next) {
@@ -602,51 +596,64 @@ app.post('/api/applications/email-sync', requireAuth, (req, res) => {
   saveApplications(apps); res.json({ ok: true, changed });
 });
 
-// --- COVER LETTER PDF DOWNLOAD ---
-// Generates a properly formatted PDF directly from the stored cover letter text.
-// No Google Docs involved. Direct download from the browser.
-app.get('/api/applications/:id/cover-letter.pdf', requireAuth, (req, res) => {
+// --- COVER LETTER HTML PRINT PAGE ---
+// No external dependencies. Opens a formatted page in a new tab.
+// User prints to PDF with Ctrl+P. The print dialog auto-opens.
+app.get('/api/applications/:id/cover-letter', requireAuth, (req, res) => {
   const apps = loadApplications();
   const appRecord = apps.find(a => a.id === req.params.id);
-  if (!appRecord) return res.status(404).json({ error: 'Application not found' });
+  if (!appRecord) return res.status(404).send('Application not found.');
   if (!appRecord.cover_letter_text) return res.status(404).send('No cover letter has been generated for this application yet.');
 
-  let PDFDocument;
-  try { PDFDocument = require('pdfkit'); } catch(e) { return res.status(500).send('PDF generation not available. pdfkit not installed.'); }
-
-  const doc = new PDFDocument({ margin: 72, size: 'LETTER' });
-  const filename = `${appRecord.company.replace(/[^a-zA-Z0-9 ]/g, '')} Cover Letter.pdf`;
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.setHeader('Cache-Control', 'no-store');
-  doc.pipe(res);
-
-  // Header
-  doc.font('Helvetica-Bold').fontSize(13).text('EVERETT STEELE', { align: 'center' });
-  doc.moveDown(0.3);
-  doc.font('Helvetica').fontSize(10).text(
-    'everett.steele@gmail.com  |  678.899.3971  |  linkedin.com/in/everettsteeleATL  |  Atlanta, GA',
-    { align: 'center' }
-  );
-
-  doc.moveDown(1.5);
-
-  // Date
-  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  doc.font('Helvetica').fontSize(11).text(dateStr);
-  doc.moveDown(0.5);
-  doc.text(appRecord.company);
-  doc.moveDown(1.2);
-
-  // Letter body — split into paragraphs
   const letterText = cleanCoverLetterText(appRecord.cover_letter_text);
   const paragraphs = letterText.split(/\n{2,}/).map(p => p.replace(/\n/g, ' ').trim()).filter(p => p.length > 0);
-  paragraphs.forEach((para, i) => {
-    doc.font('Helvetica').fontSize(11).text(para, { align: 'justify', lineGap: 3 });
-    if (i < paragraphs.length - 1) doc.moveDown(1);
-  });
+  const paragraphsHtml = paragraphs.map(p => `<p>${p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('\n');
 
-  doc.end();
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const companyEsc = (appRecord.company||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${companyEsc} Cover Letter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; background: #fff; }
+  .page { max-width: 8in; margin: 0 auto; padding: 1in; }
+  .header { text-align: center; margin-bottom: 32pt; }
+  .header h1 { font-size: 14pt; font-weight: bold; letter-spacing: 1px; margin-bottom: 6pt; }
+  .header .contact { font-size: 10pt; color: #333; }
+  .date { margin-bottom: 10pt; }
+  .company { margin-bottom: 24pt; }
+  p { margin-bottom: 12pt; line-height: 1.6; text-align: justify; }
+  .no-print { position: fixed; top: 16px; right: 16px; padding: 10px 20px; background: #1f2d3d; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: sans-serif; }
+  @media print {
+    .no-print { display: none; }
+    body { font-size: 12pt; }
+    .page { padding: 0; max-width: 100%; }
+    @page { margin: 1in; size: letter; }
+  }
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="page">
+  <div class="header">
+    <h1>EVERETT STEELE</h1>
+    <div class="contact">everett.steele@gmail.com &nbsp;|&nbsp; 678.899.3971 &nbsp;|&nbsp; linkedin.com/in/everettsteeleATL &nbsp;|&nbsp; Atlanta, GA</div>
+  </div>
+  <div class="date">${dateStr}</div>
+  <div class="company">${companyEsc}</div>
+  ${paragraphsHtml}
+</div>
+<script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });<\/script>
+</body>
+</html>`;
+
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
+  res.send(html);
 });
 
 // --- BATCH PACKAGE BUILDER ---
@@ -665,7 +672,7 @@ app.post('/api/applications/batch-packages', requireAuth, async (req, res) => {
     let built = 0, failed = 0;
     for (const appRec of targets) {
       try {
-        console.log(`[batch-packages] Building package for ${appRec.company} — ${appRec.role}`);
+        console.log(`[batch-packages] Building package for ${appRec.company} \u2014 ${appRec.role}`);
 
         const jdText = await fetchJobDescription(appRec.source_url);
         if (!jdText || jdText.length < 50) {
