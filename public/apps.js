@@ -24,7 +24,6 @@ function _authFH() {
   return { 'x-auth-token': localStorage.getItem('hopespot_token') || '' };
 }
 function _authToken() {
-  // Returns auth token for use in query params (for direct link downloads)
   var k = localStorage.getItem('hopespot_apikey');
   if (k) return 'apikey=' + encodeURIComponent(k);
   var t = localStorage.getItem('hopespot_token') || '';
@@ -209,13 +208,12 @@ function renderApplications() {
     var lat = (app.activity||[]).slice(-1)[0];
     var actHtml = lat ? '<span style="font-size:11px;color:#9CA3AF">'+lat.date+': '+(lat.note||lat.type)+'</span>' : '';
     var opts = Object.entries(APP_STATUSES).map(function(e){return '<option value="'+e[0]+'" '+(app.status===e[0]?'selected':'')+'>'+e[1].label+'</option>';}).join('');
-    // NO PKG badge is clickable to paste Drive URL
     var noPkgBadge = (app.status==='queued'&&!app.drive_url)
       ? ' <span class="hs-set-drive" data-app-id="'+app.id+'" style="font-size:9px;background:#FEF2F2;color:#EF4444;padding:1px 5px;border-radius:3px;vertical-align:middle;cursor:pointer" title="Click to paste Drive URL">NO PKG</span>'
       : '';
-    // Cover letter PDF download — direct link, no Google Docs needed
+    // Cover letter button — opens a printable HTML page in a new tab (no dependencies)
     var clBtn = app.cover_letter_text
-      ? '<a href="/api/applications/'+app.id+'/cover-letter.pdf?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="Download cover letter PDF">Cover Letter</a>'
+      ? '<a href="/api/applications/'+app.id+'/cover-letter?'+_authToken()+'" target="_blank" style="display:inline-block;padding:3px 8px;background:#2563eb;border-radius:5px;font-size:11px;color:#fff;text-decoration:none;margin-right:3px" title="View and print cover letter">Cover Letter</a>'
       : '';
     return '<tr style="border-bottom:1px solid #F3F4F6">'
       +'<td style="padding:10px 0;font-weight:600;font-size:13px">'+app.company+noPkgBadge+'</td>'
@@ -324,7 +322,6 @@ async function renderJobBoard() {
     return '<span style="padding:3px 10px;background:'+c+'15;color:'+c+';border-radius:10px;font-size:11px;font-weight:600;border:1px solid '+c+'30">'+n+' '+s+'</span>';
   }).join('');
 
-  // Buttons use data-action + data-lead-id only; event delegation handles clicks (no inline onclick)
   function row(l) {
     var sc = srcColors[l.source]||'#6b7280';
     var fc = l.fit_score>=7?'#16a34a':l.fit_score>=5?'#d97706':'#6b7280';
@@ -611,27 +608,23 @@ window.showAddEventModal = showAddEventModal;
 
 // ================================================================
 // EVENT DELEGATION: Job board Skip / Snag + NO PKG Drive URL paste
-// Handles all dynamically rendered interactive elements without inline onclick
 // ================================================================
 document.addEventListener('click', function(e) {
   var target = e.target;
   if (!target) return;
 
-  // Skip button on job board
   if (target.classList.contains('hs-skip-btn')) {
     var leadId = target.getAttribute('data-lead-id');
     if (leadId) updateLeadStatus(leadId, 'reviewed');
     return;
   }
 
-  // Snag button on job board
   if (target.classList.contains('hs-snag-btn')) {
     var leadId = target.getAttribute('data-lead-id');
     if (leadId) snagLead(leadId, target);
     return;
   }
 
-  // NO PKG badge on applications: click to paste Drive URL
   if (target.classList.contains('hs-set-drive')) {
     var appId = target.getAttribute('data-app-id');
     if (appId) _setDriveUrl(appId);
