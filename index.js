@@ -148,13 +148,19 @@ function saveCronState(s) { try { fs.writeFileSync(CRON_STATE_PATH, JSON.stringi
 
 async function postToAppsScript(url, body) {
   const payload = JSON.stringify(body), headers = { 'Content-Type': 'application/json' };
-  const init = await fetch(url, { method: 'POST', headers, body: payload, redirect: 'manual', signal: AbortSignal.timeout(15000) });
-  if (init.status >= 300 && init.status < 400) {
-    const loc = init.headers.get('location');
+  // Google Apps Script Web Apps: POST executes doPost(), then 302 redirects
+  // to a result URL. The redirect must be followed with GET (not POST).
+  // We may need to follow multiple redirects (Google account routing).
+  let resp = await fetch(url, { method: 'POST', headers, body: payload, redirect: 'manual', signal: AbortSignal.timeout(15000) });
+  let hops = 0;
+  while (resp.status >= 300 && resp.status < 400 && hops < 5) {
+    const loc = resp.headers.get('location');
     if (!loc) throw new Error('Redirect with no Location');
-    return fetch(loc, { method: 'POST', headers, body: payload, signal: AbortSignal.timeout(30000) });
+    diagLog('WEBHOOK redirect ' + resp.status + ' -> ' + loc.slice(0, 120));
+    resp = await fetch(loc, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+    hops++;
   }
-  return init;
+  return resp;
 }
 
 const DAILY_TARGET = 15, SLA_TARGET = 10, PILLARS = ['firms', 'ceos', 'vcs'];
