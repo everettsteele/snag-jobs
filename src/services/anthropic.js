@@ -143,6 +143,35 @@ async function generateCoverLetter(appRecord, jdText, userProfile) {
   return cleanCoverLetterText(raw);
 }
 
+// ================================================================
+// generateEmailDraft — cold outreach emails (recruiter/CEO/VC)
+// ================================================================
+
+async function generateEmailDraft({ recipientName, company, recipientRole, type, senderContext }) {
+  const client = getClient();
+
+  const typePrompts = {
+    recruiter: `Write a cold outreach email to a recruiter at ${company}. Under 100 words. Open with a direct value statement, not a greeting question. Reference their company specifically. Include one specific achievement. End with a clear ask for a brief call. Conversational but professional. No "I hope this finds you well."`,
+    ceo: `Write a cold outreach email to ${recipientName}, ${recipientRole || 'CEO'} at ${company}. Direct CEO outreach from a senior operations candidate. Under 80 words. Open with something specific about the company. One-line value statement. Direct ask. Founder-to-founder tone.`,
+    vc: `Write a cold outreach email to ${recipientName} at ${company} VC firm. The sender is a SaaS operations executive exploring COO and President roles at portfolio companies. Under 80 words. Lead with the firm's portfolio focus. One specific operations achievement. Ask if they have relevant portcos in search.`,
+  };
+
+  const prompt = `${typePrompts[type] || typePrompts.recruiter}
+
+SENDER BACKGROUND:
+${senderContext || 'Senior operations executive with experience scaling startups and enterprise organizations.'}
+
+RECIPIENT: ${recipientName}${recipientRole ? ', ' + recipientRole : ''} at ${company}`;
+
+  const resp = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 300,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  return resp.content?.[0]?.text || '';
+}
+
 async function fetchJobDescription(url) {
   try {
     const resp = await fetch(url, {
@@ -166,5 +195,6 @@ module.exports = {
   cleanCoverLetterText,
   selectResumeVariant,
   generateCoverLetter,
+  generateEmailDraft,
   fetchJobDescription,
 };

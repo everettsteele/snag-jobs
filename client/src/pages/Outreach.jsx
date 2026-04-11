@@ -196,6 +196,7 @@ export default function OutreachPage() {
 }
 
 function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
+  const { toast } = useToast();
   const name = item[config.nameKey] || item.name || 'Unknown';
   const status = item[config.statusKey] || 'draft';
   const statusColor = STATUS_COLORS[status] || 'bg-gray-400';
@@ -207,6 +208,30 @@ function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
   const [followupDate, setFollowupDate] = useState(
     item.followup_date || item.follow_up_date || ''
   );
+  const [drafting, setDrafting] = useState(false);
+
+  const typeMap = { recruiters: 'recruiter', ceos: 'ceo', vcs: 'vc' };
+
+  const handleDraftEmail = async () => {
+    const contactName = item.contact_name || (item.contacts?.[0]?.name) || name;
+    const company = item.company_name || name;
+    const contactRole = item.contact_title || (item.contacts?.[0]?.title) || '';
+    setDrafting(true);
+    try {
+      const data = await api.post('/draft-email', {
+        recipientName: contactName,
+        company,
+        recipientRole: contactRole,
+        type: typeMap[pillar] || 'recruiter',
+      });
+      setNotes((prev) => (prev ? prev + '\n\n--- AI Draft ---\n' + data.draft : data.draft));
+      toast('Email draft generated');
+    } catch (err) {
+      toast(err.message || 'Failed to generate draft', 'error');
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   const handleSave = () => {
     const fields = {};
@@ -328,8 +353,15 @@ function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end">
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={handleDraftEmail}
+              disabled={drafting}
+              className="bg-[#1F2D3D] hover:bg-[#2C3E50] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {drafting ? 'Drafting...' : 'Draft Email'}
+            </button>
             <button
               onClick={handleSave}
               className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors cursor-pointer"

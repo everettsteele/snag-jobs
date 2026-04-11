@@ -462,6 +462,54 @@ router.post('/cron/run', requireAuth, cronLimiter, async (req, res) => {
   res.json({ ok: true, ...(await runDailyCron()) });
 });
 
+// ================================================================
+// Email draft generation for outreach contacts
+// ================================================================
+router.post('/draft-email', requireAuth, async (req, res) => {
+  const { recipientName, company, recipientRole, type } = req.body;
+  if (!recipientName || !company) return res.status(400).json({ error: 'recipientName and company required' });
+
+  try {
+    const { generateEmailDraft } = require('../services/anthropic');
+    const { query: dbQuery } = require('../db/pool');
+
+    // Get user's background for sender context
+    let senderContext = '';
+    try {
+      const { rows } = await dbQuery(
+        `SELECT background_text FROM user_profiles WHERE user_id = $1`,
+        [req.user.id]
+      );
+      senderContext = rows[0]?.background_text || '';
+    } catch (e) {}
+
+    // If no background, try to get parsed resume text
+    if (!senderContext) {
+      try {
+        const { rows } = await dbQuery(
+          `SELECT parsed_text FROM resume_variants WHERE user_id = $1 AND is_default = true LIMIT 1`,
+          [req.user.id]
+        );
+        senderContext = rows[0]?.parsed_text || '';
+      } catch (e) {}
+    }
+
+    const draft = await generateEmailDraft({
+      recipientName,
+      company,
+      recipientRole: recipientRole || '',
+      type: type || 'recruiter',
+      senderContext,
+    });
+
+    res.json({ draft });
+  } catch (e) {
+    console.error('[draft-email]', e.message);
+    if (e.message.includes('ANTHROPIC_API_KEY')) return res.status(503).json({ error: 'AI not configured' });
+    res.status(500).json({ error: 'Failed to generate email draft' });
+  }
+});
+
 module.exports = router;
 module.exports.getDB = getDB;
 module.exports.orgName = orgName;
