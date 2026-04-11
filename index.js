@@ -606,6 +606,9 @@ function requireAuth(req, res, next) {
   if (!PASSWORD) return next();
   if (API_KEY) {
     const hk = req.headers['x-api-key'] || (req.headers['authorization']||'').replace('Bearer ','').trim();
+    if (hk) {
+      console.log('[AUTH] key check: received=' + JSON.stringify(hk) + ' expected=' + JSON.stringify(API_KEY) + ' match=' + (hk === API_KEY));
+    }
     if (hk && hk === API_KEY) return next();
   }
   if (sessions.has(req.headers['x-auth-token'] || req.query.token)) return next();
