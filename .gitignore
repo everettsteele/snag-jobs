@@ -1,4 +1,5 @@
 node_modules/
+dist/
 .env
 data/overrides.json
 data/cron_state.json

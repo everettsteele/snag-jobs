@@ -1,0 +1,23 @@
+{
+  "name": "HopeSpot",
+  "short_name": "HopeSpot",
+  "description": "Executive job search, organized.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1F2D3D",
+  "theme_color": "#F97316",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

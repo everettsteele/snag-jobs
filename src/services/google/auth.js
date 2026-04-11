@@ -3,10 +3,15 @@ const { query } = require('../../db/pool');
 
 const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',         // Create/manage files in Drive
-  'https://www.googleapis.com/auth/gmail.compose',       // Create drafts, send emails
-  'https://www.googleapis.com/auth/gmail.readonly',      // Read emails for tracking
   'https://www.googleapis.com/auth/calendar.readonly',   // Read calendar events
   'https://www.googleapis.com/auth/userinfo.email',      // Get Google account email
+];
+
+// Gmail scopes are restricted and require a paid security assessment.
+// Kept here for future use once the app is verified.
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/gmail.readonly',
 ];
 
 function getOAuth2Client() {

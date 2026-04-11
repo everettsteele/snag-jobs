@@ -37,14 +37,18 @@ app.use('/api', diagnosticsRoutes);
 app.use('/api/google', googleRoutes);
 
 // ================================================================
-// Static files
+// Static files — serve Vite build if available, otherwise legacy public/
 // ================================================================
-app.use(express.static(path.join(__dirname, 'public')));
+const fs = require('fs');
+const distPath = path.join(__dirname, 'dist');
+const publicPath = path.join(__dirname, 'public');
+const staticRoot = fs.existsSync(distPath) ? distPath : publicPath;
+app.use(express.static(staticRoot));
 
 // SPA fallback — serve index.html for any non-API route
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(staticRoot, 'index.html'));
 });
 
 // ================================================================
