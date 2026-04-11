@@ -10,6 +10,8 @@ const jobboardRoutes = require('./src/routes/jobboard');
 const networkingRoutes = require('./src/routes/networking');
 const diagnosticsRoutes = require('./src/routes/diagnostics');
 const googleRoutes = require('./src/routes/google');
+const sseRoutes = require('./src/routes/sse');
+const exportRoutes = require('./src/routes/export');
 
 // Middleware
 const { helmetMiddleware, corsMiddleware, globalLimiter } = require('./src/middleware/security');
@@ -35,6 +37,41 @@ app.use('/api', jobboardRoutes);
 app.use('/api/networking', networkingRoutes);
 app.use('/api', diagnosticsRoutes);
 app.use('/api/google', googleRoutes);
+app.use('/api/sse', sseRoutes);
+app.use('/api/export', exportRoutes);
+
+// ================================================================
+// Daily cron — 6 AM ET outreach queue + job board crawl
+// ================================================================
+const { todayET } = require('./src/utils');
+
+setInterval(() => {
+  try {
+    const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    if (et.getHours() === 6 && et.getMinutes() < 5) {
+      const { runDailyCron } = require('./src/routes/firms');
+      const store = require('./src/data/store');
+      store.loadCronState().then(state => {
+        if (state.lastRunDate !== todayET()) {
+          runDailyCron();
+          const { crawlJobBoards } = require('./src/services/crawler');
+          crawlJobBoards().catch(e => console.error('[crawl cron]', e.message));
+        }
+      });
+    }
+  } catch (e) { console.error('[cron]', e.message); }
+}, 5 * 60 * 1000);
+
+// Boot check — run cron if missed today
+setTimeout(() => {
+  const store = require('./src/data/store');
+  store.loadCronState().then(state => {
+    if (state.lastRunDate !== todayET()) {
+      const { runDailyCron } = require('./src/routes/firms');
+      runDailyCron();
+    }
+  }).catch(() => {});
+}, 3000);
 
 // ================================================================
 // Static files — serve Vite build if available, otherwise legacy public/
