@@ -4,6 +4,7 @@ const path = require('path');
 
 // Route modules
 const authRoutes = require('./src/routes/auth');
+const firmsRoutes = require('./src/routes/firms');
 const applicationRoutes = require('./src/routes/applications');
 const jobboardRoutes = require('./src/routes/jobboard');
 const networkingRoutes = require('./src/routes/networking');
@@ -27,6 +28,7 @@ app.use('/api', globalLimiter);
 // API routes
 // ================================================================
 app.use('/api/auth', authRoutes);
+app.use('/api', firmsRoutes);
 app.use('/api', applicationRoutes);
 app.use('/api', jobboardRoutes);
 app.use('/api/networking', networkingRoutes);
