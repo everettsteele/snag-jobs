@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { validate, schemas, VALID_APP_STATUSES } = require('../middleware/validate');
 const { expensiveLimiter } = require('../middleware/security');
+const { checkAiLimit, logAiUsage } = require('../middleware/tier');
 const db = require('../db/store');
 const { todayET, diagLog } = require('../utils');
 const { generateCoverLetter, selectResumeVariant, fetchJobDescription, cleanCoverLetterText } = require('../services/anthropic');
@@ -133,7 +134,7 @@ router.get('/applications/:id/cover-letter', requireAuth, async (req, res) => {
 });
 
 // Batch packages — generate cover letters + Drive folders
-router.post('/applications/batch-packages', requireAuth, expensiveLimiter, async (req, res) => {
+router.post('/applications/batch-packages', requireAuth, expensiveLimiter, checkAiLimit('cover_letters'), async (req, res) => {
   const webhookUrl = process.env.DRIVE_WEBHOOK_URL;
   if (!webhookUrl) return res.status(503).json({ error: 'DRIVE_WEBHOOK_URL not configured' });
   if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });

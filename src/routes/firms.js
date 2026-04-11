@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { validate, schemas, VALID_OUTREACH_STATUSES } = require('../middleware/validate');
 const { cronLimiter } = require('../middleware/security');
+const { checkAiLimit, logAiUsage } = require('../middleware/tier');
 const store = require('../data/store');
 const { todayET, daysAgoStr, daysBetween, diagLog } = require('../utils');
 const { randomUUID } = require('crypto');
@@ -465,7 +466,7 @@ router.post('/cron/run', requireAuth, cronLimiter, async (req, res) => {
 // ================================================================
 // Email draft generation for outreach contacts
 // ================================================================
-router.post('/draft-email', requireAuth, async (req, res) => {
+router.post('/draft-email', requireAuth, checkAiLimit('cover_letters'), async (req, res) => {
   const { recipientName, company, recipientRole, type } = req.body;
   if (!recipientName || !company) return res.status(400).json({ error: 'recipientName and company required' });
 
@@ -501,6 +502,9 @@ router.post('/draft-email', requireAuth, async (req, res) => {
       type: type || 'recruiter',
       senderContext,
     });
+
+    // Log AI usage
+    await logAiUsage(req.user.tenantId, req.user.id, 'cover_letters', 300, { type: 'email_draft', company });
 
     res.json({ draft });
   } catch (e) {

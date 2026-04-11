@@ -20,10 +20,19 @@ router.get('/status', requireAuth, async (req, res) => {
     [req.user.tenantId]
   );
   const tenant = rows[0] || {};
+
+  // Get weekly AI usage
+  const { getWeeklyUsage, LIMITS } = require('../middleware/tier');
+  const usage = await getWeeklyUsage(req.user.id);
+
   res.json({
     plan: tenant.plan || 'free',
     hasStripe: !!tenant.stripe_customer_id,
     hasSubscription: !!tenant.stripe_subscription_id,
+    usage: {
+      cover_letters: usage.cover_letters || 0,
+      limit: tenant.plan === 'pro' ? null : LIMITS.cover_letters_per_week,
+    },
   });
 });
 
