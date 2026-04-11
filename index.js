@@ -613,7 +613,14 @@ function requireAuth(req, res, next) {
 }
 
 app.use(express.json());
-app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-auth-token, Authorization');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // Log ALL job-board requests BEFORE auth — to catch 401 rejections
 app.use('/api/job-board', (req, res, next) => {
