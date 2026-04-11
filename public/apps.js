@@ -21,18 +21,14 @@ var _appsData = [], _netData = [], _showHiddenNet = false, _appStatusFilter = lo
 var _skippedLeadIds = new Set();
 
 function _authH() {
-  var k = localStorage.getItem('hopespot_apikey');
-  if (k) return { 'x-api-key': k, 'Content-Type': 'application/json' };
-  return { 'x-auth-token': localStorage.getItem('hopespot_token') || '', 'Content-Type': 'application/json' };
+  var t = localStorage.getItem('hopespot_token') || '';
+  return { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' };
 }
 function _authFH() {
-  var k = localStorage.getItem('hopespot_apikey');
-  if (k) return { 'x-api-key': k };
-  return { 'x-auth-token': localStorage.getItem('hopespot_token') || '' };
+  var t = localStorage.getItem('hopespot_token') || '';
+  return { 'Authorization': 'Bearer ' + t };
 }
 function _authToken() {
-  var k = localStorage.getItem('hopespot_apikey');
-  if (k) return 'apikey=' + encodeURIComponent(k);
   var t = localStorage.getItem('hopespot_token') || '';
   return 'token=' + encodeURIComponent(t);
 }

@@ -2,17 +2,16 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { validate, schemas, VALID_APP_STATUSES } = require('../middleware/validate');
 const { expensiveLimiter } = require('../middleware/security');
-const store = require('../data/store');
+const db = require('../db/store');
 const { todayET, diagLog } = require('../utils');
-const { randomUUID } = require('crypto');
 const { generateCoverLetter, selectResumeVariant, fetchJobDescription, cleanCoverLetterText } = require('../services/anthropic');
 
 const router = Router();
 
-// ================================================================
-// Helpers
-// ================================================================
+// SSE clients for batch progress
+const sseClients = new Map();
 
+// Helper: Google Apps Script webhook
 async function postToAppsScript(url, body) {
   const payload = JSON.stringify(body);
   const headers = { 'Content-Type': 'application/json' };
@@ -28,13 +27,18 @@ async function postToAppsScript(url, body) {
   return resp;
 }
 
+function sendSSE(userId, event, data) {
+  const client = sseClients.get(userId);
+  if (client) client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
 // ================================================================
-// Routes
+// Routes — all scoped by req.user.tenantId / req.user.id
 // ================================================================
 
 router.get('/applications', requireAuth, async (req, res) => {
-  const apps = await store.loadApplications();
-  res.json(apps.sort((a, b) => (b.applied_date || '').localeCompare(a.applied_date || '')));
+  const apps = await db.listApplications(req.user.tenantId, req.user.id);
+  res.json(apps);
 });
 
 router.post('/applications', requireAuth, validate(schemas.applicationCreate), async (req, res) => {
@@ -42,242 +46,239 @@ router.post('/applications', requireAuth, validate(schemas.applicationCreate), a
   const today = applied_date || todayET();
   const fd = new Date(today + 'T12:00:00Z');
   fd.setDate(fd.getDate() + 7);
-  const rec = {
-    id: randomUUID(),
-    company,
-    role,
-    applied_date: today,
-    status: status || 'queued',
-    source_url: source_url || '',
-    notion_url: notion_url || '',
-    drive_url: '',
+
+  const app = await db.createApplication(req.user.tenantId, req.user.id, {
+    company, role, applied_date: today, status: status || 'queued',
+    source_url: source_url || '', notion_url: notion_url || '',
     follow_up_date: fd.toISOString().split('T')[0],
-    last_activity: today,
     notes: notes || '',
     activity: [{ date: today, type: status || 'queued', note: 'Added to queue' }],
-  };
-  const apps = await store.loadApplications();
-  apps.push(rec);
-  await store.saveApplications(apps);
-  res.json(rec);
+  });
+  res.json(app);
 });
 
 router.patch('/applications/:id', requireAuth, validate(schemas.applicationPatch), async (req, res) => {
-  const apps = await store.loadApplications();
-  const idx = apps.findIndex(a => a.id === req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  const app = await db.getApplication(req.user.tenantId, req.params.id);
+  if (!app) return res.status(404).json({ error: 'Not found' });
+
   const today = todayET();
+  const updates = { ...req.body, last_activity: today };
 
-  if (req.body.status && req.body.status !== apps[idx].status) {
-    const activity = apps[idx].activity || [];
+  // Log status changes to activity array
+  if (req.body.status && req.body.status !== app.status) {
+    const activity = Array.isArray(app.activity) ? [...app.activity] : [];
     activity.push({ date: today, type: req.body.status, note: req.body.activity_note || '' });
-    apps[idx].activity = activity;
+    updates.activity = activity;
   }
+  delete updates.activity_note;
 
-  apps[idx] = { ...apps[idx], ...req.body, id: apps[idx].id, last_activity: today };
-  delete apps[idx].activity_note;
-  await store.saveApplications(apps);
-  res.json(apps[idx]);
+  const updated = await db.updateApplication(req.user.tenantId, req.params.id, updates);
+  res.json(updated);
 });
 
 router.delete('/applications/:id', requireAuth, async (req, res) => {
-  const apps = await store.loadApplications();
-  const idx = apps.findIndex(a => a.id === req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'Not found' });
-  apps.splice(idx, 1);
-  await store.saveApplications(apps);
+  const deleted = await db.deleteApplication(req.user.tenantId, req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Not found' });
   res.json({ ok: true });
 });
 
+// Email sync — match emails to applications
 router.post('/applications/email-sync', requireAuth, async (req, res) => {
   const matches = req.body.matches || [];
   if (!matches.length) return res.json({ ok: true, changed: 0 });
-  const apps = await store.loadApplications();
+
   let changed = 0;
-  matches.forEach(({ id, status, note, date }) => {
-    const idx = apps.findIndex(a => a.id === id);
-    if (idx < 0) return;
+  for (const { id, status, note, date } of matches) {
+    const app = await db.getApplication(req.user.tenantId, id);
+    if (!app) continue;
     const actDate = date || todayET();
-    if (status && VALID_APP_STATUSES.includes(status) && status !== apps[idx].status) {
-      apps[idx].status = status;
+    const updates = { last_activity: actDate };
+    if (status && VALID_APP_STATUSES.includes(status) && status !== app.status) {
+      updates.status = status;
     }
-    (apps[idx].activity = apps[idx].activity || []).push({ date: actDate, type: status || 'note', note: note || '' });
-    apps[idx].last_activity = actDate;
+    const activity = Array.isArray(app.activity) ? [...app.activity] : [];
+    activity.push({ date: actDate, type: status || 'note', note: note || '' });
+    updates.activity = activity;
+    await db.updateApplication(req.user.tenantId, id, updates);
     changed++;
-  });
-  await store.saveApplications(apps);
+  }
   res.json({ ok: true, changed });
 });
 
+// Cover letter — render as printable HTML
 router.get('/applications/:id/cover-letter', requireAuth, async (req, res) => {
-  const apps = await store.loadApplications();
-  const appRecord = apps.find(a => a.id === req.params.id);
-  if (!appRecord) return res.status(404).send('Application not found.');
-  if (!appRecord.cover_letter_text) return res.status(404).send('No cover letter generated yet.');
+  const app = await db.getApplication(req.user.tenantId, req.params.id);
+  if (!app) return res.status(404).send('Application not found.');
+  if (!app.cover_letter_text) return res.status(404).send('No cover letter generated yet.');
 
-  const letterText = cleanCoverLetterText(appRecord.cover_letter_text);
-  const paragraphs = letterText
-    .split(/\n{2,}/)
-    .map(p => p.replace(/\n/g, ' ').trim())
-    .filter(p => p.length > 0);
-  const paragraphsHtml = paragraphs
-    .map(p => `<p>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
-    .join('\n');
+  const letterText = cleanCoverLetterText(app.cover_letter_text);
+  const paragraphs = letterText.split(/\n{2,}/).map(p => p.replace(/\n/g, ' ').trim()).filter(p => p.length > 0);
+  const paragraphsHtml = paragraphs.map(p => `<p>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('\n');
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const companyEsc = (appRecord.company || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const companyEsc = (app.company || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${companyEsc} Cover Letter</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000;background:#fff}.page{max-width:8in;margin:0 auto;padding:1in}.header{text-align:center;margin-bottom:32pt}.header h1{font-size:14pt;font-weight:bold;letter-spacing:1px;margin-bottom:6pt}.header .contact{font-size:10pt;color:#333}.date{margin-bottom:10pt}.company{margin-bottom:24pt}p{margin-bottom:12pt;line-height:1.6;text-align:justify}.no-print{position:fixed;top:16px;right:16px;padding:10px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif}@media print{.no-print{display:none}body{font-size:12pt}.page{padding:0;max-width:100%}@page{margin:1in;size:letter}}</style></head><body><button class="no-print" onclick="window.print()">Print / Save as PDF</button><div class="page"><div class="header"><h1>EVERETT STEELE</h1><div class="contact">everett.steele@gmail.com &nbsp;|&nbsp; 678.899.3971 &nbsp;|&nbsp; linkedin.com/in/everettsteeleATL &nbsp;|&nbsp; Atlanta, GA</div></div><div class="date">${dateStr}</div><div class="company">${companyEsc}</div>${paragraphsHtml}</div><script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script></body></html>`;
+  // Use user profile for header instead of hardcoded values
+  const profile = req.user.profile || {};
+  const nameEsc = (req.user.fullName || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const contactParts = [
+    profile.emailDisplay || req.user.email,
+    profile.phone,
+    profile.linkedinUrl,
+    profile.location,
+  ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${companyEsc} Cover Letter</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000;background:#fff}.page{max-width:8in;margin:0 auto;padding:1in}.header{text-align:center;margin-bottom:32pt}.header h1{font-size:14pt;font-weight:bold;letter-spacing:1px;margin-bottom:6pt}.header .contact{font-size:10pt;color:#333}.date{margin-bottom:10pt}.company{margin-bottom:24pt}p{margin-bottom:12pt;line-height:1.6;text-align:justify}.no-print{position:fixed;top:16px;right:16px;padding:10px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif}@media print{.no-print{display:none}body{font-size:12pt}.page{padding:0;max-width:100%}@page{margin:1in;size:letter}}</style></head><body><button class="no-print" onclick="window.print()">Print / Save as PDF</button><div class="page"><div class="header"><h1>${nameEsc}</h1><div class="contact">${contactParts}</div></div><div class="date">${dateStr}</div><div class="company">${companyEsc}</div>${paragraphsHtml}</div><script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script></body></html>`;
   res.set('Content-Type', 'text/html; charset=utf-8').set('Cache-Control', 'no-store').send(html);
 });
 
+// Batch packages — generate cover letters + Drive folders
 router.post('/applications/batch-packages', requireAuth, expensiveLimiter, async (req, res) => {
   const webhookUrl = process.env.DRIVE_WEBHOOK_URL;
   if (!webhookUrl) return res.status(503).json({ error: 'DRIVE_WEBHOOK_URL not configured' });
   if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
-  const apps = await store.loadApplications();
+  const apps = await db.listApplications(req.user.tenantId, req.user.id);
   const targets = apps.filter(a => a.status === 'queued' && (!a.cover_letter_text || !a.drive_url));
   if (!targets.length) return res.json({ ok: true, built: 0, message: 'All queued applications already have complete packages' });
 
-  diagLog('BATCH-PKG starting for ' + targets.length + ' apps: ' + targets.map(a => a.company).join(', '));
-  res.json({ ok: true, queued: targets.length, message: `Building packages for ${targets.length} applications in background. Check back in 2-3 minutes.` });
+  const userId = req.user.id;
+  const tenantId = req.user.tenantId;
+  const userProfile = req.user.profile || {};
 
+  diagLog(`BATCH-PKG starting for ${targets.length} apps (user=${userId})`);
+  res.json({ ok: true, queued: targets.length, message: `Building packages for ${targets.length} applications in background.` });
+
+  // Process in background
   setImmediate(async () => {
     let built = 0, failed = 0;
-    for (const appRec of targets) {
+    for (let i = 0; i < targets.length; i++) {
+      const appRec = targets[i];
       try {
-        diagLog('BATCH-PKG processing: ' + appRec.company + ' (id=' + appRec.id + ')');
-        const allApps = await store.loadApplications();
-        const idx = allApps.findIndex(a => a.id === appRec.id);
-        if (idx < 0) { diagLog('BATCH-PKG app not found: ' + appRec.id); continue; }
+        sendSSE(userId, 'progress', { current: i + 1, total: targets.length, company: appRec.company });
         const today = todayET();
-        let coverLetter = allApps[idx].cover_letter_text;
+        let coverLetter = appRec.cover_letter_text;
         let jdText = '';
 
-        // Phase 1: Generate cover letter if missing
+        // Phase 1: Generate cover letter
         if (!coverLetter) {
-          diagLog('BATCH-PKG generating cover letter for ' + appRec.company);
           jdText = await fetchJobDescription(appRec.source_url);
-          if (!jdText || jdText.length < 50) {
-            jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
-          }
-          coverLetter = await generateCoverLetter(appRec, jdText);
-          if (!coverLetter || coverLetter.length < 50) {
-            diagLog('BATCH-PKG cover letter generation failed for ' + appRec.company);
-            failed++;
-            continue;
-          }
-          allApps[idx].cover_letter_text = coverLetter;
-          allApps[idx].last_activity = today;
-          diagLog('BATCH-PKG cover letter generated for ' + appRec.company + ' (' + coverLetter.length + ' chars)');
-        } else {
-          diagLog('BATCH-PKG cover letter exists for ' + appRec.company);
+          if (!jdText || jdText.length < 50) jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
+
+          // Use user's background for cover letter generation
+          coverLetter = await generateCoverLetter(
+            { ...appRec, userBackground: userProfile.backgroundText },
+            jdText
+          );
+          if (!coverLetter || coverLetter.length < 50) { failed++; continue; }
+          await db.updateApplication(tenantId, appRec.id, { cover_letter_text: coverLetter, last_activity: today });
+          await db.logUsage(tenantId, userId, 'cover_letter', 700, { company: appRec.company });
         }
 
-        // Phase 2: Select resume variant + create Drive folder if missing
-        if (!allApps[idx].drive_url) {
+        // Phase 2: Resume variant + Drive folder
+        if (!appRec.drive_url) {
           if (!jdText) {
             jdText = await fetchJobDescription(appRec.source_url);
-            if (!jdText || jdText.length < 50) {
-              jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
-            }
+            if (!jdText || jdText.length < 50) jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
           }
-          diagLog('BATCH-PKG selecting variant for ' + appRec.company + ' (jd=' + jdText.length + ' chars)');
           const variant = await selectResumeVariant(appRec, jdText);
-          allApps[idx].resume_variant = variant;
-          diagLog('BATCH-PKG variant=' + variant + ' for ' + appRec.company + ', calling webhook...');
+          await db.updateApplication(tenantId, appRec.id, { resume_variant: variant });
+          await db.logUsage(tenantId, userId, 'variant_select', 20, { company: appRec.company, variant });
 
-          if (!webhookUrl) {
-            diagLog('BATCH-PKG NO WEBHOOK URL');
-          } else {
-            try {
-              const response = await postToAppsScript(webhookUrl, {
-                folderName: `${appRec.company} - ${appRec.role}`,
-                variant,
-                coverLetterText: coverLetter,
-                company: appRec.company,
-                role: appRec.role,
-              });
-              const text = await response.text();
-              diagLog('BATCH-PKG webhook response for ' + appRec.company + ': ' + text.slice(0, 300));
-              let result;
-              try { result = JSON.parse(text); } catch (e) { result = null; }
-              if (result && result.ok) {
-                const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
-                if (folderUrl) {
-                  allApps[idx].drive_url = folderUrl;
-                  allApps[idx].drive_folder_id = result.folderId || '';
-                  (allApps[idx].activity = allApps[idx].activity || []).push({
-                    date: today,
-                    type: 'package_created',
-                    note: variant + ' package: ' + folderUrl,
-                  });
-                  diagLog('BATCH-PKG drive folder created for ' + appRec.company + ': ' + folderUrl);
-                } else {
-                  diagLog('BATCH-PKG webhook ok but no folderUrl in response for ' + appRec.company);
-                }
-              } else {
-                diagLog('BATCH-PKG webhook failed for ' + appRec.company + ': ' + (result ? JSON.stringify(result) : 'non-JSON response'));
+          try {
+            const response = await postToAppsScript(webhookUrl, {
+              folderName: `${appRec.company} - ${appRec.role}`,
+              variant, coverLetterText: coverLetter,
+              company: appRec.company, role: appRec.role,
+              // Pass user info for personalized documents
+              userName: req.user.fullName,
+              userEmail: userProfile.emailDisplay || req.user.email,
+              userPhone: userProfile.phone || '',
+              userLinkedin: userProfile.linkedinUrl || '',
+              userLocation: userProfile.location || '',
+            });
+            const text = await response.text();
+            let result; try { result = JSON.parse(text); } catch (e) { result = null; }
+            if (result && result.ok) {
+              const folderUrl = result.folderUrl || result.driveUrl || result.url || result.folder_url || '';
+              if (folderUrl) {
+                const activity = Array.isArray(appRec.activity) ? [...appRec.activity] : [];
+                activity.push({ date: today, type: 'package_created', note: `${variant} package: ${folderUrl}` });
+                await db.updateApplication(tenantId, appRec.id, {
+                  drive_url: folderUrl, drive_folder_id: result.folderId || '',
+                  last_activity: today, activity,
+                });
               }
-            } catch (driveErr) {
-              diagLog('BATCH-PKG webhook error for ' + appRec.company + ': ' + driveErr.message);
             }
-          }
-        } else {
-          diagLog('BATCH-PKG drive_url exists for ' + appRec.company + ': ' + allApps[idx].drive_url);
+          } catch (driveErr) { diagLog('BATCH-PKG webhook error: ' + driveErr.message); }
         }
 
-        await store.saveApplications(allApps);
         built++;
         await new Promise(r => setTimeout(r, 2000));
-      } catch (err) {
-        diagLog('BATCH-PKG EXCEPTION for ' + appRec.company + ': ' + err.message);
-        failed++;
-      }
+      } catch (err) { diagLog('BATCH-PKG EXCEPTION: ' + err.message); failed++; }
     }
-    diagLog('BATCH-PKG complete. Built: ' + built + ', Failed: ' + failed);
+    sendSSE(userId, 'complete', { built, failed });
+    diagLog(`BATCH-PKG complete. Built: ${built}, Failed: ${failed}`);
   });
 });
 
+// SSE endpoint for batch progress
+router.get('/sse/batch-progress', requireAuth, (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  res.write('event: connected\ndata: {}\n\n');
+  sseClients.set(req.user.id, res);
+  req.on('close', () => sseClients.delete(req.user.id));
+});
+
+// Single Drive package creation
 router.post('/create-drive-package', requireAuth, async (req, res) => {
   const { app_id, variant, cover_letter_text, company, role } = req.body;
-  if (!app_id || !variant || !cover_letter_text) {
-    return res.status(400).json({ error: 'app_id, variant, and cover_letter_text required' });
-  }
+  if (!app_id || !variant || !cover_letter_text) return res.status(400).json({ error: 'app_id, variant, and cover_letter_text required' });
   const webhookUrl = process.env.DRIVE_WEBHOOK_URL;
   if (!webhookUrl) return res.status(503).json({ error: 'DRIVE_WEBHOOK_URL not configured.' });
 
-  const apps = await store.loadApplications();
-  const idx = apps.findIndex(a => a.id === app_id);
-  if (idx < 0) return res.status(404).json({ error: 'Application not found' });
-  const ar = apps[idx];
+  const app = await db.getApplication(req.user.tenantId, app_id);
+  if (!app) return res.status(404).json({ error: 'Application not found' });
 
   try {
+    const profile = req.user.profile || {};
     const response = await postToAppsScript(webhookUrl, {
-      folderName: (company || ar.company) + ' - ' + (role || ar.role),
-      variant,
-      coverLetterText: cover_letter_text,
-      company: company || ar.company,
-      role: role || ar.role,
+      folderName: `${company || app.company} - ${role || app.role}`,
+      variant, coverLetterText: cover_letter_text,
+      company: company || app.company, role: role || app.role,
+      userName: req.user.fullName,
+      userEmail: profile.emailDisplay || req.user.email,
+      userPhone: profile.phone || '',
+      userLinkedin: profile.linkedinUrl || '',
+      userLocation: profile.location || '',
     });
     const text = await response.text();
-    let result;
-    try { result = JSON.parse(text); } catch (e) {
-      return res.status(500).json({ error: 'Apps Script non-JSON: ' + text.slice(0, 100) });
-    }
+    let result; try { result = JSON.parse(text); } catch (e) { return res.status(500).json({ error: 'Apps Script non-JSON response' }); }
     if (!result.ok) return res.status(500).json({ error: result.error || 'Drive webhook failed' });
 
     const today = todayET();
-    apps[idx].drive_url = result.folderUrl;
-    apps[idx].drive_folder_id = result.folderId;
-    apps[idx].last_activity = today;
-    (apps[idx].activity = apps[idx].activity || []).push({ date: today, type: 'package_created', note: 'Drive: ' + result.folderUrl });
-    await store.saveApplications(apps);
+    const activity = Array.isArray(app.activity) ? [...app.activity] : [];
+    activity.push({ date: today, type: 'package_created', note: 'Drive: ' + result.folderUrl });
+    await db.updateApplication(req.user.tenantId, app_id, {
+      drive_url: result.folderUrl, drive_folder_id: result.folderId,
+      last_activity: today, activity,
+    });
     res.json({ ok: true, folderUrl: result.folderUrl, folderId: result.folderId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Data export
+router.get('/export/applications', requireAuth, async (req, res) => {
+  const apps = await db.listApplications(req.user.tenantId, req.user.id);
+  if (req.query.format === 'csv') {
+    const header = 'Company,Role,Status,Applied Date,Follow-up,Source URL,Notes';
+    const rows = apps.map(a =>
+      [a.company, a.role, a.status, a.applied_date, a.follow_up_date || '', a.source_url, (a.notes || '').replace(/"/g, '""')]
+        .map(f => `"${f}"`).join(',')
+    );
+    res.set('Content-Type', 'text/csv').set('Content-Disposition', 'attachment; filename="applications.csv"');
+    return res.send([header, ...rows].join('\n'));
   }
+  res.json(apps);
 });
 
 module.exports = router;

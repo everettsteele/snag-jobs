@@ -1,102 +1,121 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
-const store = require('../data/store');
+const db = require('../db/store');
 const { todayET, daysAgoStr } = require('../utils');
-const { randomUUID } = require('crypto');
 
 const router = Router();
 
 router.get('/events', requireAuth, async (req, res) => {
-  const events = await store.loadNetworking();
   const { days, include_hidden } = req.query;
-  const pool = include_hidden === 'true' ? events : events.filter(e => !e.hidden);
-  if (days) {
-    const cutoff = daysAgoStr(parseInt(days));
-    return res.json(pool.filter(e => e.start_date >= cutoff).sort((a, b) => b.start_date.localeCompare(a.start_date)));
-  }
-  res.json(pool.sort((a, b) => b.start_date.localeCompare(a.start_date)));
+  const events = await db.listEvents(req.user.tenantId, req.user.id, {
+    includeHidden: include_hidden === 'true',
+    days: days ? parseInt(days) : null,
+  });
+  res.json(events);
 });
 
 router.post('/events', requireAuth, validate(schemas.eventCreate), async (req, res) => {
-  const { title, start_date, start_time, end_time, location, type, notes, contacts, next_steps } = req.body;
-  const event = {
-    id: randomUUID(), source: 'manual', external_id: null, title, start_date,
-    start_time: start_time || '', end_time: end_time || '', location: location || '',
-    attendees: [], notes: notes || '', contacts: contacts || [], next_steps: next_steps || [],
-    type: type || 'other', hidden: false, follow_up_sent: false, created_at: todayET(),
-  };
-  const events = await store.loadNetworking();
-  events.push(event);
-  await store.saveNetworking(events);
+  const event = await db.createEvent(req.user.tenantId, req.user.id, req.body);
   res.json(event);
 });
 
 router.patch('/events/:id', requireAuth, async (req, res) => {
-  const events = await store.loadNetworking();
-  const idx = events.findIndex(e => e.id === req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'Not found' });
-  events[idx] = { ...events[idx], ...req.body, id: events[idx].id };
-  await store.saveNetworking(events);
-  res.json(events[idx]);
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, req.body);
+  if (!updated) return res.status(404).json({ error: 'Not found' });
+  res.json(updated);
 });
 
 router.delete('/events/:id', requireAuth, async (req, res) => {
-  const events = await store.loadNetworking();
-  const idx = events.findIndex(e => e.id === req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'Not found' });
-  events.splice(idx, 1);
-  await store.saveNetworking(events);
+  const deleted = await db.deleteEvent(req.user.tenantId, req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Not found' });
   res.json({ ok: true });
 });
 
 router.post('/calendar-sync', requireAuth, async (req, res) => {
   let incoming = req.body.events || [];
   if (!incoming.length) return res.json({ ok: true, added: 0, updated: 0, filtered: 0 });
-  const calCfg = await store.loadCalConfig();
+
+  const calCfg = await db.getCalConfig(req.user.id);
   let filtered = 0;
-  if (calCfg.setup_complete && calCfg.whitelisted_calendar_ids.length > 0) {
+  if (calCfg.setup_complete && calCfg.whitelisted_calendar_ids?.length > 0) {
     const before = incoming.length;
     incoming = incoming.filter(ev => !ev.calendar_id || calCfg.whitelisted_calendar_ids.includes(ev.calendar_id));
     filtered = before - incoming.length;
   }
-  const events = await store.loadNetworking();
-  const extIds = new Set(events.filter(e => e.external_id).map(e => e.external_id));
+
+  // Get existing events to check for updates
+  const existing = await db.listEvents(req.user.tenantId, req.user.id, { includeHidden: true });
+  const extIds = new Set(existing.filter(e => e.external_id).map(e => e.external_id));
+
   let added = 0, updated = 0;
-  incoming.forEach(ev => {
-    if (!ev.title || !ev.start_date) return;
+  for (const ev of incoming) {
+    if (!ev.title || !ev.start_date) continue;
     if (ev.external_id && extIds.has(ev.external_id)) {
-      const idx = events.findIndex(e => e.external_id === ev.external_id);
-      if (idx >= 0) {
-        events[idx] = { ...events[idx], title: ev.title, start_date: ev.start_date, start_time: ev.start_time || events[idx].start_time || '', end_time: ev.end_time || events[idx].end_time || '', location: ev.location || events[idx].location || '', attendees: ev.attendees || events[idx].attendees || [] };
+      const existingEvent = existing.find(e => e.external_id === ev.external_id);
+      if (existingEvent) {
+        await db.updateEvent(req.user.tenantId, existingEvent.id, {
+          title: ev.title, start_date: ev.start_date,
+          start_time: ev.start_time || existingEvent.start_time || '',
+          end_time: ev.end_time || existingEvent.end_time || '',
+          location: ev.location || existingEvent.location || '',
+          attendees: ev.attendees || existingEvent.attendees || [],
+        });
         updated++;
       }
     } else {
-      events.push({
-        id: randomUUID(), source: 'google_calendar', external_id: ev.external_id || null,
-        calendar_id: ev.calendar_id || null, calendar_name: ev.calendar_name || null,
-        title: ev.title, start_date: ev.start_date, start_time: ev.start_time || '', end_time: ev.end_time || '',
-        location: ev.location || '', attendees: ev.attendees || [], notes: '', contacts: [], next_steps: [],
-        type: 'other', hidden: false, follow_up_sent: false, created_at: todayET(),
+      await db.createEvent(req.user.tenantId, req.user.id, {
+        source: 'google_calendar', external_id: ev.external_id,
+        calendar_id: ev.calendar_id, calendar_name: ev.calendar_name,
+        title: ev.title, start_date: ev.start_date,
+        start_time: ev.start_time || '', end_time: ev.end_time || '',
+        location: ev.location || '', attendees: ev.attendees || [],
       });
       if (ev.external_id) extIds.add(ev.external_id);
       added++;
     }
-  });
-  await store.saveNetworking(events);
+  }
   res.json({ ok: true, added, updated, filtered });
 });
 
-router.get('/calendar-config', requireAuth, async (req, res) => res.json(await store.loadCalConfig()));
+router.get('/calendar-config', requireAuth, async (req, res) => {
+  res.json(await db.getCalConfig(req.user.id));
+});
 
 router.post('/calendar-config', requireAuth, async (req, res) => {
-  const config = await store.loadCalConfig();
+  const config = await db.getCalConfig(req.user.id);
   const { whitelisted_calendar_ids, whitelisted_calendar_names, setup_complete } = req.body;
-  if (whitelisted_calendar_ids !== undefined) config.whitelisted_calendar_ids = whitelisted_calendar_ids;
-  if (whitelisted_calendar_names !== undefined) config.whitelisted_calendar_names = whitelisted_calendar_names;
-  if (setup_complete !== undefined) config.setup_complete = setup_complete;
-  await store.saveCalConfig(config);
-  res.json({ ok: true, config });
+  const updated = { ...config };
+  if (whitelisted_calendar_ids !== undefined) updated.whitelisted_calendar_ids = whitelisted_calendar_ids;
+  if (whitelisted_calendar_names !== undefined) updated.whitelisted_calendar_names = whitelisted_calendar_names;
+  if (setup_complete !== undefined) updated.setup_complete = setup_complete;
+  await db.saveCalConfig(req.user.id, updated);
+  res.json({ ok: true, config: updated });
+});
+
+// Export networking contacts
+router.get('/export/networking', requireAuth, async (req, res) => {
+  const events = await db.listEvents(req.user.tenantId, req.user.id, { includeHidden: false });
+  const contactMap = {};
+  events.forEach(e => {
+    (e.contacts || []).forEach(c => {
+      const key = c.email ? c.email.toLowerCase() : (c.name || '').toLowerCase();
+      if (!contactMap[key]) contactMap[key] = { name: c.name, company: c.company || '', role: c.role || '', email: c.email || '', events: [] };
+      contactMap[key].events.push(e.title);
+    });
+  });
+  const contacts = Object.values(contactMap);
+
+  if (req.query.format === 'csv') {
+    const header = 'Name,Company,Role,Email,Events';
+    const rows = contacts.map(c =>
+      [c.name, c.company, c.role, c.email, c.events.join('; ')]
+        .map(f => `"${String(f || '').replace(/"/g, '""')}"`).join(',')
+    );
+    res.set('Content-Type', 'text/csv').set('Content-Disposition', 'attachment; filename="networking-contacts.csv"');
+    return res.send([header, ...rows].join('\n'));
+  }
+  res.json(contacts);
 });
 
 module.exports = router;

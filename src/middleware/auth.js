@@ -1,31 +1,94 @@
-const { randomUUID } = require('crypto');
+const jwt = require('jsonwebtoken');
+const { findUserById } = require('../db/users');
 
-const PASSWORD = process.env.AUTH_PASSWORD || '';
-const API_KEY = process.env.API_KEY || '';
-const sessions = new Set();
+const JWT_SECRET = process.env.JWT_SECRET || 'hopespot-dev-secret-change-in-production';
+const JWT_EXPIRES_IN = '7d';
 
-function requireAuth(req, res, next) {
-  if (!PASSWORD) return next();
-  if (API_KEY) {
-    const hk = req.headers['x-api-key'] || (req.headers['authorization'] || '').replace('Bearer ', '').trim();
-    if (hk && hk === API_KEY) return next();
+function signToken(user) {
+  return jwt.sign(
+    { userId: user.id, tenantId: user.tenant_id, email: user.email, role: user.role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+}
+
+function verifyToken(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return null;
   }
-  if (sessions.has(req.headers['x-auth-token'] || req.query.token)) return next();
-  res.status(401).json({ error: 'Unauthorized' });
 }
 
-function login(password) {
-  if (!PASSWORD) return { ok: true, token: 'no-auth' };
-  if (password === PASSWORD) {
-    const token = randomUUID();
-    sessions.add(token);
-    return { ok: true, token };
+// Extract token from Authorization header or x-auth-token
+function extractToken(req) {
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7).trim();
+  return req.headers['x-auth-token'] || req.query.token || null;
+}
+
+// Main auth middleware — sets req.user with full context
+async function requireAuth(req, res, next) {
+  const token = extractToken(req);
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+
+  const payload = verifyToken(token);
+  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+
+  // Hydrate full user from DB (cached per-request)
+  try {
+    const user = await findUserById(payload.userId);
+    if (!user) return res.status(401).json({ error: 'User not found' });
+
+    req.user = {
+      id: user.id,
+      tenantId: user.tenant_id,
+      email: user.email,
+      role: user.role,
+      fullName: user.full_name,
+      tenantName: user.tenant_name,
+      tenantPlan: user.tenant_plan,
+      profile: {
+        phone: user.phone,
+        emailDisplay: user.email_display,
+        linkedinUrl: user.linkedin_url,
+        location: user.location,
+        backgroundText: user.background_text,
+        targetRoles: user.target_roles,
+        targetGeography: user.target_geography,
+        targetIndustries: user.target_industries,
+        dailyOutreachTarget: user.daily_outreach_target,
+        slaTarget: user.sla_target,
+      },
+    };
+    next();
+  } catch (e) {
+    console.error('[auth] Error hydrating user:', e.message);
+    res.status(500).json({ error: 'Authentication error' });
   }
-  return null;
 }
 
-function isAuthRequired() {
-  return !!PASSWORD;
+// Optional auth — sets req.user if token present, but doesn't block
+async function optionalAuth(req, res, next) {
+  const token = extractToken(req);
+  if (!token) return next();
+
+  const payload = verifyToken(token);
+  if (!payload) return next();
+
+  try {
+    const user = await findUserById(payload.userId);
+    if (user) {
+      req.user = {
+        id: user.id,
+        tenantId: user.tenant_id,
+        email: user.email,
+        role: user.role,
+        fullName: user.full_name,
+      };
+    }
+  } catch (e) { /* proceed without user context */ }
+  next();
 }
 
-module.exports = { requireAuth, login, isAuthRequired, sessions, PASSWORD, API_KEY };
+module.exports = { requireAuth, optionalAuth, signToken, verifyToken, JWT_SECRET };

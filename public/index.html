@@ -90,10 +90,22 @@
       <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       <span class="login-logo-name">HopeSpot</span>
     </div>
-    <div class="login-sub">Could've used HubSpot.</div>
-    <input class="login-input" type="password" id="pw-input" placeholder="Password or API key" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Sign in</button>
-    <div class="login-err" id="login-error">Wrong password.</div>
+    <div class="login-sub">Executive job search, organized.</div>
+    <div id="login-form">
+      <input class="login-input" type="email" id="login-email" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+      <input class="login-input" type="password" id="login-password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-btn" onclick="doLogin()">Sign in</button>
+      <div class="login-err" id="login-error">Invalid credentials.</div>
+      <div style="text-align:center;margin-top:14px"><span style="font-size:13px;color:#9CA3AF">No account? </span><button onclick="showRegisterForm()" style="background:none;border:none;color:#F97316;font-size:13px;font-weight:600;cursor:pointer">Create one</button></div>
+    </div>
+    <div id="register-form" style="display:none">
+      <input class="login-input" type="text" id="reg-name" placeholder="Full name" onkeydown="if(event.key==='Enter')document.getElementById('reg-email').focus()">
+      <input class="login-input" type="email" id="reg-email" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('reg-password').focus()">
+      <input class="login-input" type="password" id="reg-password" placeholder="Password (8+ characters)" onkeydown="if(event.key==='Enter')doRegister()">
+      <button class="login-btn" onclick="doRegister()">Create Account</button>
+      <div class="login-err" id="reg-error"></div>
+      <div style="text-align:center;margin-top:14px"><span style="font-size:13px;color:#9CA3AF">Already have an account? </span><button onclick="showLoginForm()" style="background:none;border:none;color:#F97316;font-size:13px;font-weight:600;cursor:pointer">Sign in</button></div>
+    </div>
     <div class="login-status" id="login-status">Connecting...</div>
   </div>
 </div>
@@ -156,8 +168,11 @@
       </button>
     </div>
     <div class="sidebar-footer">
-      <span>everett.steele@gmail.com</span>
-      <span class="version-badge" onclick="showChangelog()">v7.7</span>
+      <span id="sidebar-user-email" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px"></span>
+      <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+        <button onclick="doLogout()" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:10px;cursor:pointer;padding:2px 4px" title="Sign out">logout</button>
+        <span class="version-badge" onclick="showChangelog()">v9.0</span>
+      </div>
     </div>
   </nav>
 
@@ -245,40 +260,62 @@ function hideChangelog(){document.getElementById('changelog-modal').style.displa
 
 function toast(msg,dur=3000){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
 function setStatus(m){const e=document.getElementById('login-status');if(e)e.textContent=m;}
-function authHeaders(){if(API_KEY_MODE)return{'x-api-key':TOKEN,'Content-Type':'application/json'};return{'x-auth-token':TOKEN,'Content-Type':'application/json'};}
-function authFetchHeaders(){if(API_KEY_MODE)return{'x-api-key':TOKEN};return{'x-auth-token':TOKEN};}
+let CURRENT_USER=null;
+function authHeaders(){return{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'};}
+function authFetchHeaders(){return{'Authorization':'Bearer '+TOKEN};}
 
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay');s.classList.toggle('mobile-open');o.classList.toggle('show');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('mobile-open');document.getElementById('sidebar-overlay').classList.remove('show');}
 
-async function tryApiKey(key){try{const r=await fetch('/api/due',{headers:{'x-api-key':key}});return r.status!==401;}catch(e){return false;}}
-async function validateToken(token){try{const r=await fetch('/api/firms',{headers:{'x-auth-token':token}});return r.status!==401;}catch(e){return false;}}
 function showLogin(msg){if(msg)setStatus(msg);document.getElementById('login-view').style.display='flex';document.getElementById('app-view').style.display='none';}
-function showApp(){document.getElementById('login-view').style.display='none';document.getElementById('app-view').style.display='flex';}
+function showApp(){
+  document.getElementById('login-view').style.display='none';document.getElementById('app-view').style.display='flex';
+  const sf=document.getElementById('sidebar-user-email');if(sf&&CURRENT_USER)sf.textContent=CURRENT_USER.email;
+}
+function showRegisterForm(){document.getElementById('login-form').style.display='none';document.getElementById('register-form').style.display='block';}
+function showLoginForm(){document.getElementById('register-form').style.display='none';document.getElementById('login-form').style.display='block';}
+function doLogout(){TOKEN='';CURRENT_USER=null;localStorage.removeItem(STORAGE_KEY);showLogin('Signed out.');}
 
 async function init(){
   TAB=localStorage.getItem('hs_tab')||'queue';
   setStatus('Connecting...');
-  const savedKey=localStorage.getItem(API_KEY_STORE);
-  if(savedKey){const valid=await tryApiKey(savedKey);if(valid){TOKEN=savedKey;API_KEY_MODE=true;await loadAll();showApp();return;}localStorage.removeItem(API_KEY_STORE);}
-  try{
-    const r=await fetch('/api/auth-required').then(x=>x.json());
-    if(!r.required){TOKEN='no-auth';await loadAll();showApp();return;}
-    const saved=localStorage.getItem(STORAGE_KEY);
-    if(saved){const valid=await validateToken(saved);if(valid){TOKEN=saved;API_KEY_MODE=false;await loadAll();showApp();return;}localStorage.removeItem(STORAGE_KEY);}
-    setStatus('Enter password or API key to continue.');
-  }catch(e){setStatus('Could not reach server.');}
+  const saved=localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    try{
+      const r=await fetch('/api/auth/check',{headers:{'Authorization':'Bearer '+saved}});
+      if(r.ok){TOKEN=saved;const me=await fetch('/api/auth/me',{headers:authFetchHeaders()}).then(x=>x.json());CURRENT_USER=me.user;await loadAll();showApp();return;}
+    }catch(e){}
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  setStatus('Sign in or create an account.');
 }
 
 async function doLogin(){
-  const pw=document.getElementById('pw-input').value;
-  const keyValid=await tryApiKey(pw);
-  if(keyValid){TOKEN=pw;API_KEY_MODE=true;localStorage.setItem(API_KEY_STORE,pw);await loadAll();showApp();return;}
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-password').value;
+  if(!email||!pw){setStatus('Email and password required.');return;}
+  document.getElementById('login-error').style.display='none';
   try{
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(x=>x.json());
-    if(r.ok){TOKEN=r.token;API_KEY_MODE=false;localStorage.setItem(STORAGE_KEY,TOKEN);await loadAll();showApp();}
-    else document.getElementById('login-error').style.display='block';
-  }catch(e){setStatus('Login failed.');}
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})});
+    const data=await r.json();
+    if(data.ok){TOKEN=data.token;CURRENT_USER=data.user;localStorage.setItem(STORAGE_KEY,TOKEN);await loadAll();showApp();}
+    else{document.getElementById('login-error').textContent=data.error||'Invalid credentials';document.getElementById('login-error').style.display='block';}
+  }catch(e){setStatus('Login failed. Check connection.');}
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pw=document.getElementById('reg-password').value;
+  if(!name||!email||!pw){document.getElementById('reg-error').textContent='All fields required.';document.getElementById('reg-error').style.display='block';return;}
+  if(pw.length<8){document.getElementById('reg-error').textContent='Password must be at least 8 characters.';document.getElementById('reg-error').style.display='block';return;}
+  document.getElementById('reg-error').style.display='none';
+  try{
+    const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({full_name:name,email:email,password:pw})});
+    const data=await r.json();
+    if(data.ok){TOKEN=data.token;CURRENT_USER=data.user;localStorage.setItem(STORAGE_KEY,TOKEN);await loadAll();showApp();toast('Welcome to HopeSpot!');}
+    else{document.getElementById('reg-error').textContent=data.error||'Registration failed';document.getElementById('reg-error').style.display='block';}
+  }catch(e){document.getElementById('reg-error').textContent='Registration failed. Check connection.';document.getElementById('reg-error').style.display='block';}
 }
 
 async function loadAll(){
