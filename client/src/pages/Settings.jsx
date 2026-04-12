@@ -322,7 +322,17 @@ function GoogleSection({ profile, toast }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="text-base font-semibold text-[#1F2D3D] mb-4">Google Integration</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-[#1F2D3D]">Google Integration</h3>
+        <a
+          href="https://github.com/everettsteele/meridian-recruiter-tracker/blob/main/docs/GOOGLE_SETUP.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-gray-500 hover:text-[#F97316] cursor-pointer"
+        >
+          Setup guide →
+        </a>
+      </div>
       {googleEmail ? (
         <div className="flex items-center justify-between">
           <div>
@@ -622,28 +632,41 @@ function JobSearchSection({ toast }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="text-base font-semibold text-[#1F2D3D] mb-4">Job Board Crawler</h3>
+      <h3 className="text-base font-semibold text-[#1F2D3D] mb-2">Job Board Crawler</h3>
       <p className="text-xs text-gray-500 mb-4">
-        Choose which job boards to crawl and filter by location. The crawler runs daily at 6 AM ET or on-demand.
+        Choose which job boards to crawl and filter leads. The crawler runs daily at 6 AM ET or on-demand.
+        Your <strong>Target Geography</strong> from Preferences is used as a default allowlist — these fields only override when you need finer control.
       </p>
 
       <div className="space-y-5">
-        {/* Sources */}
+        {/* Sources grouped by category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Enabled Sources</label>
-          <div className="grid grid-cols-2 gap-2">
-            {sources.map((s) => (
-              <label key={s.name} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-2 rounded-lg hover:bg-gray-100">
-                <input
-                  type="checkbox"
-                  checked={enabled.length === 0 ? true : enabled.includes(s.name)}
-                  onChange={() => toggleSource(s.name)}
-                  className="w-4 h-4 accent-[#F97316]"
-                />
-                <span className="text-sm text-gray-700">{s.label}</span>
-              </label>
-            ))}
-          </div>
+          {Object.entries(
+            sources.reduce((acc, s) => {
+              const cat = s.category || 'General';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(s);
+              return acc;
+            }, {})
+          ).map(([category, list]) => (
+            <div key={category} className="mb-3">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{category}</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {list.map((s) => (
+                  <label key={s.name} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-2.5 py-1.5 rounded hover:bg-gray-100">
+                    <input
+                      type="checkbox"
+                      checked={enabled.length === 0 ? true : enabled.includes(s.name)}
+                      onChange={() => toggleSource(s.name)}
+                      className="w-4 h-4 accent-[#F97316]"
+                    />
+                    <span className="text-sm text-gray-700">{s.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
           {enabled.length === 0 && (
             <p className="text-xs text-gray-400 mt-1">All sources enabled by default (uncheck to exclude)</p>
           )}
@@ -651,7 +674,10 @@ function JobSearchSection({ toast }) {
 
         {/* Location allow */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location Allowlist</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location Allowlist Override</label>
+          <p className="text-xs text-gray-400 mb-2">
+            Leave empty to use Target Geography from Preferences. Add entries here only if you want a different allowlist for the crawler specifically.
+          </p>
           <div className="flex flex-wrap gap-2 mb-2">
             {allows.map((loc, i) => (
               <span key={i} className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
@@ -706,7 +732,10 @@ function JobSearchSection({ toast }) {
             onChange={(e) => setConfig({ ...config, min_score: parseInt(e.target.value) || 0 })}
             className="w-24 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]"
           />
-          <p className="text-xs text-gray-400 mt-1">Only show leads scoring at or above this. Default: 3</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Fit score is calculated 0-10 from the job title. COO/Chief of Staff = 10, VP/Director/Head of Ops = 7,
+            generic manager/coordinator = 3. Jobs below this score are filtered out. Lower = more leads (some noise); higher = fewer leads (tighter fit).
+          </p>
         </div>
 
         <div className="flex justify-end">

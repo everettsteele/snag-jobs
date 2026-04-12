@@ -14,7 +14,7 @@ function validate(schema) {
 }
 
 // Schemas
-const VALID_APP_STATUSES = ['queued', 'applied', 'confirmation_received', 'interviewing', 'offer', 'rejected', 'no_response', 'withdrawn'];
+const VALID_APP_STATUSES = ['queued', 'identified', 'researching', 'materials_prep', 'ready_to_apply', 'applied', 'confirmation_received', 'interviewing', 'offer', 'rejected', 'no_response', 'withdrawn', 'closed'];
 const VALID_OUTREACH_STATUSES = ['not contacted', 'draft', 'linkedin', 'contacted', 'in conversation', 'bounced', 'passed'];
 const VALID_LEAD_STATUSES = ['new', 'reviewed', 'snagged', 'snoozed'];
 

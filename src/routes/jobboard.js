@@ -61,7 +61,7 @@ router.post('/job-board/crawl', requireAuth, crawlLimiter, async (req, res) => {
 // List available job board sources
 router.get('/job-board/sources', requireAuth, async (req, res) => {
   const { JOB_SOURCES } = require('../services/crawler');
-  const sources = JOB_SOURCES.map(s => ({ name: s.name, label: s.label }));
+  const sources = JOB_SOURCES.map(s => ({ name: s.name, label: s.label, category: s.category || 'General' }));
   res.json(sources);
 });
 

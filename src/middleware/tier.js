@@ -6,9 +6,25 @@ const LIMITS = {
   resumes: 1,
 };
 
+// Accounts that always have pro (regardless of DB plan).
+// Comma-separated emails in PRO_FOREVER_EMAILS env var.
+const PRO_FOREVER = new Set(
+  (process.env.PRO_FOREVER_EMAILS || 'everett.steele@gmail.com')
+    .toLowerCase()
+    .split(',')
+    .map(e => e.trim())
+    .filter(Boolean)
+);
+
+function isPro(user) {
+  if (!user) return false;
+  if (PRO_FOREVER.has((user.email || '').toLowerCase())) return true;
+  return user.tenantPlan === 'pro';
+}
+
 // Middleware: require Pro plan
 function requirePro(req, res, next) {
-  if (req.user?.tenantPlan === 'pro') return next();
+  if (isPro(req.user)) return next();
   res.status(403).json({ error: 'Pro plan required', upgrade: true });
 }
 
@@ -16,7 +32,7 @@ function requirePro(req, res, next) {
 function checkAiLimit(action) {
   return async (req, res, next) => {
     // Pro users are unlimited
-    if (req.user?.tenantPlan === 'pro') return next();
+    if (isPro(req.user)) return next();
 
     const limit = LIMITS[`${action}_per_week`];
     if (!limit) return next();
@@ -71,4 +87,4 @@ async function getWeeklyUsage(userId) {
   }
 }
 
-module.exports = { requirePro, checkAiLimit, logAiUsage, getWeeklyUsage, LIMITS };
+module.exports = { requirePro, checkAiLimit, logAiUsage, getWeeklyUsage, isPro, LIMITS };

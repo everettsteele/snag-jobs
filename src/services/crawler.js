@@ -2,12 +2,223 @@ const { createHash } = require('crypto');
 const { diagLog, todayET } = require('../utils');
 const db = require('../db/store');
 
+// Helper for URL-encoded search queries built from user keywords
+function buildSearches(urlTemplate, defaultKeywords) {
+  return defaultKeywords.map(kw => urlTemplate.replace('{q}', encodeURIComponent(kw)));
+}
+
+const DEFAULT_KEYWORDS = [
+  'chief operating officer',
+  'vp operations',
+  'chief of staff',
+  'director of operations',
+  'head of operations',
+];
+
 const JOB_SOURCES = [
-  { name: 'jewishjobs', label: 'JewishJobs', searches: ['https://www.jewishjobs.com/search/operations/-/-/true', 'https://www.jewishjobs.com/search/chief-operating-officer/-/-/true', 'https://www.jewishjobs.com/search/director-of-operations/-/-/true'], linkPattern: /href="((?:https?:\/\/(?:www\.)?jewishjobs\.com)?\/(?:job|listing|jobs|position)s?(?:-openings?)?(?:\/|$)[^"#?\s]{3,}?)"/gi, baseUrl: 'https://www.jewishjobs.com', maxPerSearch: 10 },
-  { name: 'execthread', label: 'ExecThread', searches: ['https://execthread.com/search?q=chief+operating+officer', 'https://execthread.com/search?q=vp+operations', 'https://execthread.com/search?q=chief+of+staff'], linkPattern: /href="((?:https?:\/\/execthread\.com)?\/jobs\/[^"#?\s]{3,}?)"/gi, baseUrl: 'https://execthread.com', maxPerSearch: 6 },
-  { name: 'csnetwork', label: 'CoS Network', searches: ['https://www.chiefofstaff.network/jobs'], linkPattern: /href="(\/jobs\/[^"#?\s]{3,}?)"/gi, baseUrl: 'https://www.chiefofstaff.network', maxPerSearch: 12 },
-  { name: 'idealist', label: 'Idealist', searches: ['https://www.idealist.org/en/jobs?q=vice+president+operations&type=JOB', 'https://www.idealist.org/en/jobs?q=chief+operating+officer&type=JOB', 'https://www.idealist.org/en/jobs?q=director+operations&type=JOB'], linkPattern: /href="((?:https?:\/\/(?:www\.)?idealist\.org)?\/en\/jobs?\/[^"#?\s]{3,}?)"/gi, baseUrl: 'https://www.idealist.org', maxPerSearch: 6 },
-  { name: 'builtinatlanta', label: 'Built In ATL', searches: ['https://builtinatlanta.com/jobs?title=operations&seniority=Senior%20Leadership', 'https://builtinatlanta.com/jobs?title=chief+of+staff', 'https://builtinatlanta.com/jobs?title=vice+president+operations'], linkPattern: /href="((?:https?:\/\/builtinatlanta\.com)?\/jobs?\/[^"#?\s]{3,}?)"/gi, baseUrl: 'https://builtinatlanta.com', maxPerSearch: 8 },
+  // ── General boards ───────────────────────────────────────────
+  {
+    name: 'indeed', label: 'Indeed', category: 'General',
+    searches: buildSearches('https://www.indeed.com/jobs?q={q}&l=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/(?:viewjob|rc\/clk)[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.indeed.com', maxPerSearch: 8,
+  },
+  {
+    name: 'glassdoor', label: 'Glassdoor', category: 'General',
+    searches: buildSearches('https://www.glassdoor.com/Job/jobs.htm?sc.keyword={q}&locT=C&locId=1155583', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job-listing\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.glassdoor.com', maxPerSearch: 6,
+  },
+  {
+    name: 'ziprecruiter', label: 'ZipRecruiter', category: 'General',
+    searches: buildSearches('https://www.ziprecruiter.com/jobs-search?search={q}&location=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(https?:\/\/(?:www\.)?ziprecruiter\.com\/jobs\/[^"#?\s]+)"/gi,
+    baseUrl: '', maxPerSearch: 6,
+  },
+  {
+    name: 'simplyhired', label: 'SimplyHired', category: 'General',
+    searches: buildSearches('https://www.simplyhired.com/search?q={q}&l=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.simplyhired.com', maxPerSearch: 6,
+  },
+  {
+    name: 'monster', label: 'Monster', category: 'General',
+    searches: buildSearches('https://www.monster.com/jobs/search?q={q}&where=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(https?:\/\/www\.monster\.com\/job-openings\/[^"#?\s]+)"/gi,
+    baseUrl: '', maxPerSearch: 6,
+  },
+  {
+    name: 'careerbuilder', label: 'CareerBuilder', category: 'General',
+    searches: buildSearches('https://www.careerbuilder.com/jobs?keywords={q}&location=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.careerbuilder.com', maxPerSearch: 6,
+  },
+  {
+    name: 'linkup', label: 'LinkUp', category: 'General',
+    searches: buildSearches('https://www.linkup.com/search/?q={q}&location=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/details\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.linkup.com', maxPerSearch: 6,
+  },
+
+  // ── Tech & Startup ────────────────────────────────────────────
+  {
+    name: 'wellfound', label: 'Wellfound (AngelList)', category: 'Tech/Startup',
+    searches: ['https://wellfound.com/role/chief-of-staff', 'https://wellfound.com/role/head-of-operations', 'https://wellfound.com/role/coo'],
+    linkPattern: /href="(\/jobs\/\d+[^"#?\s]*)"/gi,
+    baseUrl: 'https://wellfound.com', maxPerSearch: 8,
+  },
+  {
+    name: 'ycjobs', label: 'Y Combinator Jobs', category: 'Tech/Startup',
+    searches: ['https://www.ycombinator.com/jobs/role/operations-manager', 'https://www.ycombinator.com/jobs/role/chief-of-staff'],
+    linkPattern: /href="(\/companies\/[^"#?\s]+\/jobs\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.ycombinator.com', maxPerSearch: 10,
+  },
+  {
+    name: 'hiringcafe', label: 'Hiring Cafe', category: 'Tech/Startup',
+    searches: buildSearches('https://hiring.cafe/?q={q}', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://hiring.cafe', maxPerSearch: 6,
+  },
+  {
+    name: 'builtin', label: 'Built In (national)', category: 'Tech/Startup',
+    searches: buildSearches('https://builtin.com/jobs?search={q}&seniority=Senior%20Leadership', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://builtin.com', maxPerSearch: 6,
+  },
+  {
+    name: 'builtinatlanta', label: 'Built In ATL', category: 'Tech/Startup',
+    searches: buildSearches('https://builtinatlanta.com/jobs?search={q}&seniority=Senior%20Leadership', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://builtinatlanta.com', maxPerSearch: 8,
+  },
+  {
+    name: 'remoteok', label: 'Remote OK', category: 'Tech/Startup',
+    searches: buildSearches('https://remoteok.com/remote-{q}-jobs', ['ops', 'operations', 'chief-of-staff']),
+    linkPattern: /href="(\/remote-jobs\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://remoteok.com', maxPerSearch: 8,
+  },
+  {
+    name: 'weworkremotely', label: 'We Work Remotely', category: 'Tech/Startup',
+    searches: ['https://weworkremotely.com/categories/remote-management-and-finance-jobs'],
+    linkPattern: /href="(\/remote-jobs\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://weworkremotely.com', maxPerSearch: 10,
+  },
+  {
+    name: 'pallet', label: 'Pallet', category: 'Tech/Startup',
+    searches: ['https://pallet.com/jobs?q=operations'],
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://pallet.com', maxPerSearch: 6,
+  },
+
+  // ── Executive & Leadership ────────────────────────────────────
+  {
+    name: 'csnetwork', label: 'CoS Network', category: 'Executive',
+    searches: ['https://www.chiefofstaff.network/jobs'],
+    linkPattern: /href="(\/jobs\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.chiefofstaff.network', maxPerSearch: 12,
+  },
+  {
+    name: 'execthread', label: 'ExecThread', category: 'Executive',
+    searches: buildSearches('https://execthread.com/search?q={q}', DEFAULT_KEYWORDS),
+    linkPattern: /href="((?:https?:\/\/execthread\.com)?\/jobs\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://execthread.com', maxPerSearch: 6,
+  },
+  {
+    name: 'theladders', label: 'The Ladders', category: 'Executive',
+    searches: buildSearches('https://www.theladders.com/jobs/search?k={q}&l=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.theladders.com', maxPerSearch: 6,
+  },
+  {
+    name: 'chiefexecutive', label: 'Chief Executive Group', category: 'Executive',
+    searches: ['https://chiefexecutive.net/jobs/'],
+    linkPattern: /href="(https?:\/\/chiefexecutive\.net\/job\/[^"#?\s]+)"/gi,
+    baseUrl: '', maxPerSearch: 10,
+  },
+  {
+    name: 'boardsi', label: 'Boardsi', category: 'Executive',
+    searches: ['https://boardsi.com/board-positions/'],
+    linkPattern: /href="(\/board-positions?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://boardsi.com', maxPerSearch: 8,
+  },
+
+  // ── Nonprofit & Mission-Driven ────────────────────────────────
+  {
+    name: 'idealist', label: 'Idealist', category: 'Nonprofit',
+    searches: buildSearches('https://www.idealist.org/en/jobs?q={q}&type=JOB', DEFAULT_KEYWORDS),
+    linkPattern: /href="((?:https?:\/\/(?:www\.)?idealist\.org)?\/en\/jobs?\/[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.idealist.org', maxPerSearch: 6,
+  },
+  {
+    name: 'workforgood', label: 'Work for Good', category: 'Nonprofit',
+    searches: buildSearches('https://www.workforgood.org/jobs?q={q}', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.workforgood.org', maxPerSearch: 6,
+  },
+  {
+    name: 'nonprofitjobs', label: 'Nonprofit Jobs', category: 'Nonprofit',
+    searches: buildSearches('https://www.nonprofitjobs.org/search?q={q}', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.nonprofitjobs.org', maxPerSearch: 6,
+  },
+  {
+    name: 'dogoodjobs', label: 'Do Good Jobs', category: 'Nonprofit',
+    searches: ['https://dogoodjobs.com/jobs/'],
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://dogoodjobs.com', maxPerSearch: 6,
+  },
+  {
+    name: 'philanthropynews', label: 'Philanthropy News Digest', category: 'Nonprofit',
+    searches: ['https://philanthropynewsdigest.org/jobs'],
+    linkPattern: /href="(\/jobs\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://philanthropynewsdigest.org', maxPerSearch: 6,
+  },
+
+  // ── Government & Civic ────────────────────────────────────────
+  {
+    name: 'usajobs', label: 'USAJOBS', category: 'Government',
+    searches: buildSearches('https://www.usajobs.gov/search/results/?k={q}&l=Atlanta', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/\d+[^"#?\s]*)"/gi,
+    baseUrl: 'https://www.usajobs.gov', maxPerSearch: 5,
+  },
+  {
+    name: 'atlantaga', label: 'City of Atlanta', category: 'Government',
+    searches: ['https://www.atlantaga.gov/government/career-opportunities'],
+    linkPattern: /href="(\/government\/career-opportunities[^"#?\s]*)"/gi,
+    baseUrl: 'https://www.atlantaga.gov', maxPerSearch: 5,
+  },
+  {
+    name: 'georgiagov', label: 'State of Georgia', category: 'Government',
+    searches: ['https://careers.georgia.gov/jobs'],
+    linkPattern: /href="(\/jobs\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://careers.georgia.gov', maxPerSearch: 5,
+  },
+
+  // ── Niche & Community ─────────────────────────────────────────
+  {
+    name: 'jewishjobs', label: 'JewishJobs', category: 'Niche',
+    searches: ['https://www.jewishjobs.com/search/operations/-/-/true', 'https://www.jewishjobs.com/search/chief-operating-officer/-/-/true', 'https://www.jewishjobs.com/search/director-of-operations/-/-/true'],
+    linkPattern: /href="((?:https?:\/\/(?:www\.)?jewishjobs\.com)?\/(?:job|listing|jobs|position)s?(?:-openings?)?(?:\/|$)[^"#?\s]{3,}?)"/gi,
+    baseUrl: 'https://www.jewishjobs.com', maxPerSearch: 10,
+  },
+  {
+    name: 'diversityjobs', label: 'Diversity Jobs', category: 'Niche',
+    searches: buildSearches('https://www.diversityjobs.com/search?q={q}&l=Atlanta%2C+GA', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/jobs?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.diversityjobs.com', maxPerSearch: 6,
+  },
+  {
+    name: 'vetjobs', label: 'VetJobs', category: 'Niche',
+    searches: buildSearches('https://vetjobs.com/job-search/?keywords={q}', DEFAULT_KEYWORDS),
+    linkPattern: /href="(\/job\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://vetjobs.com', maxPerSearch: 6,
+  },
+  {
+    name: 'hireheroes', label: 'HireHeroes USA', category: 'Niche',
+    searches: ['https://www.hireheroesusa.org/job-seekers/search-jobs/'],
+    linkPattern: /href="(\/job[s]?\/[^"#?\s]+)"/gi,
+    baseUrl: 'https://www.hireheroesusa.org', maxPerSearch: 5,
+  },
 ];
 
 const LOCATION_ALLOW = /\batlanta\b|\bgeorgia\b|,\s*GA\b|\bremote\b|\bhybrid\b|distributed|nationwide|flexible|anywhere|work\s*from\s*home|\bwfh\b|u\.?s\.?\s*only|us\s*only/i;
@@ -145,6 +356,17 @@ async function crawlJobBoards(tenantId, userId) {
   try {
     userConfig = await db.getJobSearchConfig(userId);
   } catch (e) { /* no config — use defaults */ }
+
+  // Fall back to user's target_geography from profile if no explicit allowlist
+  if (userConfig && !userConfig.location_allow?.length) {
+    try {
+      const { query } = require('../db/pool');
+      const { rows } = await query(`SELECT target_geography FROM user_profiles WHERE user_id = $1`, [userId]);
+      if (rows[0]?.target_geography?.length) {
+        userConfig = { ...userConfig, location_allow: rows[0].target_geography };
+      }
+    } catch (e) {}
+  }
 
   // Filter sources by user's enabled list
   const enabledSources = userConfig?.enabled_sources?.length

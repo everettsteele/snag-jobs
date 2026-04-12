@@ -22,16 +22,17 @@ router.get('/status', requireAuth, async (req, res) => {
   const tenant = rows[0] || {};
 
   // Get weekly AI usage
-  const { getWeeklyUsage, LIMITS } = require('../middleware/tier');
+  const { getWeeklyUsage, isPro, LIMITS } = require('../middleware/tier');
   const usage = await getWeeklyUsage(req.user.id);
+  const effectivePlan = isPro(req.user) ? 'pro' : (tenant.plan || 'free');
 
   res.json({
-    plan: tenant.plan || 'free',
+    plan: effectivePlan,
     hasStripe: !!tenant.stripe_customer_id,
     hasSubscription: !!tenant.stripe_subscription_id,
     usage: {
       cover_letters: usage.cover_letters || 0,
-      limit: tenant.plan === 'pro' ? null : LIMITS.cover_letters_per_week,
+      limit: effectivePlan === 'pro' ? null : LIMITS.cover_letters_per_week,
     },
   });
 });
