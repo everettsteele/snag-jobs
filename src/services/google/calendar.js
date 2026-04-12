@@ -38,16 +38,26 @@ async function listUpcomingEvents(userId, { calendarIds, daysAhead, daysBehind }
 
   for (const calId of cals) {
     try {
-      const { data } = await calendar.events.list({
-        calendarId: calId,
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
-        singleEvents: true,
-        orderBy: 'startTime',
-        maxResults: 100,
-      });
+      // Paginate — some power users have 250+ events in 6 weeks
+      let pageToken = undefined;
+      const items = [];
+      do {
+        const { data } = await calendar.events.list({
+          calendarId: calId,
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 250,
+          pageToken,
+        });
+        items.push(...(data.items || []));
+        pageToken = data.nextPageToken;
+      } while (pageToken);
 
-      (data.items || []).forEach(event => {
+      console.log(`[calendar] ${calId}: fetched ${items.length} events from Google`);
+
+      items.forEach(event => {
         const start = event.start?.dateTime || event.start?.date;
         const end = event.end?.dateTime || event.end?.date;
         if (!start) return;
@@ -56,11 +66,12 @@ async function listUpcomingEvents(userId, { calendarIds, daysAhead, daysBehind }
         const selfAttendee = (event.attendees || []).find(a => a.self);
         if (selfAttendee?.responseStatus === 'declined') return;
 
-        // Skip all-day events (usually holidays/birthdays/travel blocks)
-        if (!event.start?.dateTime) return;
-
         // Skip cancelled events
         if (event.status === 'cancelled') return;
+
+        // Skip obvious noise (birthdays, holidays) based on title pattern
+        const title = event.summary || '';
+        if (/^(birthday|happy birthday|.*'?s birthday$)/i.test(title)) return;
 
         allEvents.push({
           external_id: event.id,
@@ -91,7 +102,7 @@ async function listUpcomingEvents(userId, { calendarIds, daysAhead, daysBehind }
 
 // Full sync: fetch events and return them in the format expected by /api/networking/calendar-sync
 async function syncEvents(userId, calendarIds) {
-  const events = await listUpcomingEvents(userId, { calendarIds, daysAhead: 30, daysBehind: 14 });
+  const events = await listUpcomingEvents(userId, { calendarIds, daysAhead: 90, daysBehind: 30 });
   return events;
 }
 
