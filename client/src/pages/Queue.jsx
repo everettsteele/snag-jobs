@@ -147,24 +147,12 @@ export default function QueuePage() {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {items.map((item) => (
-                    <div key={item.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm text-[#1F2D3D] truncate">
-                          {item.firm_name || item.contact_name || item.name || 'Unknown'}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {item.contact_email || item.email || ''}
-                          {item.subject && ` \u2014 ${item.subject}`}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => markSentMutation.mutate(item.id)}
-                        disabled={markSentMutation.isPending}
-                        className="shrink-0 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        Mark Sent
-                      </button>
-                    </div>
+                    <DraftRow
+                      key={item.id}
+                      item={item}
+                      onMarkSent={() => markSentMutation.mutate(item.id)}
+                      markPending={markSentMutation.isPending}
+                    />
                   ))}
                 </div>
               </div>
@@ -297,6 +285,49 @@ function LogFollowUpModal({ contact, onClose, onSave, saving }) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function DraftRow({ item, onMarkSent, markPending }) {
+  const [expanded, setExpanded] = useState(false);
+  const name = item.name || item.company || item.firm || item.firm_name || item.contact_name || 'Unknown';
+  const email = item.contact_email || item.email || '';
+  const draft = item.email_draft || '';
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="min-w-0 flex-1 text-left cursor-pointer hover:opacity-80"
+        >
+          <div className="font-medium text-sm text-[#1F2D3D] truncate">{name}</div>
+          <div className="text-xs text-gray-500 truncate">
+            {email}
+            {draft && <span className="ml-2 text-[#F97316]">· AI draft ready</span>}
+            {!draft && <span className="ml-2 text-gray-400">· no draft yet</span>}
+          </div>
+        </button>
+        <button
+          onClick={onMarkSent}
+          disabled={markPending}
+          className="shrink-0 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+        >
+          Mark Sent
+        </button>
+      </div>
+      {expanded && draft && (
+        <div className="mt-3 bg-gray-50 rounded-lg p-3">
+          <div className="text-xs text-gray-500 mb-1">AI-generated draft</div>
+          <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans">{draft}</pre>
+        </div>
+      )}
+      {expanded && !draft && (
+        <div className="mt-3 text-xs text-gray-400">
+          No AI draft. Run Morning Sync from the Dashboard to generate one, or draft from the Outreach page.
+        </div>
+      )}
     </div>
   );
 }

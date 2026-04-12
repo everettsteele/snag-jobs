@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useToast } from '../components/Toast';
 
 const DAYS_TO_SHOW = 14;
 
@@ -250,9 +251,27 @@ function Legend({ color, label }) {
 }
 
 function MorningSyncModal({ onClose }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [runResult, setRunResult] = useState(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ['morning-sync'],
     queryFn: () => api.get('/morning-sync/status'),
+  });
+
+  const runMutation = useMutation({
+    mutationFn: () => api.post('/morning-sync/run'),
+    onSuccess: (resp) => {
+      setRunResult(resp.summary);
+      queryClient.invalidateQueries({ queryKey: ['morning-sync'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['job-board'] });
+      toast(
+        `Drafted ${resp.summary.totalDrafted || 0} contacts, ${resp.summary.emailsGenerated} AI emails. Crawling for leads...`
+      );
+    },
+    onError: (err) => toast(err.message || 'Morning sync failed', 'error'),
   });
 
   return (
@@ -264,15 +283,84 @@ function MorningSyncModal({ onClose }) {
         <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-semibold text-[#1F2D3D]">Morning Sync</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Today's priorities, in order.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Run the morning routine and see today's priorities.</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none cursor-pointer">×</button>
         </div>
+
+        {/* Run action */}
+        <div className="bg-gradient-to-r from-[#1F2D3D] to-[#2C3E50] px-6 py-4 text-white">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold">Run Morning Routine</div>
+              <div className="text-xs text-white/70 mt-0.5">
+                Allocates today's outreach queue, generates AI drafts, and crawls job boards.
+              </div>
+            </div>
+            <button
+              onClick={() => runMutation.mutate()}
+              disabled={runMutation.isPending}
+              className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            >
+              {runMutation.isPending ? 'Running...' : 'Run Now'}
+            </button>
+          </div>
+          {runResult && (
+            <div className="mt-3 pt-3 border-t border-white/10 text-xs grid grid-cols-4 gap-3">
+              <div>
+                <div className="text-white/60">Recruiters drafted</div>
+                <div className="text-base font-bold">{runResult.drafted?.firms || 0}</div>
+              </div>
+              <div>
+                <div className="text-white/60">CEOs drafted</div>
+                <div className="text-base font-bold">{runResult.drafted?.ceos || 0}</div>
+              </div>
+              <div>
+                <div className="text-white/60">VCs drafted</div>
+                <div className="text-base font-bold">{runResult.drafted?.vcs || 0}</div>
+              </div>
+              <div>
+                <div className="text-white/60">AI emails</div>
+                <div className="text-base font-bold">
+                  {runResult.emailsGenerated}
+                  {runResult.emailsFailed > 0 && (
+                    <span className="text-red-300 text-xs ml-1">+{runResult.emailsFailed} failed</span>
+                  )}
+                </div>
+              </div>
+              {runResult.crawlStarted && (
+                <div className="col-span-4 text-white/70 italic">
+                  Job board crawl running in background. New leads appear in 2-3 min.
+                </div>
+              )}
+              {runResult.errors?.length > 0 && (
+                <div className="col-span-4 text-red-300">
+                  {runResult.errors.join(' · ')}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="overflow-y-auto p-6 space-y-5">
           {isLoading ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : data ? (
             <>
+              <SyncSection
+                title="Drafts Ready to Review"
+                count={data.outreach?.draftsQueued || 0}
+                items={[]}
+                renderItem={() => null}
+                emptyText={data.outreach?.draftsQueued ? `${data.outreach.draftsQueued} drafted emails waiting in the Queue page` : 'No drafts queued. Run Morning Sync to generate some.'}
+              />
+              <SyncSection
+                title="Outreach Follow-ups Due"
+                count={data.outreach?.dueFollowUps || 0}
+                items={[]}
+                renderItem={() => null}
+                emptyText={data.outreach?.dueFollowUps ? `${data.outreach.dueFollowUps} contacts due for follow-up` : 'No outreach follow-ups due.'}
+              />
               <SyncSection
                 title="Applications Needing Packages"
                 count={data.applications?.needsPackage || 0}
@@ -290,20 +378,6 @@ function MorningSyncModal({ onClose }) {
                   <div><span className="font-medium">{a.company}</span> <span className="text-gray-500">— {a.role}</span> <span className="text-xs text-red-600 ml-1">{a.status} · due {a.follow_up_date}</span></div>
                 )}
                 emptyText="No overdue application follow-ups."
-              />
-              <SyncSection
-                title="Outreach Follow-ups Due"
-                count={data.outreach?.dueFollowUps || 0}
-                items={[]}
-                renderItem={() => null}
-                emptyText={data.outreach?.dueFollowUps ? `${data.outreach.dueFollowUps} contacts due for follow-up` : 'No outreach follow-ups due.'}
-              />
-              <SyncSection
-                title="Drafts in Queue"
-                count={data.outreach?.draftsQueued || 0}
-                items={[]}
-                renderItem={() => null}
-                emptyText={data.outreach?.draftsQueued ? `${data.outreach.draftsQueued} drafted emails ready to send` : 'No drafts queued.'}
               />
               <SyncSection
                 title="Overdue Next Steps"

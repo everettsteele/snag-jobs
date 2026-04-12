@@ -15,7 +15,7 @@ const router = Router();
 
 const SENT_STATUSES = new Set(['contacted', 'in conversation', 'bounced', 'passed', 'linkedin']);
 const PILLARS = ['firms', 'ceos', 'vcs'];
-const EXTENDED_FIELDS = ['status', 'notes', 'followup_date', 'is_job_search', 'gmail_thread_id', 'cadence_day', 'last_contacted'];
+const EXTENDED_FIELDS = ['status', 'notes', 'followup_date', 'is_job_search', 'gmail_thread_id', 'cadence_day', 'last_contacted', 'email_draft'];
 const DAILY_TARGET = 15;
 const SLA_TARGET = 10;
 
