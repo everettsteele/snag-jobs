@@ -209,8 +209,41 @@ function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
     item.followup_date || item.follow_up_date || ''
   );
   const [drafting, setDrafting] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const typeMap = { recruiters: 'recruiter', ceos: 'ceo', vcs: 'vc' };
+
+  const extractDraft = () => {
+    const marker = '--- AI Draft ---';
+    if (notes.includes(marker)) {
+      return notes.split(marker).pop().trim();
+    }
+    return notes.trim();
+  };
+
+  const firstEmail = item.contact_email || (item.contacts?.find((c) => c.email)?.email) || '';
+
+  const handleSendGmail = async () => {
+    const body = extractDraft();
+    if (!body || body.length < 20) {
+      toast('Write or generate a draft first', 'error');
+      return;
+    }
+    if (!firstEmail) {
+      toast('No recipient email on this contact', 'error');
+      return;
+    }
+    const subject = `Reaching out — ${name}`;
+    setSending(true);
+    try {
+      await api.post('/google/gmail/draft', { to: firstEmail, subject, body });
+      toast('Draft created in Gmail');
+    } catch (err) {
+      toast(err.message || 'Failed to create Gmail draft', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleDraftEmail = async () => {
     const contactName = item.contact_name || (item.contacts?.[0]?.name) || name;
@@ -354,7 +387,7 @@ function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-wrap">
             <button
               onClick={handleDraftEmail}
               disabled={drafting}
@@ -362,6 +395,16 @@ function OutreachCard({ item, config, pillar, expanded, onToggle, onSave }) {
             >
               {drafting ? 'Drafting...' : 'Draft Email'}
             </button>
+            {firstEmail && (
+              <button
+                onClick={handleSendGmail}
+                disabled={sending}
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                title={`Create Gmail draft to ${firstEmail}`}
+              >
+                {sending ? 'Sending...' : 'Create Gmail Draft'}
+              </button>
+            )}
             <button
               onClick={handleSave}
               className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors cursor-pointer"

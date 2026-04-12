@@ -70,6 +70,21 @@ export default function EventsPage() {
     onError: (err) => toast(err.message, 'error'),
   });
 
+  const syncCalendarMutation = useMutation({
+    mutationFn: () => api.post('/google/calendar/sync'),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast(`Synced ${data.added} new, ${data.updated} updated`);
+    },
+    onError: (err) => {
+      if (err.message?.includes('not connected')) {
+        toast('Connect Google in Settings first', 'error');
+      } else {
+        toast(err.message, 'error');
+      }
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -115,6 +130,13 @@ export default function EventsPage() {
               {showHidden ? 'Hide' : 'Show'} {hiddenEvents.length} hidden
             </button>
           )}
+          <button
+            onClick={() => syncCalendarMutation.mutate()}
+            disabled={syncCalendarMutation.isPending}
+            className="text-sm bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {syncCalendarMutation.isPending ? 'Syncing...' : 'Sync Calendar'}
+          </button>
           <button
             onClick={() => setShowModal(true)}
             className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
