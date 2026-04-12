@@ -32,11 +32,11 @@ function ProfileSection({ profile, updateProfile, toast }) {
   useEffect(() => {
     if (profile) {
       setForm({
-        full_name: profile.full_name || '',
+        full_name: profile.full_name || profile.fullName || '',
         phone: profile.phone || '',
-        linkedin_url: profile.linkedin_url || '',
+        linkedin_url: profile.linkedin_url || profile.linkedinUrl || '',
         location: profile.location || '',
-        background: profile.background || '',
+        background: profile.background_text || profile.backgroundText || '',
       });
     }
   }, [profile]);
@@ -44,7 +44,13 @@ function ProfileSection({ profile, updateProfile, toast }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile(form);
+      await updateProfile({
+        full_name: form.full_name,
+        phone: form.phone,
+        linkedin_url: form.linkedin_url,
+        location: form.location,
+        background_text: form.background,
+      });
       toast('Profile saved');
     } catch (err) {
       toast(err.message, 'error');
@@ -115,24 +121,31 @@ function PreferencesSection({ profile, updateProfile, toast }) {
   const [targetRoles, setTargetRoles] = useState('');
   const [targetGeo, setTargetGeo] = useState('');
   const [dailyTarget, setDailyTarget] = useState(10);
+  const [weeklyOutreach, setWeeklyOutreach] = useState(50);
+  const [weeklyApps, setWeeklyApps] = useState(10);
+  const [weeklyEvents, setWeeklyEvents] = useState(2);
+  const [weeklyFollowups, setWeeklyFollowups] = useState(10);
   const [roleInput, setRoleInput] = useState('');
   const [geoInput, setGeoInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (profile?.preferences) {
-      const prefs = profile.preferences;
+    if (profile) {
       setTargetRoles(
-        Array.isArray(prefs.target_roles)
-          ? prefs.target_roles.join(', ')
-          : prefs.target_roles || ''
+        Array.isArray(profile.targetRoles || profile.target_roles)
+          ? (profile.targetRoles || profile.target_roles).join(', ')
+          : (profile.targetRoles || profile.target_roles) || ''
       );
       setTargetGeo(
-        Array.isArray(prefs.target_geography)
-          ? prefs.target_geography.join(', ')
-          : prefs.target_geography || ''
+        Array.isArray(profile.targetGeography || profile.target_geography)
+          ? (profile.targetGeography || profile.target_geography).join(', ')
+          : (profile.targetGeography || profile.target_geography) || ''
       );
-      setDailyTarget(prefs.daily_outreach_target || 10);
+      setDailyTarget(profile.dailyOutreachTarget || profile.daily_outreach_target || 10);
+      setWeeklyOutreach(profile.weeklyOutreachTarget ?? profile.weekly_outreach_target ?? 50);
+      setWeeklyApps(profile.weeklyAppsTarget ?? profile.weekly_apps_target ?? 10);
+      setWeeklyEvents(profile.weeklyEventsTarget ?? profile.weekly_events_target ?? 2);
+      setWeeklyFollowups(profile.weeklyFollowupsTarget ?? profile.weekly_followups_target ?? 10);
     }
   }, [profile]);
 
@@ -173,11 +186,13 @@ function PreferencesSection({ profile, updateProfile, toast }) {
     setSaving(true);
     try {
       await updateProfile({
-        preferences: {
-          target_roles: roles,
-          target_geography: geos,
-          daily_outreach_target: dailyTarget,
-        },
+        target_roles: roles,
+        target_geography: geos,
+        daily_outreach_target: dailyTarget,
+        weekly_outreach_target: weeklyOutreach,
+        weekly_apps_target: weeklyApps,
+        weekly_events_target: weeklyEvents,
+        weekly_followups_target: weeklyFollowups,
       });
       toast('Preferences saved');
     } catch (err) {
@@ -276,6 +291,21 @@ function PreferencesSection({ profile, updateProfile, toast }) {
             onChange={(e) => setDailyTarget(parseInt(e.target.value) || 10)}
             className="w-24 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]"
           />
+          <p className="text-xs text-gray-400 mt-1">How many outreach emails Morning Sync should draft each day.</p>
+        </div>
+
+        {/* Weekly targets */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="text-sm font-medium text-gray-700 mb-1">Weekly Targets (for Snag Metrics dashboard)</div>
+          <p className="text-xs text-gray-400 mb-3">
+            Your weekly goals. The dashboard shows progress toward these each week.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <TargetInput label="Outreach emails" value={weeklyOutreach} onChange={setWeeklyOutreach} max={500} hint="Emails sent to recruiters/CEOs/VCs" />
+            <TargetInput label="Applications" value={weeklyApps} onChange={setWeeklyApps} max={100} hint="Jobs you formally apply to" />
+            <TargetInput label="Networking events" value={weeklyEvents} onChange={setWeeklyEvents} max={20} hint="Coffees, meetups, calls" />
+            <TargetInput label="Follow-ups handled" value={weeklyFollowups} onChange={setWeeklyFollowups} max={100} hint="Pending follow-ups to clear (lower is better)" />
+          </div>
         </div>
 
         <div className="flex justify-end">
@@ -834,6 +864,23 @@ function JobSearchSection({ toast }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TargetInput({ label, value, onChange, max, hint }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-0.5">{label}</label>
+      <input
+        type="number"
+        min={0}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+      />
+      {hint && <p className="text-[10px] text-gray-400 mt-0.5">{hint}</p>}
     </div>
   );
 }

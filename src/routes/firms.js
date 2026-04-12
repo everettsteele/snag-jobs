@@ -402,13 +402,22 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
   });
 
+  // Normalize any date-like value (JS Date, ISO string, YYYY-MM-DD) to YYYY-MM-DD
+  function toDateStr(v) {
+    if (!v) return null;
+    if (v instanceof Date) return v.toISOString().split('T')[0];
+    const s = String(v);
+    if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    return null;
+  }
+
   // Pull applications + events from DB for current user (if auth context has it)
   try {
     const dbStore = require('../db/store');
     if (req.user?.tenantId && req.user?.id) {
       const userApps = await dbStore.listApplications(req.user.tenantId, req.user.id);
       userApps.forEach(a => {
-        const dt = a.applied_date || (a.created_at && String(a.created_at).split('T')[0]);
+        const dt = toDateStr(a.applied_date) || toDateStr(a.created_at);
         if (dt && ['applied', 'interviewing', 'offer'].includes(a.status)) {
           const d = bumpDate(dt);
           d.applications++;
@@ -417,7 +426,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       });
       const userEvents = await dbStore.listEvents(req.user.tenantId, req.user.id, { includeHidden: false });
       userEvents.forEach(e => {
-        const dt = e.start_date;
+        const dt = toDateStr(e.start_date);
         if (dt) {
           const d = bumpDate(dt);
           d.events++;
@@ -425,7 +434,7 @@ router.get('/stats', requireAuth, async (req, res) => {
         }
       });
     }
-  } catch (e) { /* fall back to just outreach data */ }
+  } catch (e) { console.error('[stats] apps/events error:', e.message); }
 
   // Sector stats (CEOs only)
   const sBuckets = {};

@@ -102,6 +102,16 @@ router.delete('/:slug/file', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/resumes/:slug/text — return the parsed resume text for a single variant
+router.get('/:slug/text', requireAuth, async (req, res) => {
+  const { rows } = await query(
+    `SELECT slug, label, filename, parsed_text FROM resume_variants WHERE user_id = $1 AND slug = $2`,
+    [req.user.id, req.params.slug]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Variant not found' });
+  res.json(rows[0]);
+});
+
 // POST /api/resumes/generate — AI-generate angle variants from a base resume
 // Free users: 1 angle. Pro: 4 angles.
 router.post('/generate', requireAuth, async (req, res) => {

@@ -59,6 +59,10 @@ async function requireAuth(req, res, next) {
         targetIndustries: user.target_industries,
         dailyOutreachTarget: user.daily_outreach_target,
         slaTarget: user.sla_target,
+        weeklyOutreachTarget: user.weekly_outreach_target,
+        weeklyAppsTarget: user.weekly_apps_target,
+        weeklyEventsTarget: user.weekly_events_target,
+        weeklyFollowupsTarget: user.weekly_followups_target,
       },
     };
     next();

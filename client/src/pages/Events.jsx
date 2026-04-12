@@ -109,10 +109,23 @@ export default function EventsPage() {
 
   const eventList = Array.isArray(data) ? data : data?.events || [];
   const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const getEventDate = (e) => {
+    const d = e.start_date || e.date;
+    if (!d) return null;
+    if (d instanceof Date) return d;
+    return new Date(String(d).split('T')[0] + 'T12:00:00');
+  };
   const visibleEvents = eventList.filter((e) => !e.hidden);
   const hiddenEvents = eventList.filter((e) => e.hidden);
-  const upcoming = visibleEvents.filter((e) => new Date(e.date) >= now);
-  const past = visibleEvents.filter((e) => new Date(e.date) < now);
+  const upcoming = visibleEvents.filter((e) => {
+    const d = getEventDate(e);
+    return d && d >= new Date(todayStr + 'T00:00:00');
+  });
+  const past = visibleEvents.filter((e) => {
+    const d = getEventDate(e);
+    return d && d < new Date(todayStr + 'T00:00:00');
+  });
 
   return (
     <div className="space-y-6">
@@ -281,13 +294,14 @@ function EventCard({ event, onUpdate, onAddStep, onToggleStep, onAddContact }) {
             </span>
           </div>
           <div className="text-xs text-gray-500 mt-0.5">
-            {event.date && new Date(event.date).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
+            {(() => {
+              const dateStr = event.start_date || event.date;
+              if (!dateStr) return null;
+              const d = dateStr instanceof Date ? dateStr : new Date(String(dateStr).split('T')[0] + 'T12:00:00');
+              const opts = { weekday: 'short', month: 'short', day: 'numeric' };
+              const formatted = d.toLocaleDateString('en-US', opts);
+              return event.start_time ? `${formatted} · ${event.start_time}` : formatted;
+            })()}
             {event.location && ` \u00B7 ${event.location}`}
           </div>
         </div>

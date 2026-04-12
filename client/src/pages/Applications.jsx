@@ -22,6 +22,7 @@ export default function ApplicationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('all');
   const [coverLetterApp, setCoverLetterApp] = useState(null);
+  const [resumeApp, setResumeApp] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications'],
@@ -167,6 +168,7 @@ export default function ApplicationsPage() {
                   app={app}
                   onUpdate={(fields) => updateMutation.mutate({ id: app.id, ...fields })}
                   onShowCoverLetter={(a) => setCoverLetterApp(a)}
+                  onShowResume={(a) => setResumeApp(a)}
                   onDelete={() => {
                     if (window.confirm('Delete this application?')) {
                       deleteMutation.mutate(app.id);
@@ -196,11 +198,93 @@ export default function ApplicationsPage() {
           generating={generateLetterMutation.isPending}
         />
       )}
+
+      {resumeApp && <ResumeViewModal app={resumeApp} onClose={() => setResumeApp(null)} />}
     </div>
   );
 }
 
-function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter }) {
+function ResumeViewModal({ app, onClose }) {
+  const { data: variants, isLoading } = useQuery({
+    queryKey: ['resume-variants'],
+    queryFn: () => api.get('/resumes'),
+  });
+
+  const variant = variants?.find((v) => v.slug === app.resume_variant);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-semibold text-[#1F2D3D]">
+              Resume {variant?.label || app.resume_variant || '(none selected)'}
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">{app.company} — {app.role}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none cursor-pointer">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {isLoading ? (
+            <div className="text-center py-12 text-gray-400">Loading...</div>
+          ) : !app.resume_variant ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-2">No resume variant assigned.</p>
+              <p className="text-xs text-gray-400">Pick one from the dropdown in the Resume column.</p>
+            </div>
+          ) : !variant ? (
+            <div className="text-center py-12 text-gray-400">Resume variant not found.</div>
+          ) : !variant.has_content && !variant.filename ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-2">This variant has no content yet.</p>
+              <a href="/settings" className="text-sm text-[#F97316] hover:underline">
+                Upload or generate it in Settings →
+              </a>
+            </div>
+          ) : (
+            <>
+              {variant.filename && (
+                <div className="text-xs text-gray-500 mb-3">
+                  File: <span className="font-mono">{variant.filename}</span>
+                  {variant.file_url && (
+                    <a
+                      href={variant.file_url + `?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-blue-600 hover:underline"
+                    >
+                      Download PDF
+                    </a>
+                  )}
+                </div>
+              )}
+              <ResumeTextFetch slug={app.resume_variant} />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumeTextFetch({ slug }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['resume-text', slug],
+    queryFn: () => api.get(`/resumes/${slug}/text`),
+  });
+  if (isLoading) return <div className="text-gray-400 text-center py-6">Loading resume text...</div>;
+  if (!data?.parsed_text) return <div className="text-gray-400 text-center py-6">No parsed text available.</div>;
+  return (
+    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans bg-gray-50 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
+      {data.parsed_text}
+    </pre>
+  );
+}
+
+function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter, onShowResume }) {
   const statusInfo = APP_STATUSES[app.status] || APP_STATUSES.identified;
   const followUp = app.follow_up_date || app.followup_date;
   const sourceUrl = app.source_url || app.url;
@@ -240,8 +324,18 @@ function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter }) {
       <td className="px-4 py-3 text-xs text-gray-500">
         {followUp ? new Date(followUp + 'T12:00:00').toLocaleDateString() : '--'}
       </td>
-      <td className="px-4 py-3 text-xs text-gray-500 max-w-32 truncate">
-        {app.resume_variant || '--'}
+      <td className="px-4 py-3 text-xs">
+        <select
+          value={app.resume_variant || ''}
+          onChange={(e) => onUpdate({ resume_variant: e.target.value })}
+          className="text-xs border border-gray-200 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+        >
+          <option value="">— none —</option>
+          <option value="operator">Operator</option>
+          <option value="partner">Partner</option>
+          <option value="builder">Builder</option>
+          <option value="innovator">Innovator</option>
+        </select>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 flex-wrap">
@@ -269,9 +363,18 @@ function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter }) {
           >
             {hasCoverLetter ? 'View CL' : 'Gen CL'}
           </button>
+          <button
+            onClick={() => onShowResume(app)}
+            className={`text-xs px-2 py-1 rounded transition-colors cursor-pointer ${
+              app.resume_variant ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+            }`}
+            title={app.resume_variant ? `View ${app.resume_variant} resume` : 'Select a resume variant first'}
+          >
+            View CV
+          </button>
           {sourceUrl && (
             <a
-              href={`/api/applications/${app.id}/cover-letter`}
+              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className={`text-xs px-2 py-1 rounded transition-colors ${
@@ -341,7 +444,7 @@ function CoverLetterModal({ app, onClose, onGenerate, generating }) {
         <div className="px-6 py-3 border-t border-gray-100 flex justify-end gap-2 bg-gray-50/50">
           {app.cover_letter_text && (
             <a
-              href={`/api/applications/${app.id}/cover-letter`}
+              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer"

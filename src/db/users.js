@@ -76,6 +76,8 @@ async function findUserById(id) {
             up.full_name, up.phone, up.email_display, up.linkedin_url,
             up.location, up.background_text, up.target_roles, up.target_geography,
             up.target_industries, up.daily_outreach_target, up.sla_target,
+            up.weekly_outreach_target, up.weekly_apps_target,
+            up.weekly_events_target, up.weekly_followups_target,
             t.name as tenant_name, t.plan as tenant_plan
      FROM users u
      JOIN user_profiles up ON up.user_id = u.id
@@ -95,6 +97,7 @@ async function updateProfile(userId, fields) {
     'full_name', 'phone', 'email_display', 'linkedin_url', 'location',
     'background_text', 'target_roles', 'target_geography', 'target_industries',
     'daily_outreach_target', 'sla_target',
+    'weekly_outreach_target', 'weekly_apps_target', 'weekly_events_target', 'weekly_followups_target',
   ];
 
   const sets = [];

@@ -26,6 +26,91 @@ router.patch('/events/:id', requireAuth, async (req, res) => {
   res.json(updated);
 });
 
+// Add a next-step to an event
+router.post('/events/:id/steps', requireAuth, async (req, res) => {
+  const { text } = req.body;
+  if (!text?.trim()) return res.status(400).json({ error: 'text required' });
+
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const newStep = {
+    id: require('crypto').randomUUID(),
+    text: text.trim(),
+    done: false,
+    due_date: req.body.due_date || null,
+    created_at: new Date().toISOString(),
+  };
+  const steps = [...(existing.next_steps || []), newStep];
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { next_steps: steps });
+  res.json(updated);
+});
+
+// Toggle/update a next-step
+router.patch('/events/:id/steps/:stepId', requireAuth, async (req, res) => {
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const steps = (existing.next_steps || []).map(s =>
+    s.id === req.params.stepId ? { ...s, ...req.body } : s
+  );
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { next_steps: steps });
+  res.json(updated);
+});
+
+// Delete a next-step
+router.delete('/events/:id/steps/:stepId', requireAuth, async (req, res) => {
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const steps = (existing.next_steps || []).filter(s => s.id !== req.params.stepId);
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { next_steps: steps });
+  res.json(updated);
+});
+
+// Add a contact to an event
+router.post('/events/:id/contacts', requireAuth, async (req, res) => {
+  const { name, email, role, company } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'name required' });
+
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const newContact = {
+    id: require('crypto').randomUUID(),
+    name: name.trim(),
+    email: email?.trim() || '',
+    role: role?.trim() || '',
+    company: company?.trim() || '',
+    notes: req.body.notes || '',
+  };
+  const contacts = [...(existing.contacts || []), newContact];
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { contacts });
+  res.json(updated);
+});
+
+// Update a contact on an event
+router.patch('/events/:id/contacts/:contactId', requireAuth, async (req, res) => {
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const contacts = (existing.contacts || []).map(c =>
+    c.id === req.params.contactId ? { ...c, ...req.body } : c
+  );
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { contacts });
+  res.json(updated);
+});
+
+// Delete a contact from an event
+router.delete('/events/:id/contacts/:contactId', requireAuth, async (req, res) => {
+  const existing = await db.getEvent(req.user.tenantId, req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const contacts = (existing.contacts || []).filter(c => c.id !== req.params.contactId);
+  const updated = await db.updateEvent(req.user.tenantId, req.params.id, { contacts });
+  res.json(updated);
+});
+
 router.delete('/events/:id', requireAuth, async (req, res) => {
   const deleted = await db.deleteEvent(req.user.tenantId, req.params.id);
   if (!deleted) return res.status(404).json({ error: 'Not found' });

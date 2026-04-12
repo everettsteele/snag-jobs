@@ -192,49 +192,59 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* SLA Compliance */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-[#1F2D3D] mb-4">SLA Compliance</h3>
-          <div className="space-y-3">
-            <SLARow label="Recruiter Follow-ups" value={slaStats.recruiterCompliance} />
-            <SLARow label="CEO Follow-ups" value={slaStats.ceoCompliance} />
-            <SLARow label="VC Follow-ups" value={slaStats.vcCompliance} />
-            <SLARow label="Application Follow-ups" value={slaStats.appCompliance} />
-          </div>
-        </div>
+      {/* Snag Metrics */}
+      <SnagMetricsCard />
+    </div>
+  );
+}
 
-        {/* Template Performance */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-[#1F2D3D] mb-4">Template Performance</h3>
-          {stats?.templateStats?.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 font-medium">Template</th>
-                  <th className="pb-2 font-medium text-right">Sent</th>
-                  <th className="pb-2 font-medium text-right">Replies</th>
-                  <th className="pb-2 font-medium text-right">Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.templateStats.map((t, i) => (
-                  <tr key={i} className="border-b border-gray-50">
-                    <td className="py-2 text-[#1F2D3D]">{t.template || t.name || `Template ${i + 1}`}</td>
-                    <td className="py-2 text-right text-gray-600">{t.sent || 0}</td>
-                    <td className="py-2 text-right text-gray-600">{t.replies || 0}</td>
-                    <td className="py-2 text-right font-medium text-[#1F2D3D]">
-                      {t.sent ? `${Math.round(((t.replies || 0) / t.sent) * 100)}%` : '--'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-sm text-gray-400">No template data yet</p>
-          )}
-        </div>
+function SnagMetricsCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['snag-metrics'],
+    queryFn: () => api.get('/snag-metrics'),
+  });
+
+  if (isLoading || !data) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-semibold text-[#1F2D3D]">Snag Metrics</h3>
+        <a href="/settings" className="text-xs text-gray-500 hover:text-[#F97316]">
+          Edit targets →
+        </a>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Your progress this week against the targets you set in Preferences. Green = on track, amber = behind, red = well off pace.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <MetricBar metric={data.outreach} />
+        <MetricBar metric={data.applications} />
+        <MetricBar metric={data.events} />
+        <MetricBar metric={data.followups} />
+      </div>
+    </div>
+  );
+}
+
+function MetricBar({ metric }) {
+  if (!metric) return null;
+  const { count, target, label, inverted } = metric;
+  const pct = target > 0 ? Math.min(100, Math.round((count / target) * 100)) : 0;
+  // For inverted metrics (fewer is better, e.g. overdue follow-ups), flip the color logic
+  const color = inverted
+    ? (count === 0 ? 'bg-green-500' : count <= Math.ceil(target / 2) ? 'bg-amber-500' : 'bg-red-500')
+    : (pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500');
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm mb-1">
+        <span className="text-gray-600">{label}</span>
+        <span className="font-medium text-[#1F2D3D]">
+          {count}{target > 0 && <span className="text-gray-400"> / {target}</span>}
+        </span>
+      </div>
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
     </div>
   );

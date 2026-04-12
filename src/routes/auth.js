@@ -30,6 +30,10 @@ const profileUpdateSchema = z.object({
   target_industries: z.array(z.string().max(100)).max(20).optional(),
   daily_outreach_target: z.number().int().min(1).max(100).optional(),
   sla_target: z.number().int().min(1).max(100).optional(),
+  weekly_outreach_target: z.number().int().min(0).max(500).optional(),
+  weekly_apps_target: z.number().int().min(0).max(100).optional(),
+  weekly_events_target: z.number().int().min(0).max(20).optional(),
+  weekly_followups_target: z.number().int().min(0).max(100).optional(),
 });
 
 // POST /api/auth/register
