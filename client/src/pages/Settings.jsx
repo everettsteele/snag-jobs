@@ -435,6 +435,8 @@ function BillingSection({ toast }) {
 function ResumeSection() {
   const [variants, setVariants] = useState([]);
   const [uploading, setUploading] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [targetRole, setTargetRole] = useState('');
   const { toast } = useToast();
 
   const loadVariants = async () => {
@@ -495,12 +497,67 @@ function ResumeSection() {
     }
   };
 
+  const handleGenerate = async () => {
+    const base = variants.find((v) => v.is_default) || variants[0];
+    if (!base) { toast('Set a default variant first', 'error'); return; }
+    setGenerating(true);
+    try {
+      const result = await api.post('/resumes/generate', {
+        baseSlug: base.slug,
+        targetRole: targetRole || 'senior operations leadership',
+        angles: ['operator', 'partner', 'builder', 'innovator'],
+      });
+      const succeeded = result.results.filter((r) => r.ok).length;
+      const failed = result.results.filter((r) => !r.ok).length;
+      toast(
+        `Generated ${succeeded} variant${succeeded !== 1 ? 's' : ''}${failed > 0 ? ` (${failed} failed)` : ''}`
+      );
+      loadVariants();
+    } catch (err) {
+      toast(err.message || 'Generation failed', 'error');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const hasBase = variants.some((v) => v.has_content || v.filename);
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="text-base font-semibold text-[#1F2D3D] mb-4">Resume Variants</h3>
+      <h3 className="text-base font-semibold text-[#1F2D3D] mb-2">Resume Variants</h3>
       <p className="text-xs text-gray-500 mb-4">
-        Upload a PDF for each positioning angle. The text is extracted and used as context for AI-generated cover letters.
+        Upload your base resume as a PDF, then generate AI variants tailored to different positioning angles.
+        Free plan gets 1 angle; Pro gets all 4.
       </p>
+
+      {hasBase && (
+        <div className="bg-gradient-to-r from-[#1F2D3D] to-[#2C3E50] text-white rounded-lg p-4 mb-4">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <div className="text-sm font-semibold">Generate Variants from Base Resume</div>
+              <div className="text-xs text-white/70 mt-0.5">
+                AI rewrites your resume 4 ways — operator, partner, builder, innovator — keeping your facts but shifting emphasis.
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={targetRole}
+              onChange={(e) => setTargetRole(e.target.value)}
+              placeholder="Target role (e.g. Chief of Staff at a Series B startup)"
+              className="flex-1 px-3 py-1.5 rounded text-sm bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-semibold px-4 py-1.5 rounded cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            >
+              {generating ? 'Generating...' : 'Generate'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {variants.length > 0 ? (
         <div className="space-y-3">
           {variants.map((v) => (
@@ -527,7 +584,12 @@ function ResumeSection() {
               </div>
               {v.filename ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">{v.filename}</span>
+                  <span className="text-xs text-gray-600">
+                    {v.filename}
+                    {v.has_content && (
+                      <span className="ml-2 text-green-600">· {Math.round((v.text_length || 0) / 100) / 10}K chars parsed</span>
+                    )}
+                  </span>
                   <div className="flex items-center gap-3">
                     <label className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer">
                       Replace
@@ -543,6 +605,29 @@ function ResumeSection() {
                       className="text-xs text-red-500 hover:text-red-600 cursor-pointer"
                     >
                       Remove
+                    </button>
+                  </div>
+                </div>
+              ) : v.has_content ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-green-600">
+                    AI-generated · {Math.round((v.text_length || 0) / 100) / 10}K chars
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer">
+                      Upload PDF
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => handleUpload(v.slug, e.target.files[0])}
+                      />
+                    </label>
+                    <button
+                      onClick={() => handleRemove(v.slug)}
+                      className="text-xs text-red-500 hover:text-red-600 cursor-pointer"
+                    >
+                      Clear
                     </button>
                   </div>
                 </div>

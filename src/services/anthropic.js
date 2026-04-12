@@ -172,6 +172,51 @@ RECIPIENT: ${recipientName}${recipientRole ? ', ' + recipientRole : ''} at ${com
   return resp.content?.[0]?.text || '';
 }
 
+// ================================================================
+// generateResumeVariant — rewrite a base resume for a specific angle
+// ================================================================
+
+const RESUME_ANGLE_PROMPTS = {
+  operator: `You're rewriting the resume to position the candidate as an Integrator/COO-type leader — EOS experience, scaling operational machines, building org infrastructure, process rigor, accountability systems. Lead with metrics-driven outcomes and systems thinking. Reorder bullets to surface operations impact first.`,
+  partner: `You're rewriting the resume to position the candidate as a Chief of Staff — right-hand to CEO, strategic partner, cross-functional leader, stakeholder management. Lead with high-leverage judgment calls, coalition-building, and executive proximity. Emphasize cadence, strategic planning, and being the connective tissue.`,
+  builder: `You're rewriting the resume to position the candidate as a zero-to-one builder — founder, early-stage operator, creating from scratch. Emphasize starting things, ambiguity tolerance, wearing many hats, early revenue/traction, and founding skills. Reorder to surface founding and build experiences first.`,
+  innovator: `You're rewriting the resume to position the candidate as an AI-native operator / technology-forward executive — applying emerging tools to transform operations, automation, AI-first workflows. Emphasize technical leverage, AI/automation projects, and technology-driven productivity gains.`,
+};
+
+async function generateResumeVariant({ baseText, angle, targetRole }) {
+  const client = getClient();
+  const angleInstr = RESUME_ANGLE_PROMPTS[angle] || RESUME_ANGLE_PROMPTS.operator;
+
+  const prompt = `You are rewriting a candidate's resume for a specific positioning angle. Output ONLY the rewritten resume text — no preamble, no explanation, no markdown formatting.
+
+POSITIONING ANGLE: ${angle}
+${angleInstr}
+
+TARGET ROLE: ${targetRole || 'senior operations leadership'}
+
+BASE RESUME (preserve factual content — same jobs, same dates, same companies, same metrics — but rewrite the framing, reorder bullets to emphasize the angle, sharpen action verbs, and tighten language):
+
+${baseText}
+
+RULES:
+- Keep all factual claims exactly as-is. Do not invent achievements, roles, or dates.
+- Same section structure: Summary, Experience, Education, etc.
+- Rewrite the Summary section to lead with the angle's positioning.
+- Within each job, reorder bullets so the most angle-relevant ones come first.
+- Sharpen verbs. Remove weak filler. Keep under 800 words total.
+- Output plain text only. No markdown, no bullets with asterisks, no headers with hashes.
+  Use CAPS for section headers and standard formatting.
+
+Begin the rewritten resume now.`;
+
+  const resp = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2500,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  return (resp.content?.[0]?.text || '').trim();
+}
+
 async function fetchJobDescription(url) {
   try {
     const resp = await fetch(url, {
@@ -196,5 +241,6 @@ module.exports = {
   selectResumeVariant,
   generateCoverLetter,
   generateEmailDraft,
+  generateResumeVariant,
   fetchJobDescription,
 };

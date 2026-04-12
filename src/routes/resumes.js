@@ -24,7 +24,10 @@ const upload = multer({
 // GET /api/resumes — list all variants for the user
 router.get('/', requireAuth, async (req, res) => {
   const { rows } = await query(
-    `SELECT id, slug, label, file_url, filename, is_default, created_at
+    `SELECT id, slug, label, file_url, filename, is_default,
+            (parsed_text IS NOT NULL AND length(parsed_text) > 0) AS has_content,
+            length(parsed_text) AS text_length,
+            created_at
      FROM resume_variants WHERE user_id = $1 ORDER BY created_at`,
     [req.user.id]
   );
@@ -97,6 +100,51 @@ router.delete('/:slug/file', requireAuth, async (req, res) => {
   );
 
   res.json({ ok: true });
+});
+
+// POST /api/resumes/generate — AI-generate angle variants from a base resume
+// Free users: 1 angle. Pro: 4 angles.
+router.post('/generate', requireAuth, async (req, res) => {
+  const { baseSlug, targetRole, angles } = req.body;
+  if (!baseSlug) return res.status(400).json({ error: 'baseSlug required' });
+
+  const { isPro } = require('../middleware/tier');
+  const { generateResumeVariant } = require('../services/anthropic');
+  const pro = isPro(req.user);
+
+  // Load base resume text
+  const { rows: baseRows } = await query(
+    `SELECT parsed_text FROM resume_variants WHERE user_id = $1 AND slug = $2`,
+    [req.user.id, baseSlug]
+  );
+  if (!baseRows.length || !baseRows[0].parsed_text) {
+    return res.status(400).json({ error: 'Base resume not uploaded or empty' });
+  }
+  const baseText = baseRows[0].parsed_text;
+
+  // Determine which angles to generate
+  const requestedAngles = Array.isArray(angles) && angles.length
+    ? angles
+    : ['operator', 'partner', 'builder', 'innovator'];
+  const allowed = pro ? requestedAngles : requestedAngles.slice(0, 1);
+
+  const results = [];
+  for (const angle of allowed) {
+    if (angle === baseSlug) continue; // Don't overwrite base
+    try {
+      const text = await generateResumeVariant({ baseText, angle, targetRole });
+      await query(
+        `UPDATE resume_variants SET parsed_text = $1 WHERE user_id = $2 AND slug = $3`,
+        [text, req.user.id, angle]
+      );
+      results.push({ angle, ok: true, preview: text.slice(0, 200) });
+    } catch (e) {
+      console.error(`[resume-gen] ${angle} failed:`, e.message);
+      results.push({ angle, ok: false, error: e.message });
+    }
+  }
+
+  res.json({ ok: true, results, pro });
 });
 
 // PATCH /api/resumes/:slug/default — set a variant as default
