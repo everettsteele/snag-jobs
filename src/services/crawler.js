@@ -263,28 +263,62 @@ function extractLocation(html) {
   return '';
 }
 
-function scoreTitle(title) {
-  const tl = title.toLowerCase();
+// Score based on how closely a job title matches user's target roles.
+// Exact phrase match = highest score. Token overlap = partial.
+// Seniority signals (chief/vp/head/director) add weight.
+function scoreTitle(title, targetRoles) {
+  const tl = (title || '').toLowerCase();
+  if (!tl) return { score: 0, reasons: [] };
+
   let score = 0;
-  if (/chief operating|\bcoo\b/.test(tl)) score += 4;
-  else if (/vp oper|vice president oper|managing director|director of oper|director of strategic/.test(tl)) score += 3;
-  else if (/\bdirector\b/.test(tl)) score += 2;
-  else if (/\bvp\b|vice president/.test(tl)) score += 2;
-  if (/executive director/.test(tl)) score += 2;
-  if (/chief of staff/.test(tl)) score += 3;
-  if (/rabbi|cantor|teacher|social work|therapist|counsel|philanthrop|chaplain|educator|bookkeeper|accountant/.test(tl)) score -= 4;
   const reasons = [];
-  if (/chief operating|\bcoo\b/.test(tl)) reasons.push('COO');
-  if (/chief of staff/.test(tl)) reasons.push('CoS');
-  if (/director/.test(tl)) reasons.push('Director');
-  if (/vp|vice president/.test(tl)) reasons.push('VP');
-  if (/executive director/.test(tl)) reasons.push('ED');
-  if (/oper/.test(tl)) reasons.push('Ops');
-  return { score: Math.min(score, 10), reasons };
+
+  const roles = (targetRoles && targetRoles.length) ? targetRoles : ['chief operating officer', 'vp operations', 'chief of staff', 'director of operations', 'head of operations'];
+
+  // Exact phrase match against any target role = up to 6 points
+  for (const r of roles) {
+    const rl = r.toLowerCase().trim();
+    if (!rl) continue;
+    if (tl.includes(rl)) {
+      score += 6;
+      reasons.push(r);
+      break;  // don't double-count for multiple overlapping targets
+    }
+  }
+
+  // Token-level partial matches: 1 point per shared meaningful token (max 3 pts)
+  if (score === 0) {
+    const titleTokens = new Set(tl.split(/[^a-z]+/).filter(t => t.length > 2));
+    const stop = new Set(['the', 'and', 'for', 'with', 'senior', 'junior', 'level', 'remote', 'hybrid']);
+    let tokenHits = 0;
+    for (const r of roles) {
+      const roleTokens = r.toLowerCase().split(/[^a-z]+/).filter(t => t.length > 2 && !stop.has(t));
+      for (const rt of roleTokens) {
+        if (titleTokens.has(rt)) tokenHits++;
+      }
+    }
+    if (tokenHits > 0) {
+      score += Math.min(3, tokenHits);
+      reasons.push('partial match');
+    }
+  }
+
+  // Seniority boost
+  if (/\b(chief|coo|cto|cfo|cpo|ceo|president|svp|vp|vice\s*president|head|director|executive)\b/.test(tl)) {
+    score += 2;
+    if (!reasons.some(r => /senior/i.test(r))) reasons.push('senior');
+  }
+
+  // Penalize clearly-off-target roles
+  if (/\b(intern|assistant|coordinator|clerk|receptionist|cashier|driver|nurse|pharmac)/i.test(tl)) {
+    score -= 4;
+  }
+
+  return { score: Math.max(0, Math.min(score, 10)), reasons };
 }
 
 // Crawl a single source with circuit breaker
-async function crawlSource(source, existingUrls, userConfig) {
+async function crawlSource(source, existingUrls, userConfig, targetRoles) {
   const srcLeads = [];
   let urlsFound = 0, urlsAttempted = 0, filteredByLocation = 0, filteredByScore = 0;
   let consecutiveFailures = 0;
@@ -324,7 +358,7 @@ async function crawlSource(source, existingUrls, userConfig) {
           const orgM = jhtml.match(/(?:Employer|Organization|Company|Posted by):\s*([^<\n]{3,80})/) || jhtml.match(/class="[^"]*(?:company|employer|org)[^"]*"[^>]*>([^<]{3,60})/i);
           const organization = orgM ? orgM[1].replace(/<[^>]+>/g, '').trim() : '';
           const location = extractLocation(jhtml);
-          const { score, reasons } = scoreTitle(title);
+          const { score, reasons } = scoreTitle(title, targetRoles);
           const minScore = userConfig?.min_score || 3;
           if (score < minScore) { filteredByScore++; await new Promise(r => setTimeout(r, 300)); continue; }
           if (!passesLocationFilter(location, userConfig)) { filteredByLocation++; await new Promise(r => setTimeout(r, 300)); continue; }
@@ -357,16 +391,18 @@ async function crawlJobBoards(tenantId, userId) {
     userConfig = await db.getJobSearchConfig(userId);
   } catch (e) { /* no config — use defaults */ }
 
-  // Fall back to user's target_geography from profile if no explicit allowlist
-  if (userConfig && !userConfig.location_allow?.length) {
-    try {
-      const { query } = require('../db/pool');
-      const { rows } = await query(`SELECT target_geography FROM user_profiles WHERE user_id = $1`, [userId]);
-      if (rows[0]?.target_geography?.length) {
+  // Load target roles + fall back to target_geography from profile if no explicit allowlist
+  let targetRoles = [];
+  try {
+    const { query } = require('../db/pool');
+    const { rows } = await query(`SELECT target_roles, target_geography FROM user_profiles WHERE user_id = $1`, [userId]);
+    if (rows[0]) {
+      targetRoles = rows[0].target_roles || [];
+      if (userConfig && !userConfig.location_allow?.length && rows[0].target_geography?.length) {
         userConfig = { ...userConfig, location_allow: rows[0].target_geography };
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
   // Filter sources by user's enabled list
   const enabledSources = userConfig?.enabled_sources?.length
@@ -379,8 +415,9 @@ async function crawlJobBoards(tenantId, userId) {
   diagLog('CRAWL existing leads=' + allStatuses.length + ' unique URLs=' + existingUrls.size);
 
   // Run all enabled sources in parallel
+  // Note: source URLs have default keywords baked in, but scoring uses user's target roles
   const results = await Promise.allSettled(
-    enabledSources.map(source => crawlSource(source, existingUrls, userConfig))
+    enabledSources.map(source => crawlSource(source, existingUrls, userConfig, targetRoles))
   );
 
   const allNew = [];

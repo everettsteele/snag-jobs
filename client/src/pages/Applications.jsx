@@ -21,6 +21,7 @@ export default function ApplicationsPage() {
   const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [coverLetterApp, setCoverLetterApp] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications'],
@@ -56,10 +57,20 @@ export default function ApplicationsPage() {
   });
 
   const buildMutation = useMutation({
-    mutationFn: () => api.post('/applications/build-packages'),
-    onSuccess: () => {
+    mutationFn: () => api.post('/applications/batch-packages'),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
-      toast('Packages built');
+      toast(data?.message || 'Package build started');
+    },
+    onError: (err) => toast(err.message, 'error'),
+  });
+
+  const generateLetterMutation = useMutation({
+    mutationFn: (id) => api.post(`/applications/${id}/generate-letter`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      toast('Cover letter generated');
+      if (data?.application) setCoverLetterApp(data.application);
     },
     onError: (err) => toast(err.message, 'error'),
   });
@@ -138,7 +149,7 @@ export default function ApplicationsPage() {
               <th className="px-4 py-3 font-medium">Added</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Follow-up</th>
-              <th className="px-4 py-3 font-medium">Activity</th>
+              <th className="px-4 py-3 font-medium">Resume</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -155,6 +166,7 @@ export default function ApplicationsPage() {
                   key={app.id}
                   app={app}
                   onUpdate={(fields) => updateMutation.mutate({ id: app.id, ...fields })}
+                  onShowCoverLetter={(a) => setCoverLetterApp(a)}
                   onDelete={() => {
                     if (window.confirm('Delete this application?')) {
                       deleteMutation.mutate(app.id);
@@ -175,21 +187,32 @@ export default function ApplicationsPage() {
           saving={addMutation.isPending}
         />
       )}
+
+      {coverLetterApp && (
+        <CoverLetterModal
+          app={coverLetterApp}
+          onClose={() => setCoverLetterApp(null)}
+          onGenerate={(a) => generateLetterMutation.mutate(a.id)}
+          generating={generateLetterMutation.isPending}
+        />
+      )}
     </div>
   );
 }
 
-function ApplicationRow({ app, onUpdate, onDelete }) {
+function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter }) {
   const statusInfo = APP_STATUSES[app.status] || APP_STATUSES.identified;
   const followUp = app.follow_up_date || app.followup_date;
+  const sourceUrl = app.source_url || app.url;
+  const hasCoverLetter = !!app.cover_letter_text;
 
   return (
     <tr className="border-b border-gray-50 hover:bg-gray-50/50">
       <td className="px-4 py-3">
         <div className="font-medium text-[#1F2D3D]">{app.company}</div>
-        {app.url && (
+        {sourceUrl && (
           <a
-            href={app.url}
+            href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-[#F97316] hover:underline"
@@ -200,7 +223,8 @@ function ApplicationRow({ app, onUpdate, onDelete }) {
       </td>
       <td className="px-4 py-3 text-gray-700">{app.role || app.title || '--'}</td>
       <td className="px-4 py-3 text-gray-500 text-xs">
-        {app.created_at ? new Date(app.created_at).toLocaleDateString() : '--'}
+        {app.applied_date ? new Date(app.applied_date + 'T12:00:00').toLocaleDateString()
+          : app.created_at ? new Date(app.created_at).toLocaleDateString() : '--'}
       </td>
       <td className="px-4 py-3">
         <select
@@ -214,37 +238,51 @@ function ApplicationRow({ app, onUpdate, onDelete }) {
         </select>
       </td>
       <td className="px-4 py-3 text-xs text-gray-500">
-        {followUp ? new Date(followUp).toLocaleDateString() : '--'}
+        {followUp ? new Date(followUp + 'T12:00:00').toLocaleDateString() : '--'}
       </td>
       <td className="px-4 py-3 text-xs text-gray-500 max-w-32 truncate">
-        {app.notes || '--'}
+        {app.resume_variant || '--'}
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-1">
-          {app.url && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {sourceUrl ? (
             <a
-              href={app.url}
+              href={sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs bg-[#F97316] hover:bg-[#EA580C] text-white px-2 py-1 rounded transition-colors"
+              title="Open the job posting"
             >
               Apply
             </a>
+          ) : (
+            <span className="text-xs text-gray-300 px-2 py-1" title="No source URL">Apply</span>
           )}
           <button
-            onClick={() => onUpdate({ status: 'materials_prep' })}
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            title="Cover Letter"
+            onClick={() => onShowCoverLetter(app)}
+            className={`text-xs px-2 py-1 rounded transition-colors cursor-pointer ${
+              hasCoverLetter
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+            }`}
+            title={hasCoverLetter ? 'View cover letter' : 'Generate cover letter'}
           >
-            CL
+            {hasCoverLetter ? 'View CL' : 'Gen CL'}
           </button>
-          <button
-            onClick={() => onUpdate({ status: 'ready_to_apply' })}
-            className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            title="Resume"
-          >
-            CV
-          </button>
+          {sourceUrl && (
+            <a
+              href={`/api/applications/${app.id}/cover-letter`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`text-xs px-2 py-1 rounded transition-colors ${
+                hasCoverLetter ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 pointer-events-none'
+              }`}
+              title="Print-ready cover letter"
+              onClick={(e) => !hasCoverLetter && e.preventDefault()}
+            >
+              Print
+            </a>
+          )}
           <button
             onClick={onDelete}
             className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors cursor-pointer"
@@ -254,6 +292,72 @@ function ApplicationRow({ app, onUpdate, onDelete }) {
         </div>
       </td>
     </tr>
+  );
+}
+
+function CoverLetterModal({ app, onClose, onGenerate, generating }) {
+  const [editedText, setEditedText] = useState(app.cover_letter_text || '');
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-semibold text-[#1F2D3D]">Cover Letter</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {app.company} — {app.role}
+              {app.resume_variant && <span className="ml-2 text-[#F97316]">· {app.resume_variant} variant</span>}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none cursor-pointer">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {app.cover_letter_text ? (
+            <textarea
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              rows={20}
+              className="w-full p-3 border border-gray-200 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No cover letter generated yet.</p>
+              <button
+                onClick={() => onGenerate(app)}
+                disabled={generating}
+                className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-semibold px-5 py-2.5 rounded-lg cursor-pointer disabled:opacity-50"
+              >
+                {generating ? 'Generating (30-60s)...' : 'Generate Cover Letter'}
+              </button>
+              <p className="text-xs text-gray-400 mt-2">
+                Uses your resume, this role's JD, and AI to write a custom letter.
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-3 border-t border-gray-100 flex justify-end gap-2 bg-gray-50/50">
+          {app.cover_letter_text && (
+            <a
+              href={`/api/applications/${app.id}/cover-letter`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Print-ready version
+            </a>
+          )}
+          <button
+            onClick={onClose}
+            className="bg-[#1F2D3D] hover:bg-[#2C3E50] text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

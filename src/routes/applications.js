@@ -133,6 +133,48 @@ router.get('/applications/:id/cover-letter', requireAuth, async (req, res) => {
   res.set('Content-Type', 'text/html; charset=utf-8').set('Cache-Control', 'no-store').send(html);
 });
 
+// Generate cover letter for a single application (no Drive folder)
+router.post('/applications/:id/generate-letter', requireAuth, checkAiLimit('cover_letters'), async (req, res) => {
+  const app = await db.getApplication(req.user.tenantId, req.params.id);
+  if (!app) return res.status(404).json({ error: 'Application not found' });
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  }
+
+  try {
+    let jdText = '';
+    if (app.source_url) {
+      jdText = await fetchJobDescription(app.source_url);
+    }
+    if (!jdText || jdText.length < 50) {
+      jdText = `Position: ${app.role} at ${app.company}. ${app.notes || ''}`.trim();
+    }
+
+    const userProfile = req.user.profile || {};
+    const coverLetter = await generateCoverLetter(app, jdText, {
+      fullName: req.user.fullName,
+      backgroundText: userProfile.backgroundText,
+    });
+
+    if (!coverLetter || coverLetter.length < 50) {
+      return res.status(500).json({ error: 'AI returned empty letter' });
+    }
+
+    const today = todayET();
+    const updated = await db.updateApplication(req.user.tenantId, app.id, {
+      cover_letter_text: coverLetter,
+      last_activity: today,
+    });
+    await db.logUsage(req.user.tenantId, req.user.id, 'cover_letters', 700, { company: app.company, single: true });
+
+    res.json({ ok: true, application: updated });
+  } catch (e) {
+    console.error('[generate-letter]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Batch packages — generate cover letters + Drive folders
 router.post('/applications/batch-packages', requireAuth, expensiveLimiter, checkAiLimit('cover_letters'), async (req, res) => {
   const webhookUrl = process.env.DRIVE_WEBHOOK_URL;

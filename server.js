@@ -57,19 +57,26 @@ app.use('/api/admin', adminRoutes);
 // ================================================================
 const { todayET } = require('./src/utils');
 
-setInterval(() => {
+setInterval(async () => {
   try {
     const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    if (et.getHours() === 6 && et.getMinutes() < 5) {
-      const { runDailyCron } = require('./src/routes/firms');
-      const store = require('./src/data/store');
-      store.loadCronState().then(state => {
-        if (state.lastRunDate !== todayET()) {
-          runDailyCron();
-          const { crawlJobBoards } = require('./src/services/crawler');
-          crawlJobBoards().catch(e => console.error('[crawl cron]', e.message));
-        }
-      });
+    if (et.getHours() !== 6 || et.getMinutes() >= 5) return;
+
+    const store = require('./src/data/store');
+    const state = await store.loadCronState();
+    if (state.lastRunDate === todayET()) return;
+
+    // Global outreach queue (JSON-based, tenant-agnostic)
+    const { runDailyCron } = require('./src/routes/firms');
+    await runDailyCron().catch(e => console.error('[cron runDaily]', e.message));
+
+    // Per-user crawls
+    const { query } = require('./src/db/pool');
+    const { crawlJobBoards } = require('./src/services/crawler');
+    const { rows: users } = await query(`SELECT id, tenant_id FROM users`);
+    for (const u of users) {
+      crawlJobBoards(u.tenant_id, u.id)
+        .catch(e => console.error(`[crawl cron user=${u.id}]`, e.message));
     }
   } catch (e) { console.error('[cron]', e.message); }
 }, 5 * 60 * 1000);

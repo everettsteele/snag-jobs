@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
-const { checkAiLimit, logAiUsage } = require('../middleware/tier');
+const { logAiUsage } = require('../middleware/tier');
 const db = require('../db/store');
 const store = require('../data/store');
 const { todayET, daysAgoStr } = require('../utils');
@@ -74,43 +74,69 @@ router.get('/status', requireAuth, async (req, res) => {
 
 // ────────────────────────────────────────────────────────────────
 // POST /api/morning-sync/run — actually do the work
+// Returns detailed diagnostics so the user can see what happened.
 // ────────────────────────────────────────────────────────────────
 router.post('/run', requireAuth, async (req, res) => {
   const tenantId = req.user.tenantId;
   const userId = req.user.id;
-  const today = todayET();
   const summary = {
-    drafted: { firms: 0, ceos: 0, vcs: 0 },
-    emailsGenerated: 0,
-    emailsFailed: 0,
-    crawlStarted: false,
+    outreach: {
+      pool: { firms: 0, ceos: 0, vcs: 0 },           // eligible ("not contacted" w/ email)
+      alreadyDrafted: { firms: 0, ceos: 0, vcs: 0 }, // already in draft status
+      allContacted: { firms: 0, ceos: 0, vcs: 0 },   // already contacted (ineligible)
+      newlyDrafted: { firms: 0, ceos: 0, vcs: 0 },   // moved to draft this run
+      draftedNames: [],                               // names of newly drafted
+    },
+    emails: {
+      generated: 0,
+      failed: 0,
+      items: [],  // { pillar, name, status: ok/failed, reason }
+    },
+    crawl: {
+      started: false,
+      finished: false,
+      sourceStats: {},
+      newLeads: 0,
+      error: null,
+    },
     errors: [],
   };
 
+  // ────── Phase 1: Pre-count state of each pillar ──────
+  const { getDB, runDailyCron, PILLARS, orgName } = require('./firms');
   try {
-    // 1. Run daily cron to allocate new drafts
-    const { runDailyCron, PILLARS, getDB, orgName } = require('./firms');
+    for (const key of PILLARS) {
+      const items = await getDB(key);
+      items.forEach(item => {
+        const status = item.status || 'not contacted';
+        const hasEmail = (item.contacts || []).some(c => c.email && c.email.trim());
+        if (status === 'draft') summary.outreach.alreadyDrafted[key]++;
+        else if (['contacted', 'in conversation', 'bounced', 'passed'].includes(status)) summary.outreach.allContacted[key]++;
+        else if (status === 'not contacted' && hasEmail) summary.outreach.pool[key]++;
+      });
+    }
+  } catch (e) {
+    summary.errors.push('Pre-count: ' + e.message);
+  }
+
+  // ────── Phase 2: Allocate new drafts ──────
+  try {
     const cronResult = await runDailyCron();
-    summary.drafted = cronResult.allocations || {};
-    summary.totalDrafted = cronResult.totalDrafted || 0;
+    summary.outreach.newlyDrafted = cronResult.allocations || {};
+    summary.outreach.totalDrafted = cronResult.totalDrafted || 0;
   } catch (e) {
     console.error('[morning-sync] runDailyCron error:', e.message);
     summary.errors.push('Daily cron: ' + e.message);
   }
 
-  // 2. Generate AI email drafts for each drafted item that doesn't have one yet
+  // ────── Phase 3: Generate AI email drafts ──────
   try {
     const { generateEmailDraft } = require('../services/anthropic');
-    const { getDB, PILLARS, orgName } = require('./firms');
-
-    // Get sender context (profile background or default resume)
     const { query: dbQuery } = require('../db/pool');
+
     let senderContext = '';
     try {
-      const { rows } = await dbQuery(
-        `SELECT background_text FROM user_profiles WHERE user_id = $1`,
-        [userId]
-      );
+      const { rows } = await dbQuery(`SELECT background_text FROM user_profiles WHERE user_id = $1`, [userId]);
       senderContext = rows[0]?.background_text || '';
     } catch (e) {}
     if (!senderContext) {
@@ -131,27 +157,30 @@ router.post('/run', requireAuth, async (req, res) => {
       const ov = await store.loadOverrides();
       if (!ov[key]) ov[key] = {};
 
-      for (const item of toDraft.slice(0, 10)) { // cap at 10 per pillar per run
+      for (const item of toDraft.slice(0, 10)) {
         const contact = (item.contacts || []).find(c => c.email) || {};
-        if (!contact.name && !item.name) continue;
         const company = orgName(key, item);
         const recipientName = contact.name || item.name || company;
+        if (!recipientName) {
+          summary.emails.items.push({ pillar: key, name: `#${item.id}`, status: 'failed', reason: 'no name' });
+          summary.emails.failed++;
+          continue;
+        }
+        summary.outreach.draftedNames.push({ pillar: key, name: recipientName, company });
         try {
           const draft = await generateEmailDraft({
-            recipientName,
-            company,
+            recipientName, company,
             recipientRole: contact.title || '',
             type: typeMap[key],
             senderContext,
           });
-          ov[key][String(item.id)] = {
-            ...(ov[key][String(item.id)] || {}),
-            email_draft: draft,
-          };
-          summary.emailsGenerated++;
+          ov[key][String(item.id)] = { ...(ov[key][String(item.id)] || {}), email_draft: draft };
+          summary.emails.generated++;
+          summary.emails.items.push({ pillar: key, name: recipientName, status: 'ok' });
           await logAiUsage(tenantId, userId, 'cover_letters', 300, { type: 'morning_sync_draft', key, id: item.id });
         } catch (e) {
-          summary.emailsFailed++;
+          summary.emails.failed++;
+          summary.emails.items.push({ pillar: key, name: recipientName, status: 'failed', reason: e.message });
           console.error(`[morning-sync] draft fail for ${key} #${item.id}:`, e.message);
         }
       }
@@ -162,15 +191,23 @@ router.post('/run', requireAuth, async (req, res) => {
     summary.errors.push('Email drafts: ' + e.message);
   }
 
-  // 3. Kick off job board crawl in background (non-blocking)
+  // ────── Phase 4: Run job board crawl SYNCHRONOUSLY (bounded) ──────
   try {
+    summary.crawl.started = true;
     const { crawlJobBoards } = require('../services/crawler');
-    crawlJobBoards(tenantId, userId)
-      .then(r => console.log(`[morning-sync] crawl done: ${r.leads.length} new leads`))
-      .catch(e => console.error('[morning-sync] crawl error:', e.message));
-    summary.crawlStarted = true;
+
+    // Bound the crawl to 90s total so the request doesn't hang
+    const crawlPromise = crawlJobBoards(tenantId, userId);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Crawl timeout (90s) — continuing in background')), 90000)
+    );
+    const result = await Promise.race([crawlPromise, timeout]);
+    summary.crawl.finished = true;
+    summary.crawl.sourceStats = result.sourceStats || {};
+    summary.crawl.newLeads = (result.leads || []).length;
   } catch (e) {
-    summary.errors.push('Crawler: ' + e.message);
+    summary.crawl.error = e.message;
+    console.error('[morning-sync] crawl error:', e.message);
   }
 
   res.json({ ok: true, summary });

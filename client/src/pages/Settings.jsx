@@ -818,8 +818,9 @@ function JobSearchSection({ toast }) {
             className="w-24 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]"
           />
           <p className="text-xs text-gray-400 mt-1">
-            Fit score is calculated 0-10 from the job title. COO/Chief of Staff = 10, VP/Director/Head of Ops = 7,
-            generic manager/coordinator = 3. Jobs below this score are filtered out. Lower = more leads (some noise); higher = fewer leads (tighter fit).
+            Fit score is 0-10 based on how closely a job title matches your target roles.
+            Jobs scoring below this are filtered out. Lower = more leads (includes rough matches);
+            higher = fewer leads (tight matches only). Default: 3.
           </p>
         </div>
 

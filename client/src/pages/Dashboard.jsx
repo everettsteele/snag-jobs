@@ -146,14 +146,27 @@ export default function DashboardPage() {
               month: 'short',
               day: 'numeric',
             });
+            const tooltipLines = [
+              `${new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+              r > 0 && `Recruiters: ${r}`,
+              c > 0 && `CEOs: ${c}`,
+              v > 0 && `VCs: ${v}`,
+              a > 0 && `Applications: ${a}`,
+              e > 0 && `Events: ${e}`,
+              total === 0 && 'No activity',
+            ].filter(Boolean);
             return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div
+                key={i}
+                className="flex-1 flex flex-col items-center gap-1 group relative cursor-default"
+                title={tooltipLines.join('\n')}
+              >
                 <div className="w-full flex flex-col-reverse" style={{ height: '128px' }}>
-                  {r > 0 && <div className="w-full bg-blue-500" style={{ height: `${pct(r)}%` }} title={`Recruiters: ${r}`} />}
-                  {c > 0 && <div className="w-full bg-[#F97316]" style={{ height: `${pct(c)}%` }} title={`CEOs: ${c}`} />}
-                  {v > 0 && <div className="w-full bg-green-500" style={{ height: `${pct(v)}%` }} title={`VCs: ${v}`} />}
-                  {a > 0 && <div className="w-full bg-purple-500" style={{ height: `${pct(a)}%` }} title={`Applications: ${a}`} />}
-                  {e > 0 && <div className="w-full bg-amber-500 rounded-t-sm" style={{ height: `${pct(e)}%` }} title={`Events: ${e}`} />}
+                  {r > 0 && <div className="w-full bg-blue-500" style={{ height: `${pct(r)}%` }} />}
+                  {c > 0 && <div className="w-full bg-[#F97316]" style={{ height: `${pct(c)}%` }} />}
+                  {v > 0 && <div className="w-full bg-green-500" style={{ height: `${pct(v)}%` }} />}
+                  {a > 0 && <div className="w-full bg-purple-500" style={{ height: `${pct(a)}%` }} />}
+                  {e > 0 && <div className="w-full bg-amber-500 rounded-t-sm" style={{ height: `${pct(e)}%` }} />}
                   {total === 0 && (
                     <div className="w-full bg-gray-100 rounded-t-sm" style={{ height: '2px' }} />
                   )}
@@ -161,6 +174,11 @@ export default function DashboardPage() {
                 <span className="text-[9px] text-gray-400 truncate w-full text-center">
                   {dateStr}
                 </span>
+                {/* Hover tooltip */}
+                <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#1F2D3D] text-white text-xs rounded px-2 py-1.5 whitespace-nowrap z-10 shadow-lg pointer-events-none">
+                  <div className="font-semibold">{tooltipLines[0]}</div>
+                  {tooltipLines.slice(1).map((line, j) => <div key={j}>{line}</div>)}
+                </div>
               </div>
             );
           })}
@@ -267,8 +285,9 @@ function MorningSyncModal({ onClose }) {
       queryClient.invalidateQueries({ queryKey: ['morning-sync'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
       queryClient.invalidateQueries({ queryKey: ['job-board'] });
+      const s = resp.summary;
       toast(
-        `Drafted ${resp.summary.totalDrafted || 0} contacts, ${resp.summary.emailsGenerated} AI emails. Crawling for leads...`
+        `Sync done — ${s.outreach?.totalDrafted || 0} drafted · ${s.emails?.generated || 0} AI emails · ${s.crawl?.newLeads || 0} new leads`
       );
     },
     onError: (err) => toast(err.message || 'Morning sync failed', 'error'),
@@ -306,37 +325,72 @@ function MorningSyncModal({ onClose }) {
             </button>
           </div>
           {runResult && (
-            <div className="mt-3 pt-3 border-t border-white/10 text-xs grid grid-cols-4 gap-3">
+            <div className="mt-3 pt-3 border-t border-white/10 text-xs space-y-2">
+              {/* Outreach */}
               <div>
-                <div className="text-white/60">Recruiters drafted</div>
-                <div className="text-base font-bold">{runResult.drafted?.firms || 0}</div>
+                <div className="text-white/70 font-semibold mb-1">Outreach Pool</div>
+                <div className="grid grid-cols-3 gap-3">
+                  {['firms', 'ceos', 'vcs'].map((k) => (
+                    <div key={k}>
+                      <div className="text-white/60">{k === 'firms' ? 'Recruiters' : k === 'ceos' ? 'CEOs' : 'VCs'}</div>
+                      <div className="text-sm">
+                        <span className="font-bold">{runResult.outreach?.newlyDrafted?.[k] || 0}</span>
+                        <span className="text-white/50"> drafted</span>
+                      </div>
+                      <div className="text-[10px] text-white/40">
+                        {runResult.outreach?.pool?.[k] || 0} eligible · {runResult.outreach?.allContacted?.[k] || 0} already contacted
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {/* AI Emails */}
               <div>
-                <div className="text-white/60">CEOs drafted</div>
-                <div className="text-base font-bold">{runResult.drafted?.ceos || 0}</div>
-              </div>
-              <div>
-                <div className="text-white/60">VCs drafted</div>
-                <div className="text-base font-bold">{runResult.drafted?.vcs || 0}</div>
-              </div>
-              <div>
-                <div className="text-white/60">AI emails</div>
-                <div className="text-base font-bold">
-                  {runResult.emailsGenerated}
-                  {runResult.emailsFailed > 0 && (
-                    <span className="text-red-300 text-xs ml-1">+{runResult.emailsFailed} failed</span>
+                <div className="text-white/70 font-semibold mb-1">AI Emails</div>
+                <div className="flex items-center gap-3">
+                  <span className="text-base font-bold">{runResult.emails?.generated || 0}</span>
+                  <span className="text-white/50">generated</span>
+                  {runResult.emails?.failed > 0 && (
+                    <span className="text-red-300">· {runResult.emails.failed} failed</span>
                   )}
                 </div>
               </div>
-              {runResult.crawlStarted && (
-                <div className="col-span-4 text-white/70 italic">
-                  Job board crawl running in background. New leads appear in 2-3 min.
-                </div>
-              )}
+
+              {/* Crawl */}
+              <div>
+                <div className="text-white/70 font-semibold mb-1">Job Board Crawl</div>
+                {runResult.crawl?.error ? (
+                  <div className="text-red-300">{runResult.crawl.error}</div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-bold">{runResult.crawl?.newLeads || 0}</span>
+                      <span className="text-white/50">new leads</span>
+                      {Object.keys(runResult.crawl?.sourceStats || {}).length > 0 && (
+                        <span className="text-white/40 text-[10px]">· {Object.keys(runResult.crawl.sourceStats).length} sources</span>
+                      )}
+                    </div>
+                    {runResult.crawl?.sourceStats && Object.keys(runResult.crawl.sourceStats).length > 0 && (
+                      <details className="mt-1">
+                        <summary className="text-white/50 cursor-pointer text-[10px]">per-source breakdown</summary>
+                        <div className="mt-1 space-y-0.5 text-[10px] text-white/60">
+                          {Object.entries(runResult.crawl.sourceStats).map(([src, stats]) => (
+                            <div key={src}>
+                              {src}: found {stats.urlsFound || 0}, kept {stats.added || 0}
+                              {stats.filteredByLocation > 0 && `, location-filtered ${stats.filteredByLocation}`}
+                              {stats.filteredByScore > 0 && `, score-filtered ${stats.filteredByScore}`}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </>
+                )}
+              </div>
+
               {runResult.errors?.length > 0 && (
-                <div className="col-span-4 text-red-300">
-                  {runResult.errors.join(' · ')}
-                </div>
+                <div className="text-red-300">{runResult.errors.join(' · ')}</div>
               )}
             </div>
           )}
