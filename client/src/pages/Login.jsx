@@ -40,12 +40,11 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 bg-[#F97316] rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-[#1F2D3D]">HopeSpot</h1>
+          <h1 className="text-2xl font-bold text-[#1F2D3D]">Snag</h1>
         </div>
 
         {/* Card */}
@@ -55,8 +54,8 @@ export default function LoginPage() {
           </h2>
           <p className="text-sm text-gray-500 mb-6">
             {mode === 'login'
-              ? 'Sign in to your HopeSpot account'
-              : 'Get started with HopeSpot'}
+              ? 'Sign in to your Snag account'
+              : 'Get started with Snag'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

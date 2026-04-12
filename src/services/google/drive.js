@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const { getAuthedClient } = require('./auth');
 const { query } = require('../../db/pool');
 
-const ROOT_FOLDER_NAME = 'HopeSpot - Job Applications';
+const ROOT_FOLDER_NAME = 'Snag - Job Applications';
 const BASE_RESUMES_FOLDER_NAME = 'Base Resumes';
 
 async function getDrive(userId) {

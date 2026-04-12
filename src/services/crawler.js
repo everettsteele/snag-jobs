@@ -327,7 +327,7 @@ async function crawlSource(source, existingUrls, userConfig, targetRoles) {
     if (consecutiveFailures >= 3) { diagLog(`CRAWL ${source.name}: circuit breaker tripped after 3 failures`); break; }
     try {
       const resp = await fetch(searchUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', Accept: 'text/html,application/xhtml+xml' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; snag/1.0)', Accept: 'text/html,application/xhtml+xml' },
         signal: AbortSignal.timeout(12000),
       });
       if (!resp.ok) { consecutiveFailures++; continue; }
@@ -348,7 +348,7 @@ async function crawlSource(source, existingUrls, userConfig, targetRoles) {
         urlsAttempted++;
         try {
           const jr = await fetch(jobUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', Accept: 'text/html' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; snag/1.0)', Accept: 'text/html' },
             signal: AbortSignal.timeout(10000),
           });
           if (!jr.ok) continue;

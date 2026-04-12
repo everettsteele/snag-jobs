@@ -1,4 +1,4 @@
-# HopeSpot
+# Snag
 
 > *If you want to get a job from scratch, you must first build a CRM.*
 
@@ -10,7 +10,7 @@ A personal executive recruiter CRM built in one day by a 3x-exit operator runnin
 
 ## What It Does
 
-HopeSpot is a HubSpot-style CRM designed for one specific workflow: contacting every relevant executive recruiter in the country systematically, tracking responses, and running 10+ outreach emails per morning without losing track of anything.
+Snag is a HubSpot-style CRM designed for one specific workflow: contacting every relevant executive recruiter in the country systematically, tracking responses, and running 10+ outreach emails per morning without losing track of anything.
 
 It is not a general-purpose CRM. It is purpose-built for a senior executive job search.
 
@@ -33,7 +33,7 @@ It is not a general-purpose CRM. It is purpose-built for a senior executive job 
 
 The target rhythm is **10+ emails per morning**:
 
-1. Open HopeSpot and check the Follow-ups nav (overdue badge)
+1. Open Snag and check the Follow-ups nav (overdue badge)
 2. Send any queued Gmail drafts — attach resume to each before sending
 3. Mark sent firms as `contacted` in the app
 4. Handle any responses — update status to `in conversation`
@@ -178,7 +178,7 @@ AUTH_PASSWORD=yourpassword npm start
 │   ├── tracker.json      # Live data (created on first run, gitignored)
 │   └── activity.json     # Job search effort metrics
 ├── docs/
-│   └── PRODUCT_SPEC.md   # Full PRD for HopeSpot as a multi-user SaaS (tabled)
+│   └── PRODUCT_SPEC.md   # Full PRD for Snag as a multi-user SaaS (tabled)
 ├── package.json
 └── railway.json
 ```
@@ -197,7 +197,7 @@ AUTH_PASSWORD=yourpassword npm start
 
 ## Branding
 
-- **Name:** HopeSpot
+- **Name:** Snag
 - **Tagline:** *If you want to get a job from scratch, you must first build a CRM.*
 - **Login error:** *Incorrect password. The irony of being locked out of your own job search tool is noted.*
 - **Sidebar footer:** *Built instead of applying.*
@@ -222,7 +222,7 @@ Update this file manually at the end of each session.
 
 ---
 
-## Future: HopeSpot as a SaaS
+## Future: Snag as a SaaS
 
 See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for a full product requirements document covering:
 

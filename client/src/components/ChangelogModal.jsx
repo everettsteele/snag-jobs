@@ -62,7 +62,7 @@ export default function ChangelogModal({ onClose }) {
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-lg font-semibold text-[#1F2D3D]">HopeSpot Changelog</h2>
+            <h2 className="text-lg font-semibold text-[#1F2D3D]">Snag Changelog</h2>
             <p className="text-xs text-gray-500 mt-0.5">Built instead of applying.</p>
           </div>
           <button

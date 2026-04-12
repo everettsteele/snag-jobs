@@ -34,6 +34,8 @@ const profileUpdateSchema = z.object({
   weekly_apps_target: z.number().int().min(0).max(100).optional(),
   weekly_events_target: z.number().int().min(0).max(20).optional(),
   weekly_followups_target: z.number().int().min(0).max(100).optional(),
+  signature_style: z.enum(['typed', 'script', 'image', 'none']).optional(),
+  signature_closing: z.string().max(100).optional(),
 });
 
 // POST /api/auth/register

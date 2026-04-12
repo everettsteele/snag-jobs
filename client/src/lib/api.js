@@ -1,7 +1,7 @@
 const BASE = '/api';
 
 function getHeaders() {
-  const token = localStorage.getItem('hopespot_token');
+  const token = localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token');
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   return headers;
@@ -12,7 +12,7 @@ async function request(method, path, body) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE}${path}`, opts);
   if (res.status === 401) {
-    localStorage.removeItem('hopespot_token');
+    localStorage.removeItem('snag_token');
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }

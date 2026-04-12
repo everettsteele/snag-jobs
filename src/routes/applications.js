@@ -115,13 +115,14 @@ router.get('/applications/:id/cover-letter', requireAuth, async (req, res) => {
 
   const letterText = cleanCoverLetterText(app.cover_letter_text);
   const paragraphs = letterText.split(/\n{2,}/).map(p => p.replace(/\n/g, ' ').trim()).filter(p => p.length > 0);
-  const paragraphsHtml = paragraphs.map(p => `<p>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('\n');
+  const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const paragraphsHtml = paragraphs.map(p => `<p>${esc(p)}</p>`).join('\n');
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const companyEsc = (app.company || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const companyEsc = esc(app.company || '');
 
   // Use user profile for header instead of hardcoded values
   const profile = req.user.profile || {};
-  const nameEsc = (req.user.fullName || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const nameEsc = esc(req.user.fullName || '');
   const contactParts = [
     profile.emailDisplay || req.user.email,
     profile.phone,
@@ -129,7 +130,67 @@ router.get('/applications/:id/cover-letter', requireAuth, async (req, res) => {
     profile.location,
   ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${companyEsc} Cover Letter</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000;background:#fff}.page{max-width:8in;margin:0 auto;padding:1in}.header{text-align:center;margin-bottom:32pt}.header h1{font-size:14pt;font-weight:bold;letter-spacing:1px;margin-bottom:6pt}.header .contact{font-size:10pt;color:#333}.date{margin-bottom:10pt}.company{margin-bottom:24pt}p{margin-bottom:12pt;line-height:1.6;text-align:justify}.no-print{position:fixed;top:16px;right:16px;padding:10px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif}@media print{.no-print{display:none}body{font-size:12pt}.page{padding:0;max-width:100%}@page{margin:1in;size:letter}}</style></head><body><button class="no-print" onclick="window.print()">Print / Save as PDF</button><div class="page"><div class="header"><h1>${nameEsc}</h1><div class="contact">${contactParts}</div></div><div class="date">${dateStr}</div><div class="company">${companyEsc}</div>${paragraphsHtml}</div><script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script></body></html>`;
+  // Signature block
+  const sigStyle = profile.signatureStyle || 'script';
+  const sigClosing = esc(profile.signatureClosing || 'Sincerely,');
+  let signatureHtml = '';
+  if (sigStyle === 'none') {
+    signatureHtml = '';
+  } else if (sigStyle === 'image' && profile.signatureImageUrl) {
+    // Pass auth token through so the image loads
+    const token = req.headers['authorization']?.replace('Bearer ', '') || req.query.token || '';
+    const filename = profile.signatureImageUrl.split('/').pop();
+    const imgSrc = `/api/signature/file/${filename}?token=${encodeURIComponent(token)}`;
+    signatureHtml = `<div class="sig-block"><div>${sigClosing}</div><img class="sig-img" src="${imgSrc}" alt="${nameEsc}" /><div class="sig-name">${nameEsc}</div></div>`;
+  } else if (sigStyle === 'typed') {
+    signatureHtml = `<div class="sig-block"><div>${sigClosing}</div><div class="sig-typed">${nameEsc}</div></div>`;
+  } else {
+    // script (default) — cursive font
+    signatureHtml = `<div class="sig-block"><div>${sigClosing}</div><div class="sig-script">${nameEsc}</div><div class="sig-name">${nameEsc}</div></div>`;
+  }
+
+  const styles = `
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Times New Roman',serif;font-size:12pt;color:#000;background:#fff}
+.page{max-width:8in;margin:0 auto;padding:1in}
+.header{text-align:center;margin-bottom:32pt}
+.header h1{font-size:14pt;font-weight:bold;letter-spacing:1px;margin-bottom:6pt}
+.header .contact{font-size:10pt;color:#333}
+.date{margin-bottom:10pt}
+.company{margin-bottom:24pt}
+p{margin-bottom:12pt;line-height:1.6;text-align:justify}
+.sig-block{margin-top:24pt}
+.sig-block > div:first-child{margin-bottom:4pt}
+.sig-img{display:block;max-height:60pt;max-width:200pt;margin:4pt 0;object-fit:contain}
+.sig-script{font-family:'Brush Script MT','Lucida Handwriting','Segoe Script',cursive;font-size:26pt;margin:4pt 0 6pt;color:#1a1a1a}
+.sig-typed{margin:28pt 0 4pt;font-weight:bold}
+.sig-name{font-size:11pt;color:#333}
+.no-print{position:fixed;top:16px;right:16px;padding:10px 20px;background:#1f2d3d;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif}
+@media print{.no-print{display:none}body{font-size:12pt}.page{padding:0;max-width:100%}@page{margin:1in;size:letter}}
+  `.trim();
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${companyEsc} Cover Letter</title>
+<style>${styles}</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="page">
+  <div class="header">
+    <h1>${nameEsc}</h1>
+    <div class="contact">${contactParts}</div>
+  </div>
+  <div class="date">${dateStr}</div>
+  <div class="company">${companyEsc}</div>
+  ${paragraphsHtml}
+  ${signatureHtml}
+</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});</script>
+</body>
+</html>`;
   res.set('Content-Type', 'text/html; charset=utf-8').set('Cache-Control', 'no-store').send(html);
 });
 

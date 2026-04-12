@@ -10,6 +10,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <ProfileSection profile={profile} updateProfile={updateProfile} toast={toast} />
+      <SignatureSection profile={profile} updateProfile={updateProfile} toast={toast} />
       <PreferencesSection profile={profile} updateProfile={updateProfile} toast={toast} />
       <GoogleSection profile={profile} toast={toast} />
       <CalendarPickerSection profile={profile} toast={toast} />
@@ -619,7 +620,7 @@ function ResumeSection() {
       formData.append('file', file);
       const res = await fetch(`/api/resumes/${slug}/upload`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('hopespot_token')}` },
+        headers: { Authorization: `Bearer ${(localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token'))}` },
         body: formData,
       });
       if (!res.ok) {
@@ -993,6 +994,186 @@ function JobSearchSection({ toast }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SignatureSection({ profile, updateProfile, toast }) {
+  const [style, setStyle] = useState('script');
+  const [closing, setClosing] = useState('Sincerely,');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setStyle(profile.signatureStyle || profile.signature_style || 'script');
+      setClosing(profile.signatureClosing || profile.signature_closing || 'Sincerely,');
+      setImageUrl(profile.signatureImageUrl || profile.signature_image_url || '');
+    }
+  }, [profile]);
+
+  const fullName = profile?.full_name || profile?.fullName || 'Your Name';
+
+  const handleUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token');
+      const res = await fetch('/api/signature/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const data = await res.json();
+      setImageUrl(data.signature_image_url);
+      setStyle('image');
+      toast('Signature uploaded');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      await api.del('/signature');
+      setImageUrl('');
+      setStyle('script');
+      toast('Signature removed');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({ signature_style: style, signature_closing: closing });
+      toast('Signature preferences saved');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const token = localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token');
+  const imageSrc = imageUrl ? `/api/signature/file/${imageUrl.split('/').pop()}?token=${encodeURIComponent(token || '')}` : null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <h3 className="text-base font-semibold text-[#1F2D3D] mb-2">Cover Letter Signature</h3>
+      <p className="text-xs text-gray-500 mb-4">
+        Pick how your signature appears on print-ready cover letters.
+      </p>
+
+      <div className="space-y-3 mb-4">
+        <SignatureOption
+          checked={style === 'script'}
+          onChange={() => setStyle('script')}
+          label="Cursive"
+          description="Render your name in a script font"
+          preview={<span style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", "Segoe Script", cursive', fontSize: 26, color: '#1a1a1a' }}>{fullName}</span>}
+        />
+        <SignatureOption
+          checked={style === 'typed'}
+          onChange={() => setStyle('typed')}
+          label="Typed"
+          description="Your name in bold after a space"
+          preview={<span className="font-bold text-base">{fullName}</span>}
+        />
+        <SignatureOption
+          checked={style === 'image'}
+          onChange={() => setStyle('image')}
+          label="Uploaded image"
+          description="Use a PNG/JPEG of your actual signature (transparency recommended)"
+          preview={
+            imageSrc ? (
+              <img src={imageSrc} alt="signature" style={{ maxHeight: 48, maxWidth: 180, objectFit: 'contain' }} />
+            ) : (
+              <span className="text-xs text-gray-400">No image uploaded yet</span>
+            )
+          }
+        />
+        <SignatureOption
+          checked={style === 'none'}
+          onChange={() => setStyle('none')}
+          label="No signature"
+          description="Leave the letter unsigned"
+          preview={<span className="text-xs text-gray-400">—</span>}
+        />
+      </div>
+
+      {/* Upload controls (available regardless of active style so user can pre-upload) */}
+      <div className="bg-gray-50 rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium text-gray-700">Signature image</div>
+            <div className="text-[10px] text-gray-500">PNG with transparency works best. Max 2MB.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {imageSrc && (
+              <button onClick={handleRemove} className="text-xs text-red-600 hover:text-red-700 cursor-pointer">
+                Remove
+              </button>
+            )}
+            <label className={`text-xs bg-[#1F2D3D] hover:bg-[#2C3E50] text-white px-3 py-1.5 rounded cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploading ? 'Uploading...' : imageSrc ? 'Replace' : 'Upload'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleUpload(e.target.files[0])}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Closing line */}
+      <div className="mb-4">
+        <label className="block text-xs font-medium text-gray-600 mb-1">Closing line</label>
+        <input
+          value={closing}
+          onChange={(e) => setClosing(e.target.value)}
+          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+          placeholder="Sincerely,"
+        />
+        <p className="text-[10px] text-gray-400 mt-0.5">e.g. "Sincerely," "Best regards," "Warm regards,"</p>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Signature'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SignatureOption({ checked, onChange, label, description, preview }) {
+  return (
+    <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${checked ? 'border-[#F97316] bg-[#F97316]/5' : 'border-gray-200 hover:bg-gray-50'}`}>
+      <input type="radio" checked={checked} onChange={onChange} className="w-4 h-4 accent-[#F97316]" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-[#1F2D3D]">{label}</div>
+        <div className="text-[10px] text-gray-500">{description}</div>
+      </div>
+      <div className="flex items-center justify-end min-w-[180px] max-w-[220px] overflow-hidden">
+        {preview}
+      </div>
+    </label>
   );
 }
 

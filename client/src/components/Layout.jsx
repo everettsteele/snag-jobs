@@ -45,7 +45,7 @@ function getPageTitle(pathname) {
   if (pathname === '/events') return 'Events & Meetings';
   if (pathname === '/settings') return 'Settings';
   if (pathname === '/admin') return 'Admin';
-  return 'HopeSpot';
+  return 'Snag';
 }
 
 export default function Layout() {
@@ -78,12 +78,11 @@ export default function Layout() {
         {/* Logo */}
         <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
           <div className="w-8 h-8 bg-[#F97316] rounded-lg flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
             </svg>
           </div>
-          <span className="text-lg font-bold tracking-tight">HopeSpot</span>
+          <span className="text-lg font-bold tracking-tight">Snag</span>
         </div>
 
         {/* Nav */}

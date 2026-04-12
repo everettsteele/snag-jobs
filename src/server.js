@@ -149,6 +149,6 @@ setTimeout(bootSeedApplications, 4000);
 setTimeout(migrateLeadIds, 2000);
 
 const seedCounts = `${store.readSeedSync('firms').length}f/${store.readSeedSync('ceos').length}c/${store.readSeedSync('vcs').length}v`;
-console.log(`HopeSpot v9.0 — seeds:${seedCounts}`);
+console.log(`Snag v9.0 — seeds:${seedCounts}`);
 
 app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));

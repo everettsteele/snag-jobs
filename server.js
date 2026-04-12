@@ -1,4 +1,4 @@
-// HopeSpot v9.0 — Multi-tenant server entrypoint
+// Snag v9.0 — Multi-tenant server entrypoint
 const express = require('express');
 const path = require('path');
 
@@ -17,6 +17,7 @@ const billingRoutes = require('./src/routes/billing');
 const morningSyncRoutes = require('./src/routes/morning-sync');
 const adminRoutes = require('./src/routes/admin');
 const snagMetricsRoutes = require('./src/routes/snag-metrics');
+const signatureRoutes = require('./src/routes/signature');
 
 // Middleware
 const { helmetMiddleware, corsMiddleware, globalLimiter } = require('./src/middleware/security');
@@ -53,6 +54,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/morning-sync', morningSyncRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/snag-metrics', snagMetricsRoutes);
+app.use('/api/signature', signatureRoutes);
 
 // ================================================================
 // Daily cron — 6 AM ET outreach queue + job board crawl
@@ -145,7 +147,7 @@ async function start() {
   }
 
   app.listen(PORT, () => {
-    console.log(`HopeSpot v9.0 — listening on port ${PORT}`);
+    console.log(`Snag v9.0 — listening on port ${PORT}`);
     console.log(`  Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'JSON files (legacy)'}`);
     console.log(`  Anthropic: ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured'}`);
     console.log(`  Drive: ${process.env.DRIVE_WEBHOOK_URL ? 'configured' : 'not configured'}`);

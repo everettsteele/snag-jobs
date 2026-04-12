@@ -220,7 +220,7 @@ Begin the rewritten resume now.`;
 async function fetchJobDescription(url) {
   try {
     const resp = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; hopespot/1.0)', Accept: 'text/html' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; snag/1.0)', Accept: 'text/html' },
       signal: AbortSignal.timeout(12000),
     });
     if (!resp.ok) return '';

@@ -13,7 +13,7 @@ You need a Google Cloud project. Free tier is fine.
 
 1. Go to https://console.cloud.google.com/
 2. Click the project dropdown at the top, then **New Project**
-3. Name it (e.g., `hopespot-tracker`) and click **Create**
+3. Name it (e.g., `snag-tracker`) and click **Create**
 4. Wait for creation, then select it as the active project
 
 ## Step 2 — Enable APIs
@@ -30,7 +30,7 @@ In your project, go to **APIs & Services → Library** and enable each of these:
 1. Go to **APIs & Services → OAuth consent screen**
 2. Choose **External** (unless you have a Workspace org, then Internal is fine)
 3. Fill in:
-   - App name: `HopeSpot` (or whatever you want users to see)
+   - App name: `Snag` (or whatever you want users to see)
    - User support email: your email
    - Developer contact: your email
 4. On the **Scopes** page, click **Add or Remove Scopes** and add:
@@ -51,7 +51,7 @@ In your project, go to **APIs & Services → Library** and enable each of these:
 1. Go to **APIs & Services → Credentials**
 2. Click **Create Credentials → OAuth client ID**
 3. Application type: **Web application**
-4. Name: `HopeSpot Web Client`
+4. Name: `Snag Web Client`
 5. **Authorized redirect URIs** — add both:
    - `http://localhost:3000/api/google/callback` (local dev)
    - `https://YOUR-RAILWAY-DOMAIN/api/google/callback` (production)
@@ -74,7 +74,7 @@ localhost redirect URI).
 ## Step 6 — Connect Your Account
 
 1. Deploy (Railway will pick up the new env vars automatically)
-2. In HopeSpot, go to **Settings → Google Integration**
+2. In Snag, go to **Settings → Google Integration**
 3. Click **Connect Google**
 4. Sign in with your Google account (the one you added as a test user)
 5. Grant the requested permissions
@@ -100,7 +100,7 @@ You should now see "Connected as you@gmail.com" in Settings.
 
 **"Insufficient permissions" after connecting**
 - You didn't grant one of the scopes. Go to
-  https://myaccount.google.com/permissions, remove HopeSpot, and reconnect.
+  https://myaccount.google.com/permissions, remove Snag, and reconnect.
 
 **"Token expired" errors after a few hours**
 - Normal. The backend uses the refresh token automatically. If it keeps failing,

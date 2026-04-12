@@ -251,7 +251,7 @@ function ResumeViewModal({ app, onClose }) {
                   File: <span className="font-mono">{variant.filename}</span>
                   {variant.file_url && (
                     <a
-                      href={variant.file_url + `?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
+                      href={variant.file_url + `?token=${encodeURIComponent((localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token')) || '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="ml-2 text-blue-600 hover:underline"
@@ -374,7 +374,7 @@ function ApplicationRow({ app, onUpdate, onDelete, onShowCoverLetter, onShowResu
           </button>
           {sourceUrl && (
             <a
-              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
+              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent((localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token')) || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className={`text-xs px-2 py-1 rounded transition-colors ${
@@ -444,7 +444,7 @@ function CoverLetterModal({ app, onClose, onGenerate, generating }) {
         <div className="px-6 py-3 border-t border-gray-100 flex justify-end gap-2 bg-gray-50/50">
           {app.cover_letter_text && (
             <a
-              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent(localStorage.getItem('hopespot_token') || '')}`}
+              href={`/api/applications/${app.id}/cover-letter?token=${encodeURIComponent((localStorage.getItem('snag_token') || localStorage.getItem('hopespot_token')) || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer"

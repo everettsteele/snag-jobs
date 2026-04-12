@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { findUserById } = require('../db/users');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hopespot-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'snag-dev-secret-change-in-production';
 const JWT_EXPIRES_IN = '7d';
 
 function signToken(user) {
@@ -63,6 +63,9 @@ async function requireAuth(req, res, next) {
         weeklyAppsTarget: user.weekly_apps_target,
         weeklyEventsTarget: user.weekly_events_target,
         weeklyFollowupsTarget: user.weekly_followups_target,
+        signatureStyle: user.signature_style,
+        signatureImageUrl: user.signature_image_url,
+        signatureClosing: user.signature_closing,
       },
     };
     next();
