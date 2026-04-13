@@ -136,7 +136,7 @@ export default function Layout() {
             onClick={() => setChangelogOpen(true)}
             className="text-[10px] text-gray-500 hover:text-[#F97316] mt-2 cursor-pointer transition-colors"
           >
-            v10.0 — changelog
+            v3.0 — changelog
           </button>
         </div>
       </aside>

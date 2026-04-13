@@ -1,4 +1,4 @@
-// Snag v9.0 — Multi-tenant server entrypoint
+// Snag v3.0 — Multi-tenant server entrypoint
 const express = require('express');
 const path = require('path');
 
@@ -147,7 +147,7 @@ async function start() {
   }
 
   app.listen(PORT, () => {
-    console.log(`Snag v9.0 — listening on port ${PORT}`);
+    console.log(`Snag v3.0 — listening on port ${PORT}`);
     console.log(`  Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'JSON files (legacy)'}`);
     console.log(`  Anthropic: ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured'}`);
     console.log(`  Drive: ${process.env.DRIVE_WEBHOOK_URL ? 'configured' : 'not configured'}`);

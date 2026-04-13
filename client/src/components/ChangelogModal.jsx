@@ -1,31 +1,34 @@
+// Versioning: MAJOR bumps for architectural/product shifts, MINOR for features
+// and notable UX work, PATCH for fixes only. Rebased from legacy v10.x numbering
+// on Apr 12, 2026 — history preserved, numbers re-flattened.
 const VERSIONS = [
   {
-    version: 'v10.0',
+    version: 'v3.0',
     date: 'Apr 12, 2026',
     label: 'Commercial rebase — Postgres, Stripe, resumes, AI email drafts',
     changes: [
       { tag: 'new', text: 'Full PostgreSQL multi-tenant architecture' },
-      { tag: 'new', text: 'React SPA frontend (replaced legacy vanilla JS)' },
       { tag: 'new', text: 'Resume upload system with PDF parsing for AI context' },
       { tag: 'new', text: 'AI email draft generation (recruiter/CEO/VC prompts)' },
       { tag: 'new', text: 'Stripe billing with free/pro tiers' },
       { tag: 'new', text: 'Job board config UI with source selection and location filters' },
       { tag: 'new', text: 'AI usage tracking — 3/week free, unlimited Pro' },
       { tag: 'new', text: 'Chrome extension rewired to tracker API with dedup' },
+      { tag: 'new', text: 'Rebrand to Snag Jobs' },
     ],
   },
   {
-    version: 'v9.0',
+    version: 'v2.0',
     date: 'Apr 10, 2026',
     label: 'React frontend — Queue, Events, Settings, Outreach',
     changes: [
-      { tag: 'new', text: 'Complete React SPA with all pages migrated' },
+      { tag: 'new', text: 'Complete React SPA frontend (replaced legacy vanilla JS)' },
       { tag: 'new', text: 'Google OAuth (Drive, Gmail, Calendar)' },
       { tag: 'new', text: 'Per-user crawler config and parameterized AI prompts' },
     ],
   },
   {
-    version: 'v7.7',
+    version: 'v1.1',
     date: 'Apr 9, 2026',
     label: 'Skip persists, cover letters, async crawl',
     changes: [
@@ -36,7 +39,7 @@ const VERSIONS = [
     ],
   },
   {
-    version: 'v7.6',
+    version: 'v1.0',
     date: 'Apr 8, 2026',
     label: 'Tab persistence, event delegation, Drive URL paste',
     changes: [

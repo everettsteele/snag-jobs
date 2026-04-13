@@ -41,6 +41,6 @@ router.get('/diag/job-board-search', requireAuth, async (req, res) => {
   res.json({ query: q, matches: matches.map(l => ({ id: l.id, title: l.title, organization: l.organization, status: l.status, source: l.source, url: l.url })) });
 });
 
-router.get('/health', (req, res) => res.json({ ok: true, version: '9.0', todayET: todayET() }));
+router.get('/health', (req, res) => res.json({ ok: true, version: '3.0', todayET: todayET() }));
 
 module.exports = router;
