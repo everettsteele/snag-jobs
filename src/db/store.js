@@ -406,9 +406,139 @@ async function logUsage(tenantId, userId, action, tokensUsed, metadata) {
   );
 }
 
+// ================================================================
+// APPLICATION — SNOOZE + JD CACHE + BULK
+// ================================================================
+
+async function snoozeApplication(tenantId, applicationId, until) {
+  const { rows } = await query(
+    `UPDATE applications
+       SET snoozed_until = $3, updated_at = NOW()
+     WHERE tenant_id = $1 AND id = $2
+     RETURNING *`,
+    [tenantId, applicationId, until]
+  );
+  return rows[0] || null;
+}
+
+async function setJdText(tenantId, applicationId, text) {
+  await query(
+    `UPDATE applications SET jd_text = $3 WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, applicationId, text]
+  );
+}
+
+// ================================================================
+// APPLICATION — CONTACTS
+// ================================================================
+
+async function listApplicationContacts(tenantId, applicationId) {
+  const { rows } = await query(
+    `SELECT * FROM application_contacts
+       WHERE tenant_id = $1 AND application_id = $2
+       ORDER BY created_at`,
+    [tenantId, applicationId]
+  );
+  return rows;
+}
+
+async function createApplicationContact(tenantId, applicationId, data) {
+  const { rows } = await query(
+    `INSERT INTO application_contacts
+       (tenant_id, application_id, name, title, email, linkedin_url, kind, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      tenantId, applicationId,
+      data.name, data.title || null, data.email || null,
+      data.linkedin_url || null, data.kind || 'other', data.notes || null,
+    ]
+  );
+  return rows[0];
+}
+
+async function updateApplicationContact(tenantId, contactId, data) {
+  const allowed = ['name', 'title', 'email', 'linkedin_url', 'kind', 'notes'];
+  const sets = [];
+  const values = [];
+  let idx = 1;
+  for (const [key, val] of Object.entries(data)) {
+    if (allowed.includes(key)) {
+      sets.push(`${key} = $${idx}`);
+      values.push(val);
+      idx++;
+    }
+  }
+  if (!sets.length) return null;
+  values.push(tenantId, contactId);
+  const { rows } = await query(
+    `UPDATE application_contacts SET ${sets.join(', ')}
+       WHERE tenant_id = $${idx} AND id = $${idx + 1}
+       RETURNING *`,
+    values
+  );
+  return rows[0] || null;
+}
+
+async function deleteApplicationContact(tenantId, contactId) {
+  const { rowCount } = await query(
+    `DELETE FROM application_contacts WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, contactId]
+  );
+  return rowCount > 0;
+}
+
+// ================================================================
+// APPLICATION — CHAT
+// ================================================================
+
+async function listChatMessages(tenantId, applicationId) {
+  const { rows } = await query(
+    `SELECT id, role, content, tokens_in, tokens_out, created_at
+       FROM application_chats
+      WHERE tenant_id = $1 AND application_id = $2
+      ORDER BY created_at ASC`,
+    [tenantId, applicationId]
+  );
+  return rows;
+}
+
+async function appendChatMessage(tenantId, applicationId, role, content, tokensIn, tokensOut) {
+  const { rows } = await query(
+    `INSERT INTO application_chats
+       (tenant_id, application_id, role, content, tokens_in, tokens_out)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [tenantId, applicationId, role, content, tokensIn || 0, tokensOut || 0]
+  );
+  return rows[0];
+}
+
+async function clearChatMessages(tenantId, applicationId) {
+  await query(
+    `DELETE FROM application_chats WHERE tenant_id = $1 AND application_id = $2`,
+    [tenantId, applicationId]
+  );
+}
+
+async function countChatTurns(tenantId, applicationId) {
+  const { rows } = await query(
+    `SELECT COUNT(*)::int AS n FROM application_chats
+      WHERE tenant_id = $1 AND application_id = $2 AND role = 'user'`,
+    [tenantId, applicationId]
+  );
+  return rows[0]?.n || 0;
+}
+
 module.exports = {
   // Applications
   listApplications, getApplication, createApplication, updateApplication, deleteApplication,
+  // Application — Snooze + JD Cache
+  snoozeApplication, setJdText,
+  // Application — Contacts
+  listApplicationContacts, createApplicationContact, updateApplicationContact, deleteApplicationContact,
+  // Application — Chat
+  listChatMessages, appendChatMessage, clearChatMessages, countChatTurns,
   // Job Board
   listJobBoardLeads, getJobBoardLead, upsertJobBoardLeads, updateJobBoardLead, batchUpdateJobBoardLeads, jobBoardLeadCounts,
   // Networking
