@@ -276,8 +276,60 @@ async function fetchJobDescription(url) {
   } catch (e) { return ''; }
 }
 
+// ================================================================
+// buildInterviewChatSystemPrompt — context injection for interview chat
+// ================================================================
+
+function buildInterviewChatSystemPrompt(ctx) {
+  const {
+    app, jdText, resumeText, coverLetter, profile, contacts, notes, activity,
+  } = ctx;
+  const fullName = profile?.full_name || profile?.fullName || 'the candidate';
+  const background = profile?.background_text || profile?.backgroundText || '';
+  const targetRoles = Array.isArray(profile?.target_roles) ? profile.target_roles.join(', ') : '';
+
+  const contactsBlock = (contacts || []).length
+    ? (contacts || []).map((c) =>
+        `- ${c.name}${c.title ? ` (${c.title})` : ''} — ${c.kind}${c.linkedin_url ? ` · ${c.linkedin_url}` : ''}${c.notes ? `\n   Notes: ${c.notes}` : ''}`
+      ).join('\n')
+    : '(none recorded)';
+
+  const activityBlock = (activity || []).slice(-30).map((a) =>
+    `- ${a.date || ''} ${a.type || ''}${a.note ? `: ${a.note}` : ''}`
+  ).join('\n') || '(none)';
+
+  return `You are a focused interview prep coach for ${fullName}. They are interviewing for the ${app.role} role at ${app.company}. Use the context below to help them prepare specific answers, anticipate questions, and research the people interviewing them. Ground every answer in the resume and cover letter facts — never invent experience. When they ask to practice, act as the interviewer.
+
+ROLE: ${app.role}
+COMPANY: ${app.company}
+
+JOB DESCRIPTION:
+${(jdText || '(not available)').slice(0, 4000)}
+
+CANDIDATE:
+Name: ${fullName}
+Background: ${background}
+Target roles: ${targetRoles}
+
+RESUME (variant they submitted for this app):
+${(resumeText || '(no resume attached)').slice(0, 4000)}
+
+COVER LETTER:
+${(coverLetter || '(none)').slice(0, 2000)}
+
+PEOPLE ON THIS APPLICATION:
+${contactsBlock}
+
+RECENT NOTES:
+${notes || '(none)'}
+
+RECENT ACTIVITY:
+${activityBlock}`;
+}
+
 module.exports = {
   buildCoverLetterSystemPrompt,
+  buildInterviewChatSystemPrompt,
   DEFAULT_VARIANT_LABELS,
   cleanCoverLetterText,
   selectResumeVariant,
