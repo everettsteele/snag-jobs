@@ -141,6 +141,106 @@ router.delete('/applications/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /applications/bulk — apply an action to many application ids at once.
+// Fast actions (set_status, delete, snooze) run inline. generate_letter
+// spawns a background job that the client polls for updates.
+router.post('/applications/bulk', requireAuth, validate(schemas.bulkApplicationAction), async (req, res) => {
+  const { ids, action, value } = req.body;
+  const tenantId = req.user.tenantId;
+
+  // Verify every id belongs to this user's tenant before doing anything.
+  const verifiable = await Promise.all(ids.map((id) => db.getApplication(tenantId, id)));
+  const valid = verifiable.filter((a) => a && a.user_id === req.user.id).map((a) => a.id);
+  if (!valid.length) return res.status(404).json({ error: 'No matching applications' });
+
+  if (action === 'delete') {
+    let deleted = 0;
+    for (const id of valid) {
+      const ok = await db.deleteApplication(tenantId, id);
+      if (ok) deleted++;
+    }
+    return res.json({ ok: true, updated: deleted, failed: valid.length - deleted });
+  }
+
+  if (action === 'set_status') {
+    if (!VALID_APP_STATUSES.includes(value)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const today = todayET();
+    let updated = 0;
+    for (const id of valid) {
+      const app = await db.getApplication(tenantId, id);
+      if (!app || app.status === value) continue;
+      const activity = Array.isArray(app.activity) ? [...app.activity] : [];
+      activity.push({ date: today, type: value, note: 'bulk update' });
+      await db.updateApplication(tenantId, id, { status: value, last_activity: today, activity });
+      updated++;
+    }
+    return res.json({ ok: true, updated, failed: valid.length - updated });
+  }
+
+  if (action === 'snooze') {
+    if (value !== null && !/^\d{4}-\d{2}-\d{2}$/.test(value || '')) {
+      return res.status(400).json({ error: 'Invalid date' });
+    }
+    let updated = 0;
+    for (const id of valid) {
+      const r = await db.snoozeApplication(tenantId, id, value);
+      if (r) updated++;
+    }
+    return res.json({ ok: true, updated, failed: valid.length - updated });
+  }
+
+  if (action === 'generate_letter') {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    }
+    const targets = verifiable
+      .filter((a) => a && a.user_id === req.user.id && !a.cover_letter_text);
+    res.json({ ok: true, queued: targets.length, message: `Generating ${targets.length} cover letters.` });
+
+    const userId = req.user.id;
+    const userProfile = req.user.profile || {};
+    setImmediate(async () => {
+      const userVariants = await getResumeVariants(userId);
+      for (let i = 0; i < targets.length; i++) {
+        const appRec = targets[i];
+        try {
+          let jdText = '';
+          if (appRec.source_url) jdText = await fetchJobDescription(appRec.source_url);
+          if (!jdText || jdText.length < 50) {
+            jdText = `Position: ${appRec.role} at ${appRec.company}. ${appRec.notes || ''}`.trim();
+          }
+          const letter = await generateCoverLetter(appRec, jdText, {
+            fullName: req.user.fullName,
+            backgroundText: userProfile.backgroundText,
+          });
+          if (!letter || letter.length < 50) continue;
+          const patch = { cover_letter_text: letter, last_activity: todayET() };
+          if (!appRec.resume_variant) {
+            try {
+              const variant = await selectResumeVariant(appRec, jdText, {
+                fullName: req.user.fullName,
+                variants: userVariants,
+              });
+              if (variant) patch.resume_variant = variant;
+            } catch (e) { diagLog('BULK letter auto-select failed: ' + e.message); }
+          }
+          await db.updateApplication(tenantId, appRec.id, patch);
+          const after = await db.getApplication(tenantId, appRec.id);
+          const advance = maybeAutoAdvance(after);
+          if (Object.keys(advance).length) await db.updateApplication(tenantId, appRec.id, advance);
+          await db.logUsage(tenantId, userId, 'cover_letter', 700, { company: appRec.company, bulk: true });
+          await new Promise((r) => setTimeout(r, 1500));
+        } catch (e) { diagLog('BULK letter EXCEPTION: ' + e.message); }
+      }
+    });
+    return;
+  }
+
+  res.status(400).json({ error: 'Unknown action' });
+});
+
 // Email sync — match emails to applications
 router.post('/applications/email-sync', requireAuth, async (req, res) => {
   const matches = req.body.matches || [];
