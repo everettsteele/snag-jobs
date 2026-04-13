@@ -105,6 +105,16 @@ export default function ApplicationsPage() {
     onError: (err) => toast(err.message || 'Could not parse URL', 'error'),
   });
 
+  const generateLetterMutation = useMutation({
+    mutationFn: (id) => api.post(`/applications/${id}/generate-letter`),
+    onSuccess: (d) => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      toast('Cover letter generated');
+      if (d?.application) setCoverLetterApp(d.application);
+    },
+    onError: (err) => toast(err.message, 'error'),
+  });
+
   const appList = Array.isArray(data) ? data : data?.applications || [];
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -281,6 +291,8 @@ export default function ApplicationsPage() {
         <CoverLetterModal
           app={coverLetterApp}
           onClose={() => setCoverLetterApp(null)}
+          onGenerate={(a) => generateLetterMutation.mutate(a.id)}
+          generating={generateLetterMutation.isPending}
         />
       )}
     </div>

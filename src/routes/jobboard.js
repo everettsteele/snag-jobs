@@ -33,11 +33,11 @@ router.post('/job-board/snag', requireAuth, validate(schemas.snagRequest), async
     company: lead.organization || lead.title,
     role: lead.title,
     applied_date: today,
-    status: 'queued',
+    status: 'identified',
     source_url: lead.url,
     follow_up_date: fd.toISOString().split('T')[0],
     notes: `Snagged from ${lead.source_label || lead.source}${lead.location ? ' · ' + lead.location : ''}`,
-    activity: [{ date: today, type: 'queued', note: `Snagged from ${lead.source_label || lead.source}` }],
+    activity: [{ date: today, type: 'identified', note: `Snagged from ${lead.source_label || lead.source}` }],
   });
 
   await db.updateJobBoardLead(req.user.tenantId, lead_id, { status: 'snagged', snagged_app_id: newApp.id });

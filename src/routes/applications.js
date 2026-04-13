@@ -105,11 +105,11 @@ router.post('/applications', requireAuth, validate(schemas.applicationCreate), a
   fd.setDate(fd.getDate() + 7);
 
   const app = await db.createApplication(req.user.tenantId, req.user.id, {
-    company, role, applied_date: today, status: status || 'queued',
+    company, role, applied_date: today, status: status || 'identified',
     source_url: source_url || '', notion_url: notion_url || '',
     follow_up_date: fd.toISOString().split('T')[0],
     notes: notes || '',
-    activity: [{ date: today, type: status || 'queued', note: 'Added to queue' }],
+    activity: [{ date: today, type: status || 'identified', note: 'Added' }],
   });
   autoSelectResumeInBackground(req.user.tenantId, req.user.id, app, { fullName: req.user.fullName });
   res.json(app);
