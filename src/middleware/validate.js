@@ -14,7 +14,17 @@ function validate(schema) {
 }
 
 // Schemas
-const VALID_APP_STATUSES = ['queued', 'identified', 'researching', 'materials_prep', 'ready_to_apply', 'applied', 'confirmation_received', 'interviewing', 'offer', 'rejected', 'no_response', 'withdrawn', 'closed'];
+const VALID_APP_STATUSES = [
+  'identified', 'ready_to_apply', 'applied', 'interviewing', 'closed',
+];
+
+const VALID_CLOSED_REASONS = [
+  'offer', 'rejected', 'withdrawn', 'no_response', 'other',
+];
+
+const VALID_CONTACT_KINDS = [
+  'hiring_manager', 'recruiter', 'interviewer', 'referrer', 'other',
+];
 const VALID_OUTREACH_STATUSES = ['not contacted', 'draft', 'linkedin', 'contacted', 'in conversation', 'bounced', 'passed'];
 const VALID_LEAD_STATUSES = ['new', 'reviewed', 'snagged', 'snoozed'];
 
@@ -37,6 +47,8 @@ const applicationPatch = z.object({
   drive_url: z.string().max(2000).optional(),
   drive_folder_id: z.string().max(200).optional(),
   follow_up_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  snoozed_until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  closed_reason: z.enum(VALID_CLOSED_REASONS).nullable().optional(),
   notes: z.string().max(5000).optional(),
   cover_letter_text: z.string().max(10000).optional(),
   resume_variant: z.string().max(50).optional(),
@@ -87,6 +99,35 @@ const loginRequest = z.object({
   password: z.string().min(1).max(500),
 });
 
+const bulkApplicationAction = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(200),
+  action: z.enum(['set_status', 'delete', 'snooze', 'generate_letter']),
+  value: z.any().optional(),
+});
+
+const snoozeRequest = z.object({
+  until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+});
+
+const parseUrlRequest = z.object({
+  url: z.string().url().max(2000),
+});
+
+const applicationContactCreate = z.object({
+  name: z.string().min(1).max(200),
+  title: z.string().max(200).optional().nullable(),
+  email: z.string().email().max(200).optional().nullable(),
+  linkedin_url: z.string().url().max(500).optional().nullable(),
+  kind: z.enum(VALID_CONTACT_KINDS).optional().default('other'),
+  notes: z.string().max(5000).optional().nullable(),
+});
+
+const applicationContactPatch = applicationContactCreate.partial();
+
+const chatMessageRequest = z.object({
+  message: z.string().min(1).max(4000),
+});
+
 module.exports = {
   validate,
   schemas: {
@@ -98,8 +139,16 @@ module.exports = {
     snagRequest,
     eventCreate,
     loginRequest,
+    bulkApplicationAction,
+    snoozeRequest,
+    parseUrlRequest,
+    applicationContactCreate,
+    applicationContactPatch,
+    chatMessageRequest,
   },
   VALID_APP_STATUSES,
+  VALID_CLOSED_REASONS,
+  VALID_CONTACT_KINDS,
   VALID_OUTREACH_STATUSES,
   VALID_LEAD_STATUSES,
 };
