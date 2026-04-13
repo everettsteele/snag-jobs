@@ -177,7 +177,7 @@ export default function ApplicationsPage() {
               <th className="px-4 py-3 font-medium">Added</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Follow-up</th>
-              <th className="px-4 py-3 font-medium">Resume</th>
+              <th className="px-2 py-3 font-medium w-[90px]">Resume</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -352,23 +352,30 @@ function ApplicationRow({ app, variants = [], onUpdate, onDelete, onShowCoverLet
       <td className="px-4 py-3 text-xs text-gray-500">
         {followUp ? new Date(followUp + 'T12:00:00').toLocaleDateString() : '--'}
       </td>
-      <td className="px-4 py-3 text-xs">
+      <td className="px-2 py-3 text-xs">
         <select
           value={app.resume_variant || ''}
           onChange={(e) => onUpdate({ resume_variant: e.target.value })}
-          className="text-xs border border-gray-200 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F97316]"
+          title={
+            (variants.find((v) => v.slug === app.resume_variant)?.label) ||
+            app.resume_variant ||
+            'No resume selected'
+          }
+          className="text-xs border border-gray-200 rounded px-1 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F97316] w-[82px] truncate"
         >
-          <option value="">— none —</option>
+          <option value="">—</option>
           {(variants.length
             ? variants
             : [
-                { slug: 'operator', label: 'Operator' },
-                { slug: 'partner', label: 'Partner' },
-                { slug: 'builder', label: 'Builder' },
-                { slug: 'innovator', label: 'Innovator' },
+                { slug: 'operator' },
+                { slug: 'partner' },
+                { slug: 'builder' },
+                { slug: 'innovator' },
               ]
           ).map((v) => (
-            <option key={v.slug} value={v.slug}>{v.label || v.slug}</option>
+            <option key={v.slug} value={v.slug} title={v.label || v.slug}>
+              {v.slug}
+            </option>
           ))}
           {app.resume_variant && !variants.some((v) => v.slug === app.resume_variant) && (
             <option value={app.resume_variant}>{app.resume_variant}</option>
