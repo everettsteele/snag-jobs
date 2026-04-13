@@ -273,7 +273,7 @@ router.patch('/applications/:id/snooze', requireAuth, validate(schemas.snoozeReq
   res.json(updated);
 });
 
-router.post('/applications/parse-url', requireAuth, validate(schemas.parseUrlRequest), async (req, res) => {
+router.post('/applications/parse-url', requireAuth, expensiveLimiter, validate(schemas.parseUrlRequest), async (req, res) => {
   const { url } = req.body;
   let jdText = '';
   try { jdText = await fetchJobDescription(url); } catch (_) {}
