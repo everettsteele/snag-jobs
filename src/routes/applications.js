@@ -34,6 +34,39 @@ function sendSSE(userId, event, data) {
   if (client) client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+// Fire-and-forget: auto-select a resume variant for a newly created app.
+// Fast path — skips JD fetch if no source_url and lets selectResumeVariant
+// work off role + notes. Keeps new apps from sitting with a blank Resume column.
+function autoSelectResumeInBackground(tenantId, userId, app, userCtx) {
+  if (!process.env.ANTHROPIC_API_KEY) return;
+  if (app.resume_variant) return;
+  setImmediate(async () => {
+    try {
+      let jdText = '';
+      if (app.source_url) {
+        try { jdText = await fetchJobDescription(app.source_url); } catch (e) {}
+      }
+      if (!jdText || jdText.length < 50) {
+        jdText = `Position: ${app.role} at ${app.company}. ${app.notes || ''}`.trim();
+      }
+      const userVariants = await getResumeVariants(userId);
+      const variant = await selectResumeVariant(app, jdText, {
+        fullName: userCtx.fullName,
+        variants: userVariants,
+      });
+      if (!variant) return;
+      // Re-read in case the app was deleted between creation and now
+      const fresh = await db.getApplication(tenantId, app.id);
+      if (!fresh || fresh.resume_variant) return;
+      await db.updateApplication(tenantId, app.id, { resume_variant: variant });
+      await db.logUsage(tenantId, userId, 'variant_select', 20, { company: app.company, variant, autocreate: true });
+      diagLog(`AUTO-SELECT resume=${variant} for app=${app.id} company=${app.company}`);
+    } catch (e) {
+      diagLog('AUTO-SELECT failed: ' + e.message);
+    }
+  });
+}
+
 // ================================================================
 // Routes — all scoped by req.user.tenantId / req.user.id
 // ================================================================
@@ -56,6 +89,7 @@ router.post('/applications', requireAuth, validate(schemas.applicationCreate), a
     notes: notes || '',
     activity: [{ date: today, type: status || 'queued', note: 'Added to queue' }],
   });
+  autoSelectResumeInBackground(req.user.tenantId, req.user.id, app, { fullName: req.user.fullName });
   res.json(app);
 });
 
@@ -462,3 +496,4 @@ router.get('/export/applications', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.autoSelectResumeInBackground = autoSelectResumeInBackground;
