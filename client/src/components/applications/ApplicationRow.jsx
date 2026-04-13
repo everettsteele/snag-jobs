@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import InterviewChat from './InterviewChat';
 
 export default function ApplicationRow({
   app, variants = [], selected, onToggleSelect,
@@ -385,7 +386,7 @@ function ContactForm({ initial, onSave, onCancel }) {
   );
 }
 
-function InterviewTabLazy() { return <div className="text-xs text-gray-400">Coming up in Task 13.</div>; }
+function InterviewTabLazy({ app }) { return <InterviewChat app={app} />; }
 
 export const STATUS_INFO = {
   identified: { label: 'Identified', color: 'bg-gray-100 text-gray-700' },
