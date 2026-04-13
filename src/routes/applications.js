@@ -252,6 +252,24 @@ router.post(
   res.status(400).json({ error: 'Unknown action' });
 });
 
+router.patch('/applications/:id/snooze', requireAuth, validate(schemas.snoozeRequest), async (req, res) => {
+  const app = await db.getApplication(req.user.tenantId, req.params.id);
+  if (!app) return res.status(404).json({ error: 'Not found' });
+
+  const today = todayET();
+  const activity = Array.isArray(app.activity) ? [...app.activity] : [];
+  activity.push({
+    date: today,
+    type: req.body.until ? 'snoozed' : 'unsnoozed',
+    note: req.body.until ? `Snoozed until ${req.body.until}` : 'Unsnoozed',
+  });
+  await db.updateApplication(req.user.tenantId, req.params.id, {
+    activity, last_activity: today,
+  });
+  const updated = await db.snoozeApplication(req.user.tenantId, req.params.id, req.body.until);
+  res.json(updated);
+});
+
 // Email sync — match emails to applications
 router.post('/applications/email-sync', requireAuth, async (req, res) => {
   const matches = req.body.matches || [];
