@@ -602,6 +602,107 @@ async function upsertCompanyDossier(data) {
   return rows[0];
 }
 
+// ================================================================
+// APPLICATION PREP BRIEFS (one per app)
+// ================================================================
+
+async function getApplicationPrepBrief(tenantId, applicationId) {
+  const { rows } = await query(
+    `SELECT * FROM application_prep_briefs WHERE tenant_id = $1 AND application_id = $2`,
+    [tenantId, applicationId]
+  );
+  return rows[0] || null;
+}
+
+async function upsertApplicationPrepBrief(tenantId, applicationId, data) {
+  const { rows } = await query(
+    `INSERT INTO application_prep_briefs
+       (tenant_id, application_id, likely_questions, company_research,
+        resume_highlights, questions_to_ask, generated_by_user_id,
+        tokens_in, tokens_out, updated_at)
+     VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb, $7, $8, $9, NOW())
+     ON CONFLICT (application_id) DO UPDATE
+       SET likely_questions = EXCLUDED.likely_questions,
+           company_research = EXCLUDED.company_research,
+           resume_highlights = EXCLUDED.resume_highlights,
+           questions_to_ask = EXCLUDED.questions_to_ask,
+           generated_by_user_id = EXCLUDED.generated_by_user_id,
+           tokens_in = EXCLUDED.tokens_in,
+           tokens_out = EXCLUDED.tokens_out,
+           updated_at = NOW()
+     RETURNING *`,
+    [
+      tenantId, applicationId,
+      JSON.stringify(data.likely_questions || []),
+      data.company_research || null,
+      JSON.stringify(data.resume_highlights || []),
+      JSON.stringify(data.questions_to_ask || []),
+      data.generated_by_user_id || null,
+      data.tokens_in || 0,
+      data.tokens_out || 0,
+    ]
+  );
+  return rows[0];
+}
+
+// ================================================================
+// APPLICATION DEBRIEFS (many per app)
+// ================================================================
+
+async function listApplicationDebriefs(tenantId, applicationId) {
+  const { rows } = await query(
+    `SELECT id, application_id, input_text, summary, topics_covered,
+            strengths, watchouts, follow_ups, thank_you_draft,
+            tokens_in, tokens_out, created_at
+       FROM application_debriefs
+      WHERE tenant_id = $1 AND application_id = $2
+      ORDER BY created_at DESC`,
+    [tenantId, applicationId]
+  );
+  return rows;
+}
+
+async function createApplicationDebrief(tenantId, applicationId, data) {
+  const { rows } = await query(
+    `INSERT INTO application_debriefs
+       (tenant_id, application_id, input_text, summary, topics_covered,
+        strengths, watchouts, follow_ups, thank_you_draft,
+        generated_by_user_id, tokens_in, tokens_out)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10, $11, $12)
+     RETURNING *`,
+    [
+      tenantId, applicationId,
+      data.input_text,
+      data.summary || null,
+      JSON.stringify(data.topics_covered || []),
+      JSON.stringify(data.strengths || []),
+      JSON.stringify(data.watchouts || []),
+      JSON.stringify(data.follow_ups || []),
+      data.thank_you_draft || null,
+      data.generated_by_user_id || null,
+      data.tokens_in || 0,
+      data.tokens_out || 0,
+    ]
+  );
+  return rows[0];
+}
+
+async function deleteApplicationDebrief(tenantId, debriefId) {
+  const { rowCount } = await query(
+    `DELETE FROM application_debriefs WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, debriefId]
+  );
+  return rowCount > 0;
+}
+
+async function getApplicationDebrief(tenantId, debriefId) {
+  const { rows } = await query(
+    `SELECT * FROM application_debriefs WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, debriefId]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   // Applications
   listApplications, getApplication, createApplication, updateApplication, deleteApplication,
@@ -630,4 +731,11 @@ module.exports = {
   // Company Dossiers
   getCompanyDossier,
   upsertCompanyDossier,
+  // Prep Briefs + Debriefs
+  getApplicationPrepBrief,
+  upsertApplicationPrepBrief,
+  listApplicationDebriefs,
+  createApplicationDebrief,
+  deleteApplicationDebrief,
+  getApplicationDebrief,
 };
