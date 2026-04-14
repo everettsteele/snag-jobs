@@ -142,6 +142,7 @@ function ExpandedDetail({ app, onUpdate, variants }) {
       <div className="flex items-center gap-1 border-b border-gray-100 px-3 pt-2">
         {[
           ['timeline', 'Timeline'],
+          ['company', 'Company'],
           ['notes', 'Notes'],
           ['people', 'People'],
           ['materials', 'Materials'],
@@ -160,6 +161,7 @@ function ExpandedDetail({ app, onUpdate, variants }) {
       </div>
       <div className="p-4">
         {tab === 'timeline' && <TimelineTab activity={activity} />}
+        {tab === 'company' && <CompanyTab app={app} />}
         {tab === 'notes' && <NotesTab app={app} onUpdate={onUpdate} />}
         {tab === 'people' && <PeopleTab app={app} />}
         {tab === 'materials' && <MaterialsTab app={app} variantRow={variantRow} />}
@@ -381,6 +383,131 @@ function ContactForm({ initial, onSave, onCancel }) {
                 className="text-xs bg-[#F97316] hover:bg-[#EA580C] text-white px-3 py-1 rounded cursor-pointer disabled:opacity-50">
           Save
         </button>
+      </div>
+    </div>
+  );
+}
+
+function CompanyTab({ app }) {
+  const qc = useQueryClient();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['app-dossier', app.id],
+    queryFn: () => api.get(`/applications/${app.id}/dossier`),
+  });
+
+  const buildMut = useMutation({
+    mutationFn: (body) => api.post(`/applications/${app.id}/dossier/build`, body || {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['app-dossier', app.id] }),
+  });
+
+  if (isLoading) return <div className="text-xs text-gray-400 py-4">Loading dossier...</div>;
+  if (error) return <div className="text-xs text-red-600 py-4">{error.message}</div>;
+
+  const { dossier, stale, quota } = data || {};
+  const isPro = !!quota?.pro;
+  const remaining = quota?.remaining ?? 0;
+
+  if (!dossier) {
+    if (!isPro && remaining <= 0) {
+      return (
+        <div className="text-center py-6">
+          <div className="text-sm font-semibold text-[#1F2D3D] mb-1">You've used your weekly dossier quota</div>
+          <p className="text-xs text-gray-500 mb-3">
+            Upgrade to Pro for unlimited company dossiers and refresh-on-demand.
+          </p>
+          <a href="/settings#billing" className="inline-block text-xs bg-[#F97316] hover:bg-[#EA580C] text-white px-4 py-2 rounded-lg">
+            Upgrade to Pro
+          </a>
+        </div>
+      );
+    }
+    return (
+      <div className="text-center py-6">
+        <p className="text-xs text-gray-500 mb-3">
+          No dossier for this company yet. Build one to see a summary, key facts, and detected links.
+        </p>
+        <button
+          onClick={() => buildMut.mutate()}
+          disabled={buildMut.isPending}
+          className="text-sm bg-[#F97316] hover:bg-[#EA580C] text-white px-4 py-2 rounded-lg cursor-pointer disabled:opacity-50"
+        >
+          {buildMut.isPending
+            ? 'Building...'
+            : isPro ? 'Build dossier' : `Build dossier (${remaining} left this week)`}
+        </button>
+        {buildMut.error && (
+          <div className="text-xs text-red-600 mt-2">{buildMut.error.message}</div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {stale && (
+        <div className="text-[11px] bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2 flex items-center justify-between">
+          <span>Dossier is over 30 days old.</span>
+          {isPro ? (
+            <button
+              onClick={() => buildMut.mutate({ refresh: true })}
+              disabled={buildMut.isPending}
+              className="text-xs bg-white hover:bg-amber-100 border border-amber-300 px-2 py-0.5 rounded cursor-pointer disabled:opacity-50"
+            >
+              {buildMut.isPending ? 'Refreshing...' : 'Refresh'}
+            </button>
+          ) : (
+            <a href="/settings#billing" className="text-xs underline hover:text-amber-900">Upgrade to refresh</a>
+          )}
+        </div>
+      )}
+
+      <div>
+        <div className="text-sm font-semibold text-[#1F2D3D] mb-1">
+          {dossier.display_name}
+        </div>
+        <p className="text-sm text-gray-700 leading-relaxed">{dossier.summary}</p>
+      </div>
+
+      {Array.isArray(dossier.facts) && dossier.facts.length > 0 && (
+        <ul className="space-y-1">
+          {dossier.facts.map((f, i) => (
+            <li key={i} className="text-xs text-gray-700 flex items-start gap-2">
+              <span className="w-1 h-1 rounded-full bg-[#F97316] mt-1.5 shrink-0" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {dossier.links && Object.keys(dossier.links).length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {Object.entries(dossier.links).map(([k, v]) => (
+            <a
+              key={k}
+              href={v}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full"
+            >
+              {k}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
+        <span>
+          Last refreshed {dossier.updated_at ? new Date(dossier.updated_at).toLocaleDateString() : 'unknown'}
+        </span>
+        {isPro && !stale && (
+          <button
+            onClick={() => buildMut.mutate({ refresh: true })}
+            disabled={buildMut.isPending}
+            className="hover:text-[#F97316] cursor-pointer"
+          >
+            {buildMut.isPending ? 'Refreshing...' : 'Refresh'}
+          </button>
+        )}
       </div>
     </div>
   );
