@@ -161,7 +161,7 @@ router.post('/generate-variants', requireAuth, expensiveLimiter, async (req, res
         payload: {
           base_word_count: baseText.split(/\s+/).filter(Boolean).length,
           output_word_count: text.split(/\s+/).filter(Boolean).length,
-          angle_source: a.targetRole && a.targetRole !== name ? 'target_role' : 'custom',
+          angle_source: a.source === 'target_role' ? 'target_role' : 'custom',
         },
       });
       results.push({ slug, label: name, ok: true, preview: text.slice(0, 200) });

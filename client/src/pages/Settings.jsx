@@ -757,7 +757,10 @@ function ResumeSection() {
     setGenerating(true);
     try {
       const result = await api.post('/resumes/generate-variants', {
-        angles: selectedAngles.map((name) => ({ name })),
+        angles: selectedAngles.map((name) => ({
+          name,
+          source: targetRoles.includes(name) ? 'target_role' : 'custom',
+        })),
       });
       const ok = result.results?.filter((r) => r.ok).length || 0;
       const failed = result.results?.filter((r) => !r.ok).length || 0;
