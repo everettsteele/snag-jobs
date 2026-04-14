@@ -79,6 +79,7 @@ async function findUserById(id) {
             up.weekly_outreach_target, up.weekly_apps_target,
             up.weekly_events_target, up.weekly_followups_target,
             up.signature_style, up.signature_image_url, up.signature_closing,
+            up.analytics_opt_out,
             t.name as tenant_name, t.plan as tenant_plan
      FROM users u
      JOIN user_profiles up ON up.user_id = u.id
@@ -99,7 +100,7 @@ async function updateProfile(userId, fields) {
     'background_text', 'target_roles', 'target_geography', 'target_industries',
     'daily_outreach_target', 'sla_target',
     'weekly_outreach_target', 'weekly_apps_target', 'weekly_events_target', 'weekly_followups_target',
-    'signature_style', 'signature_closing',
+    'signature_style', 'signature_closing', 'analytics_opt_out',
   ];
 
   const sets = [];
@@ -141,6 +142,7 @@ async function findUserByApiKey(apiKey) {
             up.weekly_outreach_target, up.weekly_apps_target,
             up.weekly_events_target, up.weekly_followups_target,
             up.signature_style, up.signature_image_url, up.signature_closing,
+            up.analytics_opt_out,
             t.name as tenant_name, t.plan as tenant_plan
      FROM users u
      JOIN user_profiles up ON up.user_id = u.id

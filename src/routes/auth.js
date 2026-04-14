@@ -36,6 +36,7 @@ const profileUpdateSchema = z.object({
   weekly_followups_target: z.number().int().min(0).max(100).optional(),
   signature_style: z.enum(['typed', 'script', 'image', 'none']).optional(),
   signature_closing: z.string().max(100).optional(),
+  analytics_opt_out: z.boolean().optional(),
 });
 
 // POST /api/auth/register
