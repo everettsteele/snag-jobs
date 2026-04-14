@@ -3,15 +3,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 
-const SUGGESTION_BASE = [
-  'Generate 10 likely questions for this role',
-  'Help me rehearse behavioral answers from my resume',
-];
+const SUGGESTIONS_BY_MODE = {
+  coach: [
+    'Generate 10 likely questions for this role',
+    'Help me rehearse behavioral answers from my resume',
+  ],
+  practice: [
+    'Start with a behavioral question',
+    'Hit me with a tough case from the job description',
+    "Focus on this role's hardest skill",
+  ],
+};
 
 export default function InterviewChat({ app }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [draft, setDraft] = useState('');
+  const [mode, setMode] = useState('coach');
   const listRef = useRef(null);
 
   const { data: contacts = [] } = useQuery({
@@ -20,20 +28,23 @@ export default function InterviewChat({ app }) {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['app-chat', app.id],
-    queryFn: () => api.get(`/applications/${app.id}/chat`),
+    queryKey: ['app-chat', app.id, mode],
+    queryFn: () => api.get(`/applications/${app.id}/chat?mode=${mode}`),
     enabled: !!user?.isPro,
   });
 
   const sendMut = useMutation({
-    mutationFn: (message) => api.post(`/applications/${app.id}/chat`, { message }),
+    mutationFn: (message) => api.post(`/applications/${app.id}/chat`, { message, mode }),
     onSuccess: () => setDraft(''),
-    onSettled: () => { qc.invalidateQueries({ queryKey: ['app-chat', app.id] }); },
+    onSettled: () => { qc.invalidateQueries({ queryKey: ['app-chat', app.id, mode] }); },
   });
 
   const clearMut = useMutation({
     mutationFn: () => api.del(`/applications/${app.id}/chat`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['app-chat', app.id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['app-chat', app.id, 'coach'] });
+      qc.invalidateQueries({ queryKey: ['app-chat', app.id, 'practice'] });
+    },
   });
 
   useEffect(() => {
@@ -64,9 +75,12 @@ export default function InterviewChat({ app }) {
   const capped = turnCount >= cap;
 
   const firstInterviewer = contacts.find((c) => c.kind === 'interviewer');
+  const baseSuggestions = SUGGESTIONS_BY_MODE[mode] || SUGGESTIONS_BY_MODE.coach;
   const suggestions = [
-    ...SUGGESTION_BASE,
-    ...(firstInterviewer ? [`Research ${firstInterviewer.name} and suggest what to ask them`] : []),
+    ...baseSuggestions,
+    ...(mode === 'coach' && firstInterviewer
+        ? [`Research ${firstInterviewer.name} and suggest what to ask them`]
+        : []),
   ];
 
   const onSend = (text) => {
@@ -77,6 +91,27 @@ export default function InterviewChat({ app }) {
 
   return (
     <div className="flex flex-col h-[420px]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="inline-flex bg-gray-100 rounded-md p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode('coach')}
+            className={`text-xs px-3 py-1 rounded cursor-pointer ${mode === 'coach' ? 'bg-white text-[#1F2D3D] shadow-sm' : 'text-gray-500'}`}
+          >
+            Coach
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('practice')}
+            className={`text-xs px-3 py-1 rounded cursor-pointer ${mode === 'practice' ? 'bg-white text-[#1F2D3D] shadow-sm' : 'text-gray-500'}`}
+          >
+            Practice
+          </button>
+        </div>
+        <div className="text-[10px] text-gray-500">
+          {mode === 'practice' ? 'Claude plays the interviewer.' : 'Claude coaches your prep.'}
+        </div>
+      </div>
       <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
         {isLoading ? (
           <div className="text-xs text-gray-400 py-8 text-center">Loading history...</div>
