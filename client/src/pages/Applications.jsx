@@ -105,6 +105,10 @@ export default function ApplicationsPage() {
     onError: (err) => toast(err.message || 'Could not parse URL', 'error'),
   });
 
+  const verdictMutation = useMutation({
+    mutationFn: (url) => api.post('/applications/verdict', { url }),
+  });
+
   const generateLetterMutation = useMutation({
     mutationFn: (id) => api.post(`/applications/${id}/generate-letter`),
     onSuccess: (d) => {
@@ -167,6 +171,8 @@ export default function ApplicationsPage() {
     const v = quickInput.trim();
     if (!v) return;
     if (/^https?:\/\//i.test(v)) {
+      verdictMutation.reset();
+      verdictMutation.mutate(v);
       parseUrlMutation.mutate(v);
     } else {
       setPrefill({ company: v });
@@ -282,7 +288,10 @@ export default function ApplicationsPage() {
       {showModal && (
         <AddApplicationModal
           prefill={prefill}
-          onClose={() => { setShowModal(false); setPrefill(null); }}
+          verdict={verdictMutation.data || null}
+          verdictLoading={verdictMutation.isPending}
+          verdictError={verdictMutation.error}
+          onClose={() => { setShowModal(false); setPrefill(null); verdictMutation.reset(); }}
           onSave={(d) => addMutation.mutate(d)}
           saving={addMutation.isPending}
         />
