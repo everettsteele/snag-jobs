@@ -1,11 +1,11 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { expensiveLimiter } = require('../middleware/security');
-const { checkAiLimit, logAiUsage, isPro } = require('../middleware/tier');
+const { logAiUsage, isPro } = require('../middleware/tier');
 const db = require('../db/store');
 const { fetchJobDescription } = require('../services/anthropic');
 const {
-  companyKey, getCachedDossier, buildDossier, isFresh, ageDays, TTL_DAYS,
+  companyKey, getCachedDossier, buildDossier, isFresh, ageDays,
 } = require('../services/dossier');
 const { logEvent, lengthBucket } = require('../services/events');
 
@@ -60,7 +60,7 @@ router.get('/applications/:id/dossier', requireAuth, async (req, res) => {
 // POST /applications/:id/dossier/build
 // Generates (or regenerates) a dossier. Quota-gated for Free users.
 router.post('/applications/:id/dossier/build',
-  requireAuth, expensiveLimiter, checkAiLimit('dossier_generation'),
+  requireAuth, expensiveLimiter,
   async (req, res) => {
     const app = await db.getApplication(req.user.tenantId, req.params.id);
     if (!app || app.user_id !== req.user.id) return res.status(404).json({ error: 'Not found' });
@@ -79,6 +79,25 @@ router.post('/applications/:id/dossier/build',
     // If a refresh was requested, only Pro can do it.
     if (forceRefresh && existing && !isPro(req.user)) {
       return res.status(403).json({ error: 'Dossier refresh is a Pro feature', upgrade: true });
+    }
+
+    // Quota check for Free users — only on net-new generations (cached fresh hits returned above).
+    if (!isPro(req.user)) {
+      const { query } = require('../db/pool');
+      const { rows } = await query(
+        `SELECT COUNT(*)::int AS n FROM usage_log
+           WHERE user_id = $1 AND action = 'dossier_generation'
+           AND created_at > NOW() - INTERVAL '7 days'`,
+        [req.user.id]
+      );
+      if ((rows[0]?.n || 0) >= 3) {
+        return res.status(429).json({
+          error: 'Free plan limit reached (3 dossier generations per week). Upgrade to Pro for unlimited.',
+          limit: 3,
+          used: rows[0]?.n || 0,
+          upgrade: true,
+        });
+      }
     }
 
     // Need JD text for generation.
