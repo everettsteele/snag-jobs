@@ -6,6 +6,7 @@ const { PDFParse } = require('pdf-parse');
 const { requireAuth } = require('../middleware/auth');
 const { expensiveLimiter } = require('../middleware/security');
 const { query } = require('../db/pool');
+const { logEvent, lengthBucket } = require('../services/events');
 
 const router = Router();
 
@@ -100,6 +101,9 @@ router.post('/base/upload', requireAuth, upload.single('file'), async (req, res)
     [req.user.id]
   );
 
+  logEvent(req.user.tenantId, req.user.id, 'resume.uploaded', {
+    payload: { text_length: parsedText.length },
+  });
   res.json({ ok: true, text_length: parsedText.length });
 });
 
@@ -152,6 +156,14 @@ router.post('/generate-variants', requireAuth, expensiveLimiter, async (req, res
                parsed_text = EXCLUDED.parsed_text`,
         [req.user.id, slug, name, text]
       );
+      logEvent(req.user.tenantId, req.user.id, 'resume_variant.generated', {
+        entityType: 'resume_variant',
+        payload: {
+          base_word_count: baseText.split(/\s+/).filter(Boolean).length,
+          output_word_count: text.split(/\s+/).filter(Boolean).length,
+          angle_source: a.targetRole && a.targetRole !== name ? 'target_role' : 'custom',
+        },
+      });
       results.push({ slug, label: name, ok: true, preview: text.slice(0, 200) });
     } catch (e) {
       console.error(`[resume-gen] ${name} failed:`, e.message);
