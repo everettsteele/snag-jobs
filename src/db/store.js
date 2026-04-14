@@ -538,6 +538,26 @@ async function countChatTurns(tenantId, applicationId) {
   return rows[0]?.n || 0;
 }
 
+// ================================================================
+// PRODUCT EVENTS (analytics)
+// ================================================================
+
+async function createProductEvent(tenantId, userId, eventType, entityType, entityId, payload) {
+  await query(
+    `INSERT INTO product_events (tenant_id, user_id, event_type, entity_type, entity_id, payload)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [tenantId, userId, eventType, entityType || null, entityId || null, JSON.stringify(payload || {})]
+  );
+}
+
+async function isAnalyticsOptOut(userId) {
+  const { rows } = await query(
+    `SELECT analytics_opt_out FROM user_profiles WHERE user_id = $1`,
+    [userId]
+  );
+  return !!rows[0]?.analytics_opt_out;
+}
+
 module.exports = {
   // Applications
   listApplications, getApplication, createApplication, updateApplication, deleteApplication,
@@ -560,4 +580,7 @@ module.exports = {
   getJobSearchConfig, saveJobSearchConfig,
   // Usage
   logUsage,
+  // Product Events (analytics)
+  createProductEvent,
+  isAnalyticsOptOut,
 };
