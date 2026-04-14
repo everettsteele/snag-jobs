@@ -349,7 +349,7 @@ function BulkBar({ count, onStatus, onDelete, onGenerate, onSnooze, onClear, bus
   );
 }
 
-function AddApplicationModal({ prefill, onClose, onSave, saving }) {
+function AddApplicationModal({ prefill, verdict, verdictLoading, verdictError, onClose, onSave, saving }) {
   const [form, setForm] = useState({
     company: prefill?.company || '',
     role: prefill?.role || '',
@@ -374,6 +374,7 @@ function AddApplicationModal({ prefill, onClose, onSave, saving }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <VerdictCard verdict={verdict} loading={verdictLoading} error={verdictError} />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Company *</label>
             <input
@@ -440,6 +441,80 @@ function AddApplicationModal({ prefill, onClose, onSave, saving }) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+const VERDICT_STYLE = {
+  strong_fit: { label: 'Strong Fit', bar: 'bg-green-500', tint: 'bg-green-50 border-green-200 text-green-900' },
+  fit:        { label: 'Good Fit',   bar: 'bg-emerald-500', tint: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
+  stretch:    { label: 'Stretch',    bar: 'bg-amber-500',   tint: 'bg-amber-50 border-amber-200 text-amber-900' },
+  weak_fit:   { label: 'Weak Fit',   bar: 'bg-rose-500',    tint: 'bg-rose-50 border-rose-200 text-rose-900' },
+};
+
+function VerdictCard({ verdict, loading, error }) {
+  if (!verdict && !loading && !error) return null;
+
+  if (loading) {
+    return (
+      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 flex items-center gap-3">
+        <div className="w-4 h-4 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
+        <div className="text-xs text-gray-600">Snag is sizing up this role...</div>
+      </div>
+    );
+  }
+
+  if (error || !verdict) {
+    return (
+      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-[11px] text-gray-500">
+        Couldn't size up this role — save or edit manually.
+      </div>
+    );
+  }
+
+  const style = VERDICT_STYLE[verdict.verdict] || VERDICT_STYLE.stretch;
+
+  return (
+    <div className={`mb-4 rounded-lg border ${style.tint} px-4 py-3`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`inline-block w-2 h-6 rounded-sm ${style.bar}`} />
+        <span className="text-sm font-semibold">{style.label}</span>
+        <span className="text-xs opacity-70 ml-auto">{verdict.score}/100</span>
+      </div>
+      {verdict.reasoning && (
+        <p className="text-xs leading-relaxed mb-2">{verdict.reasoning}</p>
+      )}
+      {(Array.isArray(verdict.green_flags) && verdict.green_flags.length > 0)
+        || (Array.isArray(verdict.red_flags) && verdict.red_flags.length > 0) ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+          {Array.isArray(verdict.green_flags) && verdict.green_flags.length > 0 && (
+            <div>
+              <div className="font-semibold mb-1 opacity-80">What's working</div>
+              <ul className="space-y-0.5">
+                {verdict.green_flags.map((f, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="text-green-600 mt-0.5">+</span>
+                    <span className="flex-1">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {Array.isArray(verdict.red_flags) && verdict.red_flags.length > 0 && (
+            <div>
+              <div className="font-semibold mb-1 opacity-80">Watch out for</div>
+              <ul className="space-y-0.5">
+                {verdict.red_flags.map((f, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="text-rose-600 mt-0.5">−</span>
+                    <span className="flex-1">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
