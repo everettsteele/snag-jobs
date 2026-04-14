@@ -350,6 +350,7 @@ async function fetchJobDescription(url) {
 function buildInterviewChatSystemPrompt(ctx) {
   const {
     app, jdText, resumeText, coverLetter, profile, contacts, notes, activity,
+    mode,
   } = ctx;
   const fullName = profile?.full_name || profile?.fullName || 'the candidate';
   const background = profile?.background_text || profile?.backgroundText || '';
@@ -365,7 +366,23 @@ function buildInterviewChatSystemPrompt(ctx) {
     `- ${a.date || ''} ${a.type || ''}${a.note ? `: ${a.note}` : ''}`
   ).join('\n') || '(none)';
 
-  return `You are a focused interview prep coach for ${fullName}. They are interviewing for the ${app.role} role at ${app.company}. Use the context below to help them prepare specific answers, anticipate questions, and research the people interviewing them. Ground every answer in the resume and cover letter facts — never invent experience. When they ask to practice, act as the interviewer.
+  const openingCoach = `You are a focused interview prep coach for ${fullName}. They are interviewing for the ${app.role} role at ${app.company}. Use the context below to help them prepare specific answers, anticipate questions, and research the people interviewing them. Ground every answer in the resume and cover letter facts — never invent experience. When they ask to practice, act as the interviewer.`;
+
+  const openingPractice = `You are a skeptical hiring manager interviewing ${fullName} for the ${app.role} role at ${app.company}. Your job is to conduct a mock interview.
+
+RULES:
+- Ask ONE question per turn. Start behavioral or role-specific; escalate difficulty as the candidate warms up.
+- After each candidate response, deliver your turn in this exact order:
+  1. FEEDBACK: one short paragraph — what worked, what to sharpen. Be direct, specific, kind.
+  2. FOLLOW-UP: one next question.
+- Push for specifics when the answer is vague ("give me a number", "who was involved", "what happened next").
+- Acknowledge when the candidate uses a fact from the resume well.
+- NEVER invent experience or facts the candidate doesn't have in their resume.
+- Keep each feedback paragraph under 80 words. Keep each question under 40 words.`;
+
+  const opening = mode === 'practice' ? openingPractice : openingCoach;
+
+  return `${opening}
 
 ROLE: ${app.role}
 COMPANY: ${app.company}
