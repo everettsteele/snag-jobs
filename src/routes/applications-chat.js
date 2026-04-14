@@ -9,6 +9,7 @@ const {
   buildInterviewChatSystemPrompt,
 } = require('../services/anthropic');
 const db = require('../db/store');
+const { logEvent } = require('../services/events');
 
 const CHAT_TURN_CAP = 80;
 const MODEL = 'claude-sonnet-4-6';
@@ -126,6 +127,18 @@ router.post('/applications/:id/chat', requireAuth, expensiveLimiter,
   });
 
   const newTurnCount = await db.countChatTurns(req.user.tenantId, app.id);
+
+  logEvent(req.user.tenantId, req.user.id, 'interview_chat.turn', {
+    entityType: 'application',
+    entityId: app.id,
+    payload: {
+      turn_number: newTurnCount,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
+      contact_count: Array.isArray(contacts) ? contacts.length : 0,
+    },
+  });
+
   res.json({
     id: stored.id,
     reply,
