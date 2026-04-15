@@ -49,7 +49,7 @@ export default function ApplicationRow({
         </td>
         <td className="px-4 py-3 text-gray-700">{app.role || '--'}</td>
         <td className="px-4 py-3 text-gray-500 text-xs">
-          {app.applied_date ? new Date(app.applied_date + 'T12:00:00').toLocaleDateString()
+          {app.applied_date ? new Date(String(app.applied_date).slice(0, 10) + 'T12:00:00').toLocaleDateString()
             : app.created_at ? new Date(app.created_at).toLocaleDateString() : '--'}
         </td>
         <td className="px-4 py-3">
@@ -70,7 +70,7 @@ export default function ApplicationRow({
           )}
         </td>
         <td className="px-4 py-3 text-xs text-gray-500">
-          {followUp ? new Date(followUp + 'T12:00:00').toLocaleDateString() : '--'}
+          {followUp ? new Date(String(followUp).slice(0, 10) + 'T12:00:00').toLocaleDateString() : '--'}
         </td>
         <td className="px-2 py-3 text-xs">
           <select
